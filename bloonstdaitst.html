@@ -1,0 +1,3213 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blónky tm</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            background-color: #2c2c2c;
+            color: #e0e0e0;
+            touch-action: none;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        #gameTitle {
+            font-size: 2.8em;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px #111, 0 0 10px #ff0;
+            margin: 10px 0;
+        }
+        #gameContainer {
+            display: flex;
+            width: 1026px;
+            height: 606px;
+            max-width: 100%;
+            margin-top: 5px;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+            border: 3px solid #5a5a5a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        canvas#gameCanvas {
+            width: 800px;
+            height: 600px;
+            border: none;
+            cursor: crosshair;
+            display: block;
+            flex-shrink: 0;
+        }
+        #uiPanel {
+            width: 220px;
+            height: 600px;
+            padding: 15px;
+            background-color: #404040;
+            border-left: 3px solid #5a5a5a;
+            display: flex;
+            flex-direction: column;
+            color: #d0d0d0;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .ui-section {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #555;
+        }
+        .ui-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        #towerControlSection {
+             flex-grow: 1;
+             display: flex;
+             flex-direction: column;
+             overflow: hidden;
+        }
+        #towerShopContainer, #selectedTowerContainer {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #towerShop {
+            max-height: 420px;
+            overflow-y: auto;
+            padding-right: 5px;
+            flex-shrink: 1;
+        }
+        #selectedTowerInfoContainer {
+             overflow-y: auto;
+             flex-grow: 1;
+        }
+
+
+        h2, h3 {
+            margin-top: 0;
+            color: #ffb300;
+            text-align: center;
+            text-shadow: 1px 1px 2px #111;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background-image: linear-gradient(to bottom, #60b065, #407c44);
+            color: white;
+            border: 1px solid #2f5d32;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px #222;
+            transition: all 0.15s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+        }
+        button#startWaveButton.ready {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 0 0 0 rgba(86, 194, 92, 0.7); }
+            70% { box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 0 0 12px rgba(86, 194, 92, 0); }
+            100% { box-shadow: 0 2px 4px rgba(0,0,0,0.35), 0 0 0 0 rgba(86, 194, 92, 0); }
+        }
+
+        button:hover:not(:disabled) {
+            background-image: linear-gradient(to bottom, #70c075, #508c54);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.45);
+            transform: translateY(-2px);
+        }
+        button:active {
+            background-image: linear-gradient(to bottom, #407c44, #60b065);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+            transform: translateY(0px);
+        }
+        button.selected {
+            background-image: linear-gradient(to bottom, #f7b733, #f4a01e);
+            border-color: #c8800f;
+            box-shadow: 0 0 10px #ffc107, inset 0 1px 3px rgba(255,255,255,0.4);
+        }
+        button:disabled {
+            background-image: linear-gradient(to bottom, #888, #666);
+            border-color: #444;
+            color: #aaa;
+            cursor: not-allowed;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.25);
+            transform: translateY(0);
+            text-shadow: none;
+        }
+        #infoPanel p {
+            margin: 6px 0;
+            font-size: 15px;
+            font-weight: 500;
+        }
+        #infoPanel p span {
+            color: #77dd77;
+            font-weight: bold;
+        }
+
+        .tower-description {
+            font-size: 0.85em;
+            color: #bbb;
+            margin-top: -5px;
+            margin-bottom: 8px;
+            text-align: center;
+            min-height: 30px;
+        }
+
+        #selectedTowerInfo p {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        #selectedTowerInfo .stat-label { color: #b0b0b0; }
+        #selectedTowerInfo .stat-value { color: #f0f0f0; font-weight: bold;}
+
+        #upgradeButton {
+             background-image: linear-gradient(to bottom, #5bc0de, #31b0d5);
+             border-color: #269abc;
+        }
+         #upgradeButton:hover:not(:disabled) {
+            background-image: linear-gradient(to bottom, #70cdec, #46b8da);
+         }
+          #sellButton {
+             background-image: linear-gradient(to bottom, #f0ad4e, #ec971f);
+             border-color: #d58512;
+             margin-top: 10px;
+         }
+          #sellButton:hover:not(:disabled) {
+            background-image: linear-gradient(to bottom, #f3bd60, #f0a53a);
+         }
+
+        #gameOverScreen, #victoryScreen, #levelSelectionScreen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.88);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 1000;
+            text-align: center;
+        }
+        #gameOverScreen h1, #victoryScreen h1 { font-size: 3.5em; margin-bottom: 25px; color: #ff4d4d; text-shadow: 2px 2px 4px black;}
+        #victoryScreen h1 { color: #4dff4d; }
+        #levelSelectionScreen h1 { font-size: 3em; color: #ffc107; margin-bottom: 30px; }
+
+        #gameOverScreen button, #victoryScreen button, #levelSelectionScreen button.level-button-nav {
+            width: auto; padding: 15px 30px; font-size: 1.2em; margin-top:20px;
+        }
+        #levelSelectionScreen .level-button-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            max-width: 700px;
+        }
+         #levelSelectionScreen .level-button {
+            width: 90px; height: 90px;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: linear-gradient(to bottom, #4a90e2, #2d72c2);
+            border-color: #1e58a0;
+        }
+        #levelSelectionScreen .level-button:disabled {
+             background-image: linear-gradient(to bottom, #777, #555);
+             border-color: #444;
+             color: #999;
+        }
+        #levelSelectionScreen .level-button:hover:not(:disabled) {
+             background-image: linear-gradient(to bottom, #5aaeff, #3d82d2);
+        }
+        .modal { display: none; }
+
+        .tower-shop-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            background-color: rgba(255,255,255,0.05);
+            border: 1px solid transparent;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .tower-shop-item:hover:not(.disabled) {
+            background-color: rgba(255,255,255,0.1);
+            border-color: #ffc107;
+        }
+        .tower-shop-item.selected {
+            background-color: rgba(240,173,78,0.3);
+            border-color: #f0ad4e;
+        }
+        .tower-shop-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+             background-color: rgba(0,0,0,0.1);
+        }
+        .tower-shop-icon {
+            width: 30px; height: 30px; margin-right: 12px;
+            border: 1px solid #777;
+            display: flex; align-items: center; justify-content: center;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .tower-shop-details {
+            font-size: 0.9em;
+        }
+        .tower-shop-name { font-weight: bold; color: #eee; }
+        .tower-shop-cost { color: #9fdf9f; }
+    </style>
+</head>
+<body>
+    <h1 id="gameTitle">Blónky tm</h1>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="uiPanel">
+            <div class="ui-section" id="infoPanel">
+                <h3>Informace o hře</h3>
+                <p>Peníze: <span id="money">0</span></p>
+                <p>Životy: <span id="lives">0</span></p>
+                <p>Vlna: <span id="wave">0</span> / <span id="totalWaves">0</span></p>
+                <p>Skóre: <span id="score">0</span></p>
+            </div>
+
+            <div class="ui-section">
+                <button id="startWaveButton">Spustit vlnu</button>
+                <button id="fastForwardButton">Zrychlit (1x)</button>
+            </div>
+
+            <div class="ui-section" id="towerControlSection">
+                <div id="towerShopContainer">
+                    <h3>Věže</h3>
+                    <div id="towerShop"></div>
+
+                </div>
+                 <div id="selectedTowerContainer" style="display:none;">
+                     <div id="selectedTowerInfoContainer">
+                        <h3 id="selectedTowerName">Vybraná věž</h3>
+                        <div id="selectedTowerInfo"></div>
+                     </div>
+                    <button id="upgradeButton" disabled>Vylepšit</button>
+                    <p id="upgradeDescription" style="font-size:0.8em; color:#ccc; text-align:center; margin-top:-5px; margin-bottom:8px;"></p>
+                    <button id="sellButton">Prodat věž</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="levelSelectionScreen" class="modal">
+        <h1>Vyber úroveň</h1>
+        <div class="level-button-container">
+        </div>
+    </div>
+
+    <div id="gameOverScreen" class="modal">
+        <h1>Konec hry!</h1>
+        <p>Dostali jste se do vlny <span id="finalWaveGO"></span>.</p>
+        <p>Konečné skóre: <span id="finalScoreGO"></span>.</p>
+        <button id="restartButtonGO" class="level-button-nav">Hrát znovu</button>
+    </div>
+
+    <div id="victoryScreen" class="modal">
+        <h1>Vítězství!</h1>
+        <p>Dokončili jste všech <span id="completedWavesV"></span> vln!</p>
+        <p>Konečné skóre: <span id="finalScoreV"></span>.</p>
+        <button id="nextLevelButtonV" class="level-button-nav" style="display:none;">Další úroveň</button>
+        <button id="restartButtonV" class="level-button-nav">Hrát znovu</button>
+    </div>
+
+    <script>
+        const GAME_BALANCE_CONFIG = {
+            // ECONOMY SETTINGS
+            WAVE_BONUS_MONEY_BASE: 80, // Base money per wave (Reduced)
+            WAVE_BONUS_MONEY_PER_WAVE: 10, // Extra money per wave number (Reduced)
+            TOWER_SELL_PERCENTAGE: 0.75, // Sell price = total cost * this (Slightly reduced)
+            TOWER_COST_INCREASE_PER_PURCHASE_FACTOR: 0.18, // Each purchase increases next cost by base_cost * this (Slightly increased)
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const moneyDisplay = document.getElementById('money');
+        const livesDisplay = document.getElementById('lives');
+        const waveDisplay = document.getElementById('wave');
+        const totalWavesDisplay = document.getElementById('totalWaves');
+        const scoreDisplay = document.getElementById('score');
+        const startWaveButton = document.getElementById('startWaveButton');
+        const fastForwardButton = document.getElementById('fastForwardButton');
+
+        const towerControlSection = document.getElementById('towerControlSection');
+        const towerShopContainer = document.getElementById('towerShopContainer');
+        const selectedTowerContainer = document.getElementById('selectedTowerContainer');
+        const towerShopDiv = document.getElementById('towerShop');
+
+        const selectedTowerNameH3 = document.getElementById('selectedTowerName');
+        const selectedTowerInfoContainer = document.getElementById('selectedTowerInfoContainer');
+        const selectedTowerInfoDiv = document.getElementById('selectedTowerInfo');
+        const upgradeButton = document.getElementById('upgradeButton');
+        const upgradeDescriptionP = document.getElementById('upgradeDescription');
+        const sellButton = document.getElementById('sellButton');
+
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const victoryScreen = document.getElementById('victoryScreen');
+        const levelSelectionScreen = document.getElementById('levelSelectionScreen');
+        const finalWaveGODisplay = document.getElementById('finalWaveGO');
+        const finalScoreGODisplay = document.getElementById('finalScoreGO');
+        const finalScoreVDisplay = document.getElementById('finalScoreV');
+        const completedWavesVDisplay = document.getElementById('completedWavesV');
+        const nextLevelButtonV = document.getElementById('nextLevelButtonV');
+
+        let money = 0;
+        let lives = 0;
+        let currentWaveNumber = 0;
+        let score = 0;
+        let balloons = [];
+        let towers = [];
+        let projectiles = [];
+        let particles = [];
+        let environmentalParticles = [];
+        let currentLevelDecorations = [];
+        let selectedTowerType = null;
+        let selectedTower = null;
+        let placingTower = null;
+        let gameRunning = false;
+        let waveInProgress = false;
+        let currentLevelData = null;
+        let currentLevelIndex = -1;
+        let path = [];
+        let gameSpeed = 1;
+        let animationFrameId;
+        let maxLevelUnlocked = 0;
+
+        const screenShake = {
+            trauma: 0,
+            traumaDecay: 0.02,
+            maxShakeMagnitude: 15,
+            offsetX: 0,
+            offsetY: 0
+        };
+
+        function addScreenShake(amount) {
+            screenShake.trauma = Math.min(1, screenShake.trauma + amount);
+        }
+
+        const SoundManager = {
+            ctx: null,
+            soundsEnabled: true,
+            noiseBuffer: null,
+
+            init() {
+                if (this.ctx || !this.soundsEnabled) return;
+                try {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const bufferSize = this.ctx.sampleRate * 0.5;
+                    this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const output = this.noiseBuffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        output[i] = Math.random() * 2 - 1;
+                    }
+                } catch (e) {
+                    this.soundsEnabled = false;
+                }
+            },
+
+            playSound(options = {}) {
+                if (!this.ctx || !this.soundsEnabled) return;
+
+                const defaults = {
+                    type: 'sine',
+                    frequency: 440,
+                    volume: 1,
+                    attack: 0.005,
+                    sustain: 0,
+                    decay: 0.05,
+                    pitchBendAmount: 0,
+                    pitchBendSeconds: 0.05,
+                    pan: 0,
+                    randomVariation: 0
+                };
+                const settings = { ...defaults, ...options };
+
+                const now = this.ctx.currentTime;
+                const gainNode = this.ctx.createGain();
+                const pannerNode = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+
+                if (pannerNode) {
+                    pannerNode.pan.setValueAtTime(settings.pan, now);
+                    gainNode.connect(pannerNode);
+                    pannerNode.connect(this.ctx.destination);
+                } else {
+                    gainNode.connect(this.ctx.destination);
+                }
+
+                let actualFreq = settings.frequency;
+                let actualVol = settings.volume;
+
+                if (settings.randomVariation > 0) {
+                    actualFreq += (Math.random() * 2 - 1) * settings.randomVariation * settings.frequency;
+                    actualVol += (Math.random() * 2 - 1) * settings.randomVariation * settings.volume;
+                    actualVol = Math.max(0, Math.min(1, actualVol));
+                }
+
+
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(actualVol, now + settings.attack);
+
+                if (settings.sustain > 0) {
+                    gainNode.gain.setValueAtTime(actualVol, now + settings.attack + settings.sustain);
+                    gainNode.gain.linearRampToValueAtTime(0, now + settings.attack + settings.sustain + settings.decay);
+                } else {
+                    gainNode.gain.linearRampToValueAtTime(0, now + settings.attack + settings.decay);
+                }
+
+                if (settings.type === 'noise') {
+                    const noiseSource = this.ctx.createBufferSource();
+                    noiseSource.buffer = this.noiseBuffer;
+                    noiseSource.loop = true;
+                    noiseSource.connect(gainNode);
+                    noiseSource.start(now);
+                    noiseSource.stop(now + settings.attack + settings.sustain + settings.decay + 0.01);
+                } else {
+                    const oscillator = this.ctx.createOscillator();
+                    oscillator.type = settings.type;
+                    oscillator.frequency.setValueAtTime(actualFreq, now);
+                    if (settings.pitchBendAmount !== 0) {
+                        oscillator.frequency.linearRampToValueAtTime(actualFreq + settings.pitchBendAmount, now + settings.pitchBendSeconds);
+                    }
+                    oscillator.connect(gainNode);
+                    oscillator.start(now);
+                    oscillator.stop(now + settings.attack + settings.sustain + settings.decay + 0.01);
+                }
+            },
+
+            playPop(balloonType) {
+                let opts = { volume: 0.25, attack: 0.001, decay: 0.05, randomVariation: 0.05 };
+                let baseType = balloonType.replace('Camo','').replace('Regrow','');
+
+                if (baseType === 'Red') { opts = {...opts, frequency: 1200 + Math.random()*100, type: 'triangle', decay: 0.03 }; }
+                else if (baseType === 'Blue') { opts = {...opts, frequency: 1000 + Math.random()*80, type: 'triangle', decay: 0.04 }; }
+                else if (baseType === 'Green') { opts = {...opts, frequency: 900 + Math.random()*60, type: 'square', decay: 0.05 }; }
+                else if (baseType === 'Yellow') { opts = {...opts, frequency: 750 + Math.random()*50, type: 'square', decay: 0.06 }; }
+                else if (baseType === 'Pink') { opts = {...opts, frequency: 650 + Math.random()*50, type: 'sawtooth', decay: 0.07 }; }
+                else if (baseType === 'Black' || baseType === 'White' || baseType === 'Zebra') {
+                    this.playSound({ type: 'square', frequency: 400 + Math.random()*50, volume: 0.2, attack: 0.002, decay: 0.08, pitchBendAmount: -100, pitchBendSeconds: 0.05 });
+                    this.playSound({ type: 'noise', volume: 0.1, attack: 0.005, decay: 0.06 });
+                    return;
+                }
+                else if (baseType === 'Lead') {
+                    this.playSound({ type: 'square', frequency: 300, volume: 0.3, attack: 0.001, decay: 0.1, pitchBendAmount: 50, pitchBendSeconds: 0.02});
+                    this.playSound({ type: 'noise', frequency: 5000, volume: 0.05, attack: 0.001, decay: 0.05});
+                    return;
+                }
+                else if (baseType === 'Rainbow') {
+                    for (let i = 0; i < 3; i++) {
+                         this.playSound({ type: ['triangle','square'][i%2], frequency: 600 + i*150 + Math.random()*100, volume: 0.15, attack:0.001, decay: 0.08, randomVariation: 0.1});
+                    }
+                    return;
+                }
+                 else if (baseType.match(/MOAB|BFB|ZOMG/)) {
+                    this.playSound({ type: 'sawtooth', frequency: 80, volume: 0.5, attack: 0.01, sustain: 0.1, decay: 0.3, pitchBendAmount: -30, pitchBendSeconds: 0.2 });
+                    this.playSound({ type: 'noise', volume: 0.3, attack: 0.02, sustain: 0.05, decay: 0.25 });
+                    if (baseType === 'ZOMG') this.playSound({ type: 'square', frequency: 60, volume: 0.4, attack: 0.05, sustain: 0.15, decay: 0.3});
+                    addScreenShake(baseType === 'ZOMG' ? 0.6 : (baseType === 'BFB' ? 0.4 : 0.25));
+                    return;
+                }
+                else if (baseType === 'Ceramic') {
+                    this.playSound({ type: 'square', frequency: 250, volume: 0.35, attack:0.005, decay: 0.1, pitchBendAmount: -80, pitchBendSeconds:0.08 });
+                    this.playSound({ type: 'noise', volume: 0.2, attack: 0.001, decay: 0.08 });
+                    return;
+                }
+                this.playSound(opts);
+            },
+            playShot(towerType){
+                let opts = { volume: 0.15, attack: 0.001, decay: 0.04, randomVariation: 0.03 };
+                if(towerType === 'DartMonkey' || towerType === 'FastDartMonkey' ) {
+                    opts = {...opts, type: 'triangle', frequency: 800 + Math.random()*100, decay: 0.03, pitchBendAmount: -150, pitchBendSeconds: 0.03};
+                }
+                if(towerType === 'HeavyDartMonkey') {
+                    opts = {...opts, type: 'square', frequency: 500 + Math.random()*50, volume: 0.2, decay: 0.06, pitchBendAmount: -100, pitchBendSeconds: 0.05};
+                }
+                if(towerType === 'TackShooter') {
+                    for(let i=0; i<4; i++) {
+                        setTimeout(() => this.playSound({ type: 'triangle', frequency: 1000 + Math.random()*200, volume:0.07, attack:0.001, decay:0.02, pitchBendAmount: -200, pitchBendSeconds: 0.02}), i * 8);
+                    }
+                    return;
+                }
+                if(towerType === 'BombTower') {
+                    this.playSound({ type: 'sine', frequency: 150, volume: 0.3, attack: 0.01, decay: 0.15, pitchBendAmount: -80, pitchBendSeconds: 0.1 });
+                    this.playSound({ type: 'noise', volume: 0.1, attack: 0.005, decay: 0.1 });
+                    addScreenShake(0.05);
+                    return;
+                }
+                if(towerType === 'SuperMonkey') {
+                    opts = {...opts, type: 'sawtooth', frequency: 1200 + Math.random()*150, volume: 0.1, decay: 0.02, pitchBendAmount: 100, pitchBendSeconds: 0.015};
+                }
+                if(towerType === 'SniperMonkey') {
+                    this.playSound({ type: 'noise', volume: 0.4, attack: 0.001, decay: 0.05 });
+                    this.playSound({ type: 'sine', frequency: 200, volume: 0.2, attack: 0.001, decay: 0.08, pitchBendAmount: -100 });
+                    return;
+                }
+                if(towerType === 'WizardMonkey') {
+                    opts = {...opts, type: 'sine', frequency: 700 + Math.random()*100, volume: 0.18, decay: 0.07, pitchBendAmount: Math.random() > 0.5 ? 100: -100, pitchBendSeconds: 0.06};
+                     this.playSound({ type: 'triangle', frequency: (700 + Math.random()*100)*1.5, volume: 0.08, attack:0.005, decay: 0.05});
+                }
+                if(towerType === 'GlueGunner') {
+                    this.playSound({ type: 'noise', volume: 0.15, attack: 0.02, sustain: 0.03, decay: 0.1});
+                    this.playSound({ type: 'sine', frequency: 300, volume: 0.1, attack: 0.01, decay: 0.1, pitchBendAmount: -100, pitchBendSeconds: 0.08});
+                    return;
+                }
+                 if(towerType === 'SpikeFactory'){
+                    this.playSound({type: 'square', frequency: 200, volume: 0.2, attack: 0.002, decay: 0.08});
+                    this.playSound({type: 'noise', volume: 0.1, attack: 0.001, decay: 0.05});
+                    return;
+                 }
+                this.playSound(opts);
+            },
+            playExplosion() {
+                this.playSound({type: 'noise', volume: 0.5, attack: 0.01, sustain: 0.05, decay: 0.3});
+                this.playSound({type: 'sawtooth', frequency: 60, volume: 0.4, attack: 0.01, sustain: 0.08, decay: 0.25, pitchBendAmount: -20, pitchBendSeconds: 0.2});
+                this.playSound({type: 'triangle', frequency: 1000, volume: 0.2, attack: 0.001, decay: 0.1, pitchBendAmount: 500, pitchBendSeconds: 0.05});
+                addScreenShake(0.2);
+            },
+            playIceFreeze() {
+                this.playSound({type: 'sine', frequency: 1500, volume: 0.25, attack:0.05, sustain: 0.1, decay:0.2, pitchBendAmount: 300, pitchBendSeconds: 0.1});
+                this.playSound({type: 'noise', volume: 0.1, attack: 0.08, sustain: 0.05, decay: 0.15});
+                for (let i = 0; i < 3; i++) {
+                    this.playSound({type: 'triangle', frequency: 2000 + Math.random()*500, volume: 0.08, attack: 0.001, decay: 0.05 + Math.random()*0.05, pitchBendAmount: 200, pitchBendSeconds: 0.03})
+                }
+            },
+            playUIConfirm() {
+                this.playSound({type: 'sine', frequency: 800, volume: 0.2, attack: 0.001, decay:0.08, pitchBendAmount: 200, pitchBendSeconds: 0.05});
+            },
+            playUISelect() {
+                this.playSound({type: 'triangle', frequency: 1200, volume: 0.15, attack: 0.001, decay:0.05});
+            },
+            playSell() {
+                this.playSound({type: 'sine', frequency: 900, volume: 0.3, attack: 0.005,decay:0.1});
+                setTimeout(() => this.playSound({type: 'sine', frequency: 1300, volume: 0.3, attack: 0.005, decay:0.12}), 70);
+            },
+            playNoMoney() {
+                this.playSound({type: 'square', frequency: 200, volume: 0.2, attack: 0.001, decay:0.1, pitchBendAmount: -50, pitchBendSeconds: 0.08 });
+            },
+             playTowerPlace() {
+                this.playSound({type: 'triangle', frequency: 600, volume:0.3, attack:0.002, decay: 0.1, pitchBendAmount: 100, pitchBendSeconds:0.05});
+                this.playSound({type: 'noise', volume: 0.05, attack: 0.01, decay: 0.08});
+            },
+            playUpgrade() {
+                this.playSound({ type: 'sawtooth', frequency: 500, volume: 0.25, attack: 0.01, decay: 0.15, pitchBendAmount: 300, pitchBendSeconds: 0.1 });
+                this.playSound({ type: 'sine', frequency: 1000, volume: 0.15, attack: 0.005, decay: 0.1, pitchBendAmount: 200, pitchBendSeconds: 0.05 });
+                addScreenShake(0.08);
+            }
+        };
+
+        document.body.addEventListener('click', () => SoundManager.init(), { once: true });
+
+
+        const RBE_VALUES = {
+            Red: 1, Blue: 2, Green: 3, Yellow: 4, Pink: 5,
+            Black: 11, White: 11, Lead: 23, Zebra: 23, Rainbow: 47,
+            Ceramic: 104, MOAB: 616, BFB: 3164, ZOMG: 16656,
+            Camo: 0,
+            Regrow: 0
+        };
+
+        class Particle {
+            constructor(x, y, color, size, speed, angle, life, type = 'default', options = {}) {
+                this.x = x;
+                this.y = y;
+                this.origX = x;
+                this.origY = y;
+                this.color = color;
+                this.size = size;
+                this.life = life;
+                this.initialLife = life;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.type = type;
+                this.alpha = options.alphaStart || 1;
+                this.rotation = options.rotationStart || 0;
+                this.rotationSpeed = options.rotationSpeed || 0;
+                this.gravity = options.gravity || ( (this.type === 'smoke' || this.type === 'shard' || this.type === 'confetti' || this.type === 'ember' || this.type==='leaf' || this.type==='ash' || this.type === 'dust_mote') ? 0.05 : 0);
+                this.fadeRate = options.fadeRate || (1 / life);
+                this.sizeDecay = options.sizeDecay || ( (this.type === 'spark') ? 0.95 : 1);
+                this.waveAmplitude = options.waveAmplitude || 0;
+                this.waveFrequency = options.waveFrequency || 0;
+                this.age = 0;
+            }
+
+            update() {
+                this.age += 1 * gameSpeed;
+                this.x += this.vx * gameSpeed;
+                this.y += this.vy * gameSpeed;
+                this.vy += this.gravity * gameSpeed;
+
+                if(this.waveAmplitude > 0) {
+                    this.x = this.origX + this.age * this.vx + Math.sin(this.age * this.waveFrequency * gameSpeed) * this.waveAmplitude;
+                     this.y = this.origY + this.age * this.vy + Math.cos(this.age * this.waveFrequency * 0.7 * gameSpeed) * this.waveAmplitude * 0.5;
+                }
+
+                if(this.type==='leaf' || this.type==='ash'){ this.vx += (Math.random()-0.5)*0.1 * gameSpeed; this.vy *= (1- (0.02*gameSpeed));}
+
+
+                this.life -= 1 * gameSpeed;
+                this.alpha -= this.fadeRate * gameSpeed;
+                this.size *= (1-(1-this.sizeDecay)*gameSpeed);
+
+                if (this.rotationSpeed !== 0) {
+                    this.rotation += this.rotationSpeed * gameSpeed;
+                }
+                if(this.type === 'coin') this.vy += 0.2 * gameSpeed;
+            }
+
+            draw(ctx) {
+                if (this.alpha <= 0 || this.size <= 0.1) return;
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                if (this.type === 'spark') {
+                    ctx.beginPath();
+                    ctx.arc(0,0, Math.max(0.1, this.size), 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 5 + Math.random()*3; ctx.shadowColor = this.color; ctx.fill(); ctx.shadowBlur = 0;
+                } else if (this.type === 'shard'){
+                    ctx.beginPath();
+                    ctx.moveTo(0, -this.size * 0.8);
+                    ctx.lineTo(this.size * 0.6, this.size * 0.5);
+                    ctx.lineTo(-this.size * 0.6, this.size * 0.5);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.type === 'coin'){
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'gold';
+                    ctx.font = `${this.size*1.5}px Arial Black`;
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText('$',0,0);
+                } else if (this.type === 'banana'){
+                    ctx.fillStyle = 'yellow';
+                    ctx.beginPath();
+                    ctx.ellipse(0,0, this.size * 0.5, this.size, Math.PI/6, 0, Math.PI*2);
+                    ctx.fill();
+                    ctx.fillStyle = 'brown';
+                    ctx.fillRect(-this.size*0.1, -this.size, this.size*0.2, this.size*0.2);
+                } else if (this.type === 'leaf'){
+                    ctx.beginPath();
+                    ctx.ellipse(0,0, this.size, this.size/2, Math.PI/4 + Math.sin(this.age*0.1)*0.2, 0, Math.PI*2);
+                    ctx.fill();
+                } else if (this.type === 'confetti'){
+                     ctx.fillRect(-this.size / 2, -this.size / 4, this.size, this.size / 2);
+                } else if (this.type === 'dust_mote' || this.type === 'ember' || this.type === 'ash'){
+                    ctx.beginPath();
+                    ctx.arc(0, 0, Math.max(0.1, this.size), 0, Math.PI*2);
+                    ctx.fill();
+                }
+                else {
+                    ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                }
+                ctx.restore();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+
+        function createBurstParticles(x, y, count, baseColor, sizeRange, speedRange, lifeRange, particleType = 'default', particleOptions = {}) {
+            for (let i = 0; i < count; i++) {
+                const angle = particleOptions.angleRange ? (particleOptions.angleRange[0] + Math.random()*(particleOptions.angleRange[1]-particleOptions.angleRange[0])) : (Math.random() * Math.PI * 2);
+                const speed = speedRange[0] + Math.random() * (speedRange[1] - speedRange[0]);
+                const size = sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]);
+                const life = lifeRange[0] + Math.random() * (lifeRange[1] - lifeRange[0]);
+
+                let color = baseColor;
+                if (typeof baseColor === 'function') color = baseColor();
+
+                particles.push(new Particle(x, y, color, size, speed, angle, life, particleType, particleOptions));
+            }
+        }
+
+        const balloonTypes = {
+            Red:    { health: 1, speed: 0.20, color: 'red', size: 10, children: null, immune: [] },
+            Blue:   { health: 1, speed: 0.25, color: 'blue', size: 11, children: ['Red'], immune: [] },
+            Green:  { health: 1, speed: 0.28, color: 'green', size: 12, children: ['Blue'], immune: [] },
+            Yellow: { health: 1, speed: 0.50, color: 'yellow', size: 13, children: ['Green'], immune: [] },
+            Pink:   { health: 1, speed: 0.56, color: 'pink', size: 14, children: ['Yellow'], immune: [] },
+            Black:  { health: 1, speed: 0.28, color: 'black', size: 12, children: ['Pink', 'Pink'], immune: ['explosion'] },
+            White:  { health: 1, speed: 0.32, color: 'white', size: 12, children: ['Pink', 'Pink'], immune: ['freeze'] },
+            Lead:   { health: 1, speed: 0.16, color: 'grey', size: 15, children: ['Black', 'Black'], immune: ['sharp'], isLead: true },
+            Zebra:  { health: 1, speed: 0.28, color: 'pattern', pattern: ['black', 'white'], size: 13, children: ['Black', 'White'], immune: [] },
+            Rainbow:{ health: 1, speed: 0.36, color: 'rainbow', size: 14, children: ['Zebra', 'Zebra'], immune: [] },
+            Ceramic:{ health: 7, speed: 0.38, color: '#a52a2a', size: 16, children: ['Rainbow', 'Rainbow'], immune: [], isCeramic: true, visualHealth: 3, ceramicCrackColors: ['#b54a4a', '#c56a6a', '#d58a8a', '#e5aaaa'] },
+            MOAB:   { health: 120, speed: 0.11, color: '#4682B4', outerColor: '#ADD8E6', size: 30, children: ['Ceramic','Ceramic','Ceramic','Ceramic'], immune: [], isMoab: true, name: "MOAB" },
+            BFB:    { health: 450, speed: 0.07, color: '#FF6347', outerColor: '#FFA07A', size: 40, children: ['MOAB','MOAB','MOAB','MOAB'], immune: [], isMoab: true, name: "BFB" },
+            ZOMG:   { health: 2500, speed: 0.035, color: '#006400', outerColor: '#8FBC8F', size: 50, children: ['BFB','BFB','BFB','BFB'], immune: [], isMoab: true, name: "ZOMG" },
+        };
+
+        class Balloon {
+            constructor(type, x, y, path) {
+                let baseType = type;
+                let isCamoBalloon = false;
+                let isRegrowBalloon = false;
+
+                if (type.startsWith('Camo')) {
+                    isCamoBalloon = true;
+                    baseType = type.substring(4);
+                     if (baseType.startsWith('Regrow')) {
+                        isRegrowBalloon = true;
+                        baseType = baseType.substring(6);
+                    }
+                } else if (type.startsWith('Regrow')) {
+                    isRegrowBalloon = true;
+                    baseType = type.substring(6);
+                    if (baseType.startsWith('Camo')) {
+                        isCamoBalloon = true;
+                        baseType = baseType.substring(4);
+                    }
+                }
+
+                const definition = balloonTypes[baseType] || balloonTypes.Red;
+
+                this.type = type;
+                this.baseType = baseType;
+                Object.assign(this, definition);
+
+                this.x = x;
+                this.y = y;
+                this.path = path;
+                this.pathIndex = 0;
+                this.currentHealth = this.health;
+                this.maxHealth = this.health;
+                this.distanceTraveled = 0;
+                this.effects = {};
+                this.moabDamageVisuals = [];
+
+                if (isCamoBalloon) this.isCamo = true;
+                if (isRegrowBalloon) this.isRegrow = true;
+
+                if(this.isRegrow) this.regrowRate = balloonTypes[this.baseType]?.regrowRate || 150;
+
+
+                if (this.children && (this.isCamo || this.isRegrow)) {
+                    this.children = this.children.map(child => {
+                        let newChildType = child;
+                        if (this.isRegrow && !newChildType.startsWith("Regrow") && !newChildType.startsWith("CamoRegrow")) {
+                             newChildType = "Regrow" + newChildType;
+                        }
+                        if (this.isCamo && !newChildType.startsWith("Camo") && !(newChildType.startsWith("RegrowCamo"))) {
+                            newChildType = "Camo" + newChildType;
+                        }
+                        return newChildType;
+                    });
+                }
+            }
+
+            move() {
+                if (this.pathIndex >= this.path.length -1) return true;
+
+                let currentSpeed = this.speed;
+                if(this.effects.glue) currentSpeed *= (this.effects.glue.strength || 0.5);
+                if(this.effects.freeze) currentSpeed = 0;
+
+
+                const target = this.path[this.pathIndex + 1];
+                const dx = target.x - this.x;
+                const dy = target.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (currentSpeed > 0 && distance < currentSpeed * gameSpeed) {
+                    this.x = target.x;
+                    this.y = target.y;
+                    this.pathIndex++;
+                } else if (currentSpeed > 0) {
+                    this.x += (dx / distance) * currentSpeed * gameSpeed;
+                    this.y += (dy / distance) * currentSpeed * gameSpeed;
+                }
+                if (currentSpeed > 0) this.distanceTraveled += currentSpeed * gameSpeed;
+
+
+                if(this.isRegrow && this.currentHealth < this.maxHealth) {
+                    this.regrowTimer = (this.regrowTimer || 0) + (1 * gameSpeed);
+                    if(this.regrowTimer >= (this.regrowRate || 150) ){
+                        this.currentHealth = Math.min(this.currentHealth +1, this.maxHealth);
+                        this.regrowTimer = 0;
+                        createBurstParticles(this.x, this.y, 3, () => 'rgba(128,0,128,0.7)', [2,4], [0.5,1], [15,25], 'spark');
+                    }
+                }
+
+                Object.keys(this.effects).forEach(effectKey => {
+                    this.effects[effectKey].duration -= 1 * gameSpeed;
+                    if(this.effects[effectKey].duration <=0) delete this.effects[effectKey];
+                });
+                return false;
+            }
+
+            applyEffect(type, duration, strength = 1) {
+                if (this.baseType === 'ZOMG' && (type === 'glue' || type === 'freeze')) return;
+                this.effects[type] = { duration, strength };
+                 if(type === 'glue') {
+                    createBurstParticles(this.x, this.y, 8, () => 'rgba(255,215,0,0.6)', [4,7], [0.2,0.6], [25,35], 'default', {gravity:0.02});
+                }
+            }
+
+            takeDamage(amount, type) {
+                if (this.immune.includes(type)) return 0;
+                if (this.isLead && type === 'sharp') {
+                    SoundManager.playSound({type: 'triangle', frequency: 1800, volume: 0.1, attack: 0.001, decay: 0.05});
+                    createBurstParticles(this.x, this.y, 5, () => 'silver', [1,3], [0.8,1.5], [10,20], 'spark');
+                    return 0;
+                }
+                if (this.isMoab && amount > 0) {
+                     createBurstParticles(this.x + (Math.random()-0.5)*this.size, this.y + (Math.random()-0.5)*this.size,
+                                          Math.min(5,Math.ceil(amount/10)), () => ['#555','#777','orange'][Math.floor(Math.random()*3)], [2,4], [0.5,1.5], [15,30], 'smoke');
+                    const damagePercentage = amount / this.maxHealth;
+                    if(damagePercentage > 0.05 && this.moabDamageVisuals.length < 5) {
+                        this.moabDamageVisuals.push({
+                            x: (Math.random() - 0.5) * this.size * 0.6,
+                            y: (Math.random() - 0.5) * this.size * 0.4,
+                            size: Math.random() * this.size * 0.1 + this.size * 0.05,
+                            angle: Math.random() * Math.PI
+                        });
+                    }
+                }
+
+
+                this.currentHealth -= amount;
+                return amount;
+            }
+
+            getDrawColor() {
+                 if (this.isCeramic) {
+                    const healthRatio = this.currentHealth / this.maxHealth;
+                    const crackCount = Math.floor((1 - healthRatio) * 3);
+                    if (crackCount >= 3) return this.ceramicCrackColors[3];
+                    if (crackCount >= 2) return this.ceramicCrackColors[2];
+                    if (crackCount >= 1) return this.ceramicCrackColors[1];
+                 }
+                return this.color;
+            }
+
+             draw(ctx) {
+                 const drawColor = this.getDrawColor();
+                 const baseRadius = this.size;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                 if (this.baseType === 'Zebra') {
+                     ctx.fillStyle = 'white';
+                     ctx.beginPath(); ctx.arc(0, 0, baseRadius, 0, Math.PI * 2); ctx.fill();
+                     ctx.fillStyle = 'black';
+                     for(let i=0; i < 6; i++){
+                         ctx.beginPath();
+                         ctx.arc(0, 0, baseRadius, i * Math.PI / 3, (i+0.5) * Math.PI / 3);
+                         ctx.lineTo(0,0);
+                         ctx.closePath();
+                         ctx.fill();
+                     }
+
+                } else if (this.baseType === 'Rainbow') {
+                    const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
+                    const angleStep = Math.PI * 2 / colors.length;
+                     for (let i = 0; i < colors.length; i++) {
+                        ctx.fillStyle = colors[i];
+                        ctx.beginPath();
+                        ctx.moveTo(0,0);
+                        ctx.arc(0, 0, baseRadius, i * angleStep, (i + 1) * angleStep);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                } else if (this.isMoab) {
+                    const bodyWidth = baseRadius * 1.6;
+                    const bodyHeight = baseRadius * 0.9;
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath(); ctx.ellipse(0, 0, bodyWidth / 2, bodyHeight / 2, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = this.outerColor;
+                    ctx.beginPath(); ctx.ellipse(0, 0, bodyWidth / 2 * 0.7, bodyHeight / 2 * 0.8, 0, 0, Math.PI * 2); ctx.fill();
+
+                    ctx.fillStyle = '#555';
+                    ctx.beginPath(); ctx.rect(0 - bodyWidth * 0.2, 0 + bodyHeight * 0.3, bodyWidth * 0.4, bodyHeight * 0.25); ctx.fill();
+                    ctx.fillStyle = '#888';
+                    ctx.beginPath(); ctx.rect(0 - bodyWidth * 0.18, 0 + bodyHeight * 0.32, bodyWidth * 0.36, bodyHeight * 0.21); ctx.fill();
+
+                    ctx.fillStyle = '#666';
+                    ctx.beginPath(); ctx.moveTo(0 + bodyWidth * 0.3, 0 - bodyHeight * 0.1); ctx.lineTo(0 + bodyWidth * 0.5, 0 - bodyHeight * 0.4); ctx.lineTo(0 + bodyWidth * 0.5, 0); ctx.closePath(); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(0 + bodyWidth * 0.3, 0 + bodyHeight * 0.1); ctx.lineTo(0 + bodyWidth * 0.5, 0 + bodyHeight * 0.4); ctx.lineTo(0 + bodyWidth * 0.5, 0); ctx.closePath(); ctx.fill();
+
+                    this.moabDamageVisuals.forEach(scar => {
+                         ctx.save(); ctx.translate(scar.x, scar.y); ctx.rotate(scar.angle);
+                         ctx.fillStyle = 'rgba(20,20,20,0.7)'; ctx.fillRect(-scar.size/2, -scar.size/8, scar.size, scar.size/4);
+                         ctx.restore();
+                    });
+
+                    if(this.size >=30) {
+                        ctx.fillStyle = 'white'; ctx.font = `bold ${baseRadius * 0.3}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                        ctx.shadowColor = "black"; ctx.shadowBlur = 3; ctx.shadowOffsetX=1; ctx.shadowOffsetY=1;
+                        ctx.fillText(this.name, 0, 0);
+                        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+                    }
+                    if(this.currentHealth < this.maxHealth && this.currentHealth > 0){
+                        const damageOverlayAlpha = Math.min(0.6, (1 - this.currentHealth/this.maxHealth)*1.5);
+                        ctx.fillStyle = `rgba(150,0,0,${damageOverlayAlpha})`;
+                        ctx.beginPath(); ctx.ellipse(0, 0, bodyWidth / 2, bodyHeight / 2, 0, 0, Math.PI * 2); ctx.fill();
+                         if(Math.random() < 0.02 * gameSpeed) {
+                             createBurstParticles(this.x + (Math.random()-0.5)*bodyWidth*0.3, this.y + (Math.random()-0.5)*bodyHeight*0.3, 1,
+                             () => ['rgba(80,80,80,0.5)', 'rgba(50,50,50,0.6)'][Math.floor(Math.random()*2)], [2,4], [0.1,0.3], [30,60], 'smoke', {gravity:-0.01});
+                         }
+                    }
+
+
+                }
+                else {
+                    ctx.fillStyle = drawColor;
+                    ctx.beginPath(); ctx.arc(0, 0, baseRadius, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.beginPath(); ctx.arc(-baseRadius*0.3, -baseRadius*0.3, baseRadius*0.2, 0, Math.PI*2); ctx.fill();
+
+                    if (this.isCeramic) {
+                        const healthRatio = this.currentHealth / this.maxHealth;
+                        const crackCount = Math.floor((1 - healthRatio) * 4);
+                        ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.lineWidth = 1;
+                        for(let i=0; i<crackCount; i++){
+                             const angle = Math.random() * Math.PI * 2;
+                             const crackLen = baseRadius * (0.4 + Math.random()*0.5);
+                             const startOffset = baseRadius * (0.1 + Math.random()*0.2);
+                             ctx.beginPath();
+                             ctx.moveTo(Math.cos(angle)*startOffset, Math.sin(angle)*startOffset);
+                             ctx.lineTo(Math.cos(angle)*crackLen, Math.sin(angle)*crackLen);
+                             ctx.stroke();
+                        }
+                     }
+                }
+
+                if (this.effects.glue) {
+                    ctx.fillStyle = 'rgba(255,215,0,0.4)';
+                    ctx.beginPath(); ctx.arc(0, 0, baseRadius + 3, 0, Math.PI * 2); ctx.fill();
+                }
+                 if (this.effects.freeze) {
+                    ctx.fillStyle = 'rgba(173,216,230,0.5)';
+                    ctx.beginPath(); ctx.arc(0, 0, baseRadius + 2, 0, Math.PI * 2); ctx.fill();
+                    for(let i=0; i<4; i++) {
+                        ctx.strokeStyle = 'rgba(220,240,255,0.9)'; ctx.lineWidth = 1.5;
+                        ctx.beginPath(); const angle = Math.random() * Math.PI * 2;
+                        ctx.moveTo(Math.cos(angle)*baseRadius*0.7, Math.sin(angle)*baseRadius*0.7);
+                        ctx.lineTo(Math.cos(angle)*baseRadius*1.3, Math.sin(angle)*baseRadius*1.3); ctx.stroke();
+                    }
+                }
+                if (this.effects.slow_after_freeze) {
+                     ctx.fillStyle = 'rgba(100,150,200,0.2)';
+                    ctx.beginPath(); ctx.arc(0, 0, baseRadius + 1, 0, Math.PI * 2); ctx.fill();
+                }
+                 if (this.isCamo) {
+                    ctx.globalAlpha = 0.5 + Math.sin(Date.now()/200)*0.15;
+                    ctx.strokeStyle = 'rgba(0,80,0,0.8)'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 5]);
+                    ctx.beginPath(); ctx.arc(0, 0, baseRadius*1.1, 0, Math.PI*2); ctx.stroke();
+                    ctx.setLineDash([]); ctx.globalAlpha = 1;
+                }
+                 if (this.isRegrow) {
+                    ctx.fillStyle = 'rgba(255,0,0,0.7)';
+                    ctx.beginPath(); const heartSize = baseRadius * 0.35 * (1 + Math.sin(Date.now()/180)*0.25);
+                    ctx.moveTo(0, 0 - heartSize * 0.25);
+                    ctx.bezierCurveTo(0 + heartSize * 0.7, 0 - heartSize * 0.8, 0 + heartSize * 1.2, 0, 0, 0 + heartSize * 0.7);
+                    ctx.bezierCurveTo(0 - heartSize * 1.2, 0, 0 - heartSize * 0.7, 0 - heartSize * 0.8, 0, 0 - heartSize * 0.25);
+                    ctx.fill();
+                }
+                 ctx.restore();
+            }
+        }
+
+        const towerTypes = {
+            DartMonkey: {
+                name: 'Šipková Opice', cost: Math.round(85 * 1.3), range: 130, fireRate: 125, projectileType: 'dart', damage: 1, pierce: 1,
+                color: '#8B4513', monkeySkinColor: '#F5DEB3', projectileColor: '#333333', projectileSize: 3.5, projectileSpeed: 4.5,
+                shape: 'monkey', iconSize: 15, description: "Střílí jednotlivé šipky.", purchaseCount:0,
+                 upgrades: [
+                    { name: "Delší Dosah", cost: Math.round(80 * 1.3 * 1.1), description: "+15 Dosah", applyStats: (tower) => { tower.range += 15; tower.upg1Tint = '#D2B48C'; tower.monkeySkinColor = '#DEB887'; } }, // Pierce removed
+                    { name: "Vylepšený Zrak", cost: Math.round(110 * 1.3), description: "Vidí Maskované, střílí rychleji", applyStats: (tower) => { tower.fireRate = Math.floor(tower.fireRate * 0.85); tower.canSeeCamo=true; tower.color = '#A0522D'; tower.upg2Tint='#FF8C00';} },
+                    { name: "Ostré Šipky", cost: Math.round(180 * 1.3 * 1.4), description: "+1 Poškození", applyStats: (tower) => { tower.damage += 1; tower.projectileColor = '#404040'; tower.upg3Tint = '#FF0000'; } } // Pierce removed
+                 ]
+            },
+             FastDartMonkey: {
+                name: 'Rychlá Šipková Opice', cost: Math.round(125 * 1.3), range: 120, fireRate: 95, projectileType: 'dart', damage: 1, pierce: 1,
+                color: '#778899', monkeySkinColor: '#FFE4B5', projectileColor: '#333', projectileSize: 3, projectileSpeed: 5,
+                shape: 'monkey', iconSize: 14, description: "Rychlejší, ale slabší šipky.", purchaseCount:0,
+                 upgrades: [
+                    { name: "Velmi Rychlé Šipky", cost: Math.round(100 * 1.3), description: "Střílí ještě rychleji", applyStats: (tower) => { tower.fireRate = Math.floor(tower.fireRate * 0.7); tower.color = '#708090'; tower.upg1Tint='#C0C0C0'; } },
+                    { name: "Dvojité Šipky", cost: Math.round(220 * 1.3), description: "Střílí dvě šipky", applyStats: (tower) => { tower.shootsTwo = true; tower.upg2Tint='#D3D3D3';} },
+                    { name: "Aerodynamické Šipky", cost: Math.round(280 * 1.3 * 1.3), description: "+10 Dosah", applyStats: (tower) => { tower.range +=10; tower.projectileSpeed+=0.5; tower.monkeySkinColor = '#FFDAB9'; tower.upg3Tint='#ADD8E6'; } } // Pierce removed
+                 ]
+            },
+            HeavyDartMonkey: {
+                name: 'Těžká Šipková Opice', cost: Math.round(175 * 1.3), range: 110, fireRate: 180, projectileType: 'heavy_dart', damage: 2, pierce: 3,
+                color: '#800000', monkeySkinColor: '#BC8F8F', projectileColor: '#4B0082', projectileSize: 4.5, projectileSpeed: 3.5,
+                shape: 'monkey', iconSize: 16, description: "Pomalejší, silné šipky.", purchaseCount:0,
+                 upgrades: [
+                    { name: "Bodlinaté Šipky", cost: Math.round(180 * 1.3), description: "Prorazí Olovo, +1 Poškození", applyStats: (tower) => { tower.canPopLead = true; tower.damage +=1; tower.color = '#8B0000'; tower.upg1Tint='#DC143C'; } },
+                    { name: "Pancéřové Šipky", cost: Math.round(350 * 1.3), description: "Extra poškození Keramickým", applyStats: (tower) => { tower.ceramicBonus = 3; tower.projectileSize +=0.5; tower.upg2Tint='#B22222'; } },
+                    { name: "Obří Šipky", cost: Math.round(550 * 1.3 * 1.4), description: "+2 Poškození, větší průraz (+1)", applyStats: (tower) => { tower.damage += 2; tower.pierce +=1; tower.monkeySkinColor='#CD5C5C'; tower.iconSize +=1.5; tower.upg3Tint='#FF0000'; } } // Pierce reduced, cost increased
+                 ]
+            },
+            TackShooter: {
+                name: 'Hřebíkomet', cost: Math.round(240 * 1.3), range: 100, fireRate: 195, projectileType: 'tack', damage: 1, pierce: 1,
+                color: '#696969', barrelColor: '#A9A9A9', projectileColor: '#C0C0C0', projectileSize: 2.5, projectileSpeed: 3.5,
+                shape: 'tackshooter', iconSize: 14, tacks: 8, description: "Střílí 8 hřebíků.", purchaseCount:0,
+                upgrades: [
+                    { name: "Extra Hřebíky", cost: Math.round(120 * 1.3), description: "+2 Hřebíky na výstřel", applyStats: (tower) => { tower.tacks += 2; tower.barrelColor='#ccc'; tower.upg1Tint='#B0B0B0';} },
+                    { name: "Rychlejší Střelba", cost: Math.round(180 * 1.3), description: "Střílí o 25% rychleji", applyStats: (tower) => { tower.fireRate = Math.floor(tower.fireRate * 0.75); tower.color='#555'; tower.upg2Tint='#A9A9A9';} },
+                    { name: "Žhavé Hřebíky", cost: Math.round(300 * 1.3), description: "Hřebíky prorazí Olovo", applyStats: (tower) => { tower.canPopLead = true; tower.projectileColor='#FF4500'; tower.upg3Tint='#FF4500';} }
+                 ]
+            },
+            BombTower: {
+                name: 'Bombardovací Věž', cost: Math.round(380 * 1.3), range: 115, fireRate: 245, projectileType: 'bomb', damage: 1,
+                color: '#222', cannonColor: '#444', projectileColor: '#555', projectileSize: 7, projectileSpeed: 2.4,
+                shape: 'bombtower', iconSize: 16, splashRadius: 40, projectileEffect: 'explosion', description: "Hází explodující bomby.", purchaseCount:0,
+                upgrades: [
+                    { name: "Větší Bomby", cost: Math.round(250 * 1.3), description: "+12 Plošný dosah", applyStats: (tower) => { tower.splashRadius += 12; tower.cannonColor='#333'; tower.upg1Tint='#303030';} },
+                    { name: "Rychlejší Nabíjení", cost: Math.round(300 * 1.3), description: "Střílí o 20% rychleji", applyStats: (tower) => { tower.fireRate = Math.floor(tower.fireRate*0.80); tower.projectileSize +=1; tower.upg2Tint='#606060';} },
+                    { name: "MOAB Ničitel", cost: Math.round(780 * 1.3), description: "+1 Poškození, +3 MOAB Pošk.", applyStats: (tower) => { tower.damage += 1; tower.moabDamageBonus = 3; tower.color='#111'; tower.upg3Tint='#FF6347'; addScreenShake(0.1);} }
+                 ]
+            },
+            IceTower: {
+                name: 'Ledová Věž', cost: Math.round(420 * 1.3), range: 85, fireRate: 310, projectileType: 'aoe', damage: 0,
+                color: '#AFEEEE', highlightColor: '#FFFFFF', projectileEffect: 'freeze', projectileColor: 'rgba(173,216,230,0.3)', projectileSize: 85,
+                shape: 'icetower', iconSize: 14, freezeDuration: 90, description: "Zmrazí blízké balónky.", purchaseCount:0,
+                 upgrades: [
+                    { name: "Širší Zmrazení", cost: Math.round(160 * 1.3), description: "+20 Dosah", applyStats: (tower) => { tower.range += 20; tower.projectileSize = tower.range; tower.color='#B0E0E6'; tower.upg1Tint='#ADD8E6';} },
+                    { name: "Delší Zmrazení", cost: Math.round(220 * 1.3), description: "+50 Doba zmrazení", applyStats: (tower) => { tower.freezeDuration += 50; tower.highlightColor='#E0FFFF'; tower.upg2Tint='#A0C0C6';} },
+                    { name: "Hluboké Zmrazení", cost: Math.round(380 * 1.3), description: "Zpomalí balónky o 50% po rozmrazení", applyStats: (tower) => { tower.postFreezeSlow = 0.5; tower.postFreezeDuration = 90; tower.color='#87CEEB'; tower.upg3Tint='#00BFFF';} }
+                 ]
+            },
+            GlueGunner: {
+                name: 'Lepidlář', cost: Math.round(200 * 1.3), range: 145, fireRate: 210, projectileType: 'glue_shot', damage: 0,
+                color: '#FF8C00', tankColor: '#FFA500', barrelColor: '#808080', projectileColor: '#FFFF00', projectileSize: 6, projectileSpeed: 3.9,
+                shape: 'gluegunner', iconSize: 16, glueDuration: 250, glueStrength: 0.45, description: "Střílí zpomalující lepidlo.", purchaseCount:0,
+                 upgrades: [
+                    { name: "Lepivější Lepidlo", cost: Math.round(150 * 1.3), description: "Lepidlo vydrží déle", applyStats: (tower) => { tower.glueDuration += 180; tower.tankColor='#DAA520'; } },
+                    { name: "Hustší Lepidlo", cost: Math.round(250 * 1.3), description: "Více zpomaluje balónky", applyStats: (tower) => { tower.glueStrength = 0.30; tower.projectileColor='#FFD700'; } },
+                    { name: "Rozstřik Lepidla", cost: Math.round(380 * 1.3), description: "Zalepí 3 blízké balónky", applyStats: (tower) => { tower.splashRadius = 35; tower.splashTargets=3; tower.color='#FF4500';} }
+                 ]
+            },
+            SniperMonkey: {
+                name: 'Odstřelovací Opice', cost: Math.round(320 * 1.3), range: 1000, fireRate: 225, projectileType: 'sniper_bullet', damage: 2, pierce: 1,
+                color: '#556B2F', monkeySkinColor: '#F5F5DC', gunColor: '#696969', projectileColor: '#A9A9A9', projectileSize: 4, projectileSpeed: 10,
+                shape: 'monkey', iconSize: 15, description: "Nekonečný dosah.", canSeeCamo: true, purchaseCount:0,
+                upgrades: [
+                    { name: "Rychlejší Střelba", cost: Math.round(200 * 1.3), description: "Střílí o 25% rychleji", applyStats: (tower) => { tower.fireRate = Math.floor(tower.fireRate*0.75); tower.gunColor='#555';} },
+                    { name: "Celoplášťové Střely", cost: Math.round(280 * 1.3), description: "Prorazí Olověné balónky", applyStats: (tower) => { tower.canPopLead = true; tower.projectileColor='#D3D3D3';} },
+                    { name: "Smrtící Přesnost", cost: Math.round(650 * 1.3), description: "+2 Poškození", applyStats: (tower) => { tower.damage += 2; tower.color='#006400';} }
+                 ]
+            },
+            SuperMonkey: {
+                name: 'Super Opice', cost: Math.round(2200 * 1.3 * 1.1), range: 200, fireRate: 13, projectileType: 'plasma', damage: 1, pierce:2,
+                color: '#483D8B', capeColor: '#DC143C', monkeySkinColor: '#FFC0CB', projectileColor: '#00FFFF', projectileSize: 4, projectileSpeed: 7,
+                shape: 'monkey', iconSize: 18, description: "Super rychlá plazma.", projectileEffect: 'plasma', canSeeCamo: true, purchaseCount:0,
+                 upgrades: [
+                    { name: "Laserový Zrak", cost: Math.round(1300 * 1.3), description: "Prorazí Olovo, rychlejší projektily", applyStats: (tower) => { tower.canPopLead=true; tower.projectileColor='#FF0000'; tower.projectileSpeed *= 1.2; tower.capeColor='#B22222'; tower.upg1Tint = '#FFB6C1'; addScreenShake(0.03);} },
+                    { name: "Super Dosah", cost: Math.round(900 * 1.3), description: "+40 Dosah", applyStats: (tower) => { tower.range += 40; tower.monkeySkinColor='#FFDAEB'; } },
+                    { name: "Plazmové Výboje", cost: Math.round(2800 * 1.3 * 1.2), description: "+1 Poškození, +1 Průraz", applyStats: (tower) => { tower.damage+=1; tower.pierce +=1; tower.color='#372d6b'; tower.upg3Tint = '#FFFFFF'; addScreenShake(0.05);} } // Pierce reduced, cost increased
+                 ]
+            },
+            WizardMonkey: {
+                name: 'Kouzelnická Opice', cost: Math.round(420 * 1.3), range: 125, fireRate: 165, projectileType: 'magic_bolt', damage: 2, pierce: 2,
+                color: '#4B0082', hatDetailColor: '#FFD700', monkeySkinColor: '#B0C4DE', projectileColor: '#FF00FF', projectileSize: 6, projectileSpeed: 3.6,
+                shape: 'wizard', iconSize: 17, description: "Samonaváděcí magické střely. Prorazí olovo.", projectileEffect: 'magic', canPopLead: true, canSeeCamo: true, purchaseCount:0,
+                 upgrades: [
+                    { name: "Intenzivní Magie", cost: Math.round(220 * 1.3), description: "+1 Poškození", applyStats: (tower) => { tower.damage += 1; tower.projectileColor='#DA70D6'; tower.upg1Tint='#E6E6FA'; } },
+                    { name: "Opičí Smysl", cost: Math.round(160 * 1.3), description: "+25 Dosah", applyStats: (tower) => { tower.range += 25; tower.hatDetailColor='#FFFF00'; tower.upg2Tint='#D8BFD8';} },
+                    { name: "Dračí Dech", cost: Math.round(1100 * 1.3), description: "Přidá plamenometný útok na krátkou vzdálenost", applyStats: (tower) => { tower.hasBreathAttack=true; tower.breathRange=60; tower.breathDamage=1; tower.breathFireRate=30; tower.lastBreath=0; tower.color='#3A006A'; tower.upg3Tint = '#FF0000';} }
+                 ]
+            },
+            SpikeFactory: {
+                name: 'Továrna na Bodce', cost: Math.round(500 * 1.3), range: 0, fireRate: 360, projectileType: 'spike_pile', damage: 6,
+                color: '#A0522D', chuteColor: '#B8860B', baseColor: '#8B4513', projectileColor: '#D3D3D3', projectileSize: 16,
+                shape: 'spikefactory', iconSize: 17, pileSize: 8, spikeDuration: 400, description: "Pokládá hromady bodců.", purchaseCount:0,
+                upgrades: [
+                    { name: "Rychlejší Produkce", cost: Math.round(300 * 1.3), description: "Produkuje o 25% rychleji", applyStats: (tower) => { tower.fireRate = Math.floor(tower.fireRate * 0.75); tower.chuteColor='#DAA520';} },
+                    { name: "Větší Hromady", cost: Math.round(400 * 1.3), description: "+4 Bodce na hromadu", applyStats: (tower) => { tower.pileSize += 4; tower.baseColor='#A0522D';} },
+                    { name: "Bíle Žhavé Bodce", cost: Math.round(550 * 1.3), description: "Prorazí Olověné balónky", applyStats: (tower) => { tower.canPopLead=true; tower.projectileColor='#FFFFFF';} }
+                 ]
+            },
+            BananaFarm: {
+                name: 'Banánová Farma', cost: Math.round(550 * 1.3), range: 0, fireRate: 580, income: 220,
+                color: '#F0E68C', roofColor: '#D2B48C', doorColor: '#8B4513',
+                shape: 'farm', iconSize: 18, description: "Generuje peníze.", isSupport: true, purchaseCount:0,
+                 upgrades: [
+                    { name: "Více Banánů", cost: Math.round(400 * 1.3), description: "+80$ za trs", applyStats: (tower) => { tower.income += 80; tower.color='#FFFACD';} },
+                    { name: "Rychlejší Růst", cost: Math.round(500 * 1.3), description: "Produkuje o 20% rychleji", applyStats: (tower) => { tower.fireRate = Math.floor(tower.fireRate*0.8); tower.roofColor='#DEB887'; } },
+                    { name: "Banánová Plantáž", cost: Math.round(2000 * 1.3), description: "Příjem se stane 600$", applyStats: (tower) => { tower.income=600; tower.fireRate= Math.floor(tower.fireRate * 0.9); tower.iconSize=22;} }
+                 ]
+            }
+        };
+
+        class Tower {
+            constructor(type, x, y) {
+                const definition = towerTypes[type];
+                this.id = Date.now().toString(36) + Math.random().toString(36).substr(2);
+                this.type = type;
+                this.baseStats = { ...definition };
+                Object.assign(this, definition);
+                this.x = Math.round(x); this.y = Math.round(y);
+                this.upgradeTier = 0;
+                this.lastShotTime = 0;
+                this.target = null;
+                this.angle = (this.type === 'TackShooter' || this.type === 'IceTower' || this.type === 'SpikeFactory' || this.type === 'BananaFarm') ? 0 : -Math.PI/2;
+                this.totalCost = this.cost; // Initial cost is set here
+                 if(this.hasBreathAttack) this.lastBreath = 0;
+                 this.upg1Tint = null; this.upg2Tint = null; this.upg3Tint = null;
+                 this.purchaseCount = this.purchaseCount || 0;
+            }
+
+            findTarget(balloons) {
+                 if (this.isSupport || this.projectileType === 'aoe' || this.type === 'SpikeFactory') return;
+
+                let closestBalloon = null;
+                let minDistanceSq = this.range * this.range;
+
+                balloons.forEach(b => {
+                    if (b.isCamo && !this.canSeeCamo) return;
+
+                    const dx = b.x - this.x;
+                    const dy = b.y - this.y;
+                    const distanceSq = dx * dx + dy * dy;
+                    if (distanceSq < minDistanceSq) {
+                        minDistanceSq = distanceSq;
+                        closestBalloon = b;
+                    }
+                });
+                this.target = closestBalloon;
+            }
+
+            update(frame, balloons, projectiles) {
+                this.lastShotTime += 1 * gameSpeed;
+                 if(this.hasBreathAttack) this.lastBreath += 1 * gameSpeed;
+
+
+                if (this.type === 'BananaFarm' && this.lastShotTime >= this.fireRate) {
+                    money += this.income;
+                    createBurstParticles(this.x, this.y - this.iconSize * 0.5, Math.floor(this.income / 15), () => '#FFD700', [4,8], [1,2.5], [40,60], 'coin', {gravity: 0.1, angleRange: [-Math.PI*0.75, -Math.PI*0.25]});
+                    SoundManager.playSound({type: 'triangle', frequency: 1500 + Math.random()*200, volume: 0.15, attack:0.002, decay: 0.05});
+                    this.lastShotTime = 0;
+                    return;
+                }
+
+                if (this.type === 'SpikeFactory' && this.lastShotTime >= this.fireRate) {
+                     const pathPoint = findClosestPathPoint(this.x, this.y, path, this.range + 50 + this.iconSize);
+                     if(pathPoint){
+                        projectiles.push(new Projectile(this, null, {
+                            type: this.projectileType,
+                            damage: this.damage,
+                            color: this.projectileColor,
+                            size: this.projectileSize,
+                            duration: this.spikeDuration,
+                            hitsLeft: this.pileSize,
+                            isSpikePile: true,
+                            customX: pathPoint.x,
+                            customY: pathPoint.y,
+                             canPopLead: this.canPopLead
+                        }));
+                        createBurstParticles(pathPoint.x, pathPoint.y, 10, () => ['#aaa', '#ccc', '#eee'][Math.floor(Math.random()*3)], [2,5], [0.5,1.2], [25,35], 'shard');
+                        this.lastShotTime = 0;
+                        SoundManager.playShot(this.type);
+                     }
+                    return;
+                }
+
+                if (this.projectileType === 'aoe') {
+                    if (this.lastShotTime >= this.fireRate) {
+                        SoundManager.playIceFreeze();
+                        createBurstParticles(this.x, this.y, 25, () => 'rgba(173,216,230,0.2)', [8,15], [0.3,0.8], [20,30], 'smoke', {alphaStart: 0.5});
+                        balloons.forEach(b => {
+                            if (b.immune.includes(this.projectileEffect) || b.effects.freeze) return;
+                            const dx = b.x - this.x;
+                            const dy = b.y - this.y;
+                            if (Math.sqrt(dx*dx + dy*dy) < this.range) {
+                                b.applyEffect(this.projectileEffect, this.freezeDuration);
+                                 if(this.postFreezeSlow && this.postFreezeDuration){
+                                     b.applyEffect('slow_after_freeze', this.postFreezeDuration, this.postFreezeSlow);
+                                 }
+                                createBurstParticles(b.x, b.y, 5, () => 'rgba(200,220,255,0.7)', [2,4], [0.1,0.4], [15,25], 'spark');
+                            }
+                        });
+                        this.lastShotTime = 0;
+                    }
+                    return;
+                }
+
+                 if (this.hasBreathAttack && this.lastBreath >= this.breathFireRate){
+                    this.lastBreath = 0;
+                    createBurstParticles(this.x + Math.cos(this.angle)*this.iconSize, this.y+Math.sin(this.angle)*this.iconSize, 20, ()=>'rgba(255,100,0,0.6)', [3,8], [2,4], [15,25], 'smoke', {angleRange: [this.angle -0.4, this.angle+0.4], gravity: -0.02});
+                    SoundManager.playSound({type: 'noise', frequency: 500, volume: 0.3, attack: 0.005, sustain: 0.1, decay: 0.15});
+                     balloons.forEach(b=>{
+                        const dx = b.x - this.x; const dy = b.y - this.y;
+                        if(dx*dx + dy*dy < this.breathRange * this.breathRange){
+                           const angleToBloon = Math.atan2(dy, dx);
+                           let angleDiff = Math.abs(angleToBloon - this.angle);
+                            if(angleDiff > Math.PI) angleDiff = Math.PI*2 - angleDiff;
+                           if(angleDiff < Math.PI/4){
+                              const damageDealt = b.takeDamage(this.breathDamage, 'fire');
+                              if(damageDealt > 0 && b.currentHealth <=0) handleBalloonPop(b);
+                           }
+                        }
+                    });
+                 }
+
+
+                if (!this.target || this.target.currentHealth <= 0 || !isBalloonInRange(this, this.target)) {
+                    this.findTarget(balloons);
+                }
+
+                if (this.target && this.lastShotTime >= this.fireRate) {
+                    SoundManager.playShot(this.type);
+                    this.shoot(projectiles, this.target);
+                    this.lastShotTime = 0;
+                    let muzzleX = this.x + Math.cos(this.angle) * (this.iconSize * 1.2 + this.upgradeTier*2.5);
+                    let muzzleY = this.y + Math.sin(this.angle) * (this.iconSize * 1.2 + this.upgradeTier*2.5);
+                    if(this.type === 'TackShooter') {muzzleX=this.x; muzzleY=this.y;}
+
+                     let particleColorShoot = 'rgba(255,223,186,0.7)';
+                     if(this.projectileType === 'plasma') particleColorShoot = 'rgba(0,255,255,0.7)';
+                     if(this.projectileType === 'magic_bolt') particleColorShoot = 'rgba(255,0,255,0.7)';
+
+                    createBurstParticles(muzzleX, muzzleY, 4 + this.upgradeTier, () => particleColorShoot, [2,4 + this.upgradeTier], [1.5,3 + this.upgradeTier*0.5], [8,15], 'spark', {angleRange: [this.angle-0.2, this.angle+0.2]});
+                }
+
+                if (this.target && this.type !== 'TackShooter') {
+                    this.angle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
+                }
+            }
+
+            shoot(projectiles, target) {
+                 let projectileData = {
+                    type: this.projectileType,
+                    damage: this.damage,
+                    color: this.projectileColor,
+                    size: this.projectileSize,
+                    speed: this.projectileSpeed,
+                    splashRadius: this.splashRadius,
+                    projectileEffect: this.projectileEffect,
+                    effectDuration: this.glueDuration || this.freezeDuration,
+                    canPopLead: this.canPopLead,
+                    pierce: this.pierce || 1,
+                    moabDamageBonus: this.moabDamageBonus || 0,
+                    ceramicBonus: this.ceramicBonus || 0,
+                    splashTargets: this.splashTargets || 1,
+                };
+
+                if (this.type === 'TackShooter') {
+                    if(this.type === 'TackShooter') this.angle += Math.PI / 30 * gameSpeed;
+                    for (let i = 0; i < this.tacks; i++) {
+                        const angle = (i / this.tacks) * Math.PI * 2 + this.angle;
+                        projectiles.push(new Projectile(this, target, projectileData, angle));
+                    }
+                     createBurstParticles(this.x, this.y, 12 + this.tacks/2, () => this.projectileColor, [2,3.5], [1.2,3.5], [12,18], 'spark');
+                } else if (this.type === 'SniperMonkey') {
+                     projectiles.push(new Projectile(this, target, {...projectileData, range: this.range, isSniper:true }));
+                     createBurstParticles(this.x + Math.cos(this.angle)*this.iconSize*1.2, this.y + Math.sin(this.angle)*this.iconSize*1.2, 6, () => '#FFFF99', [2,5], [3,5], [5,10], 'spark');
+                } else {
+                     if (this.shootsTwo) {
+                        projectiles.push(new Projectile(this, target, projectileData, this.angle - 0.1));
+                        projectiles.push(new Projectile(this, target, projectileData, this.angle + 0.1));
+                    } else {
+                        projectiles.push(new Projectile(this, target, projectileData, this.angle));
+                    }
+
+                    if (this.type === 'BombTower') createBurstParticles(this.x + Math.cos(this.angle)*this.iconSize, this.y + Math.sin(this.angle)*this.iconSize, 10, () => ['#444','#666','orange'][Math.floor(Math.random()*3)], [3,7], [0.6,1.8], [25,35], 'smoke');
+                    if (this.type === 'GlueGunner') createBurstParticles(this.x + Math.cos(this.angle)*this.iconSize*1.3, this.y + Math.sin(this.angle)*this.iconSize*1.3, 7, () => 'rgba(255,165,0,0.7)', [3,5], [0.4,0.9], [18,28], 'default');
+                }
+            }
+
+            upgrade() {
+                if(!this.upgrades || this.upgradeTier >= this.upgrades.length) return false;
+                const nextUpgrade = this.upgrades[this.upgradeTier];
+                if(money < nextUpgrade.cost) {
+                    SoundManager.playNoMoney();
+                    return false;
+                }
+
+                money -= nextUpgrade.cost;
+                this.totalCost += nextUpgrade.cost;
+                nextUpgrade.applyStats(this);
+                this.upgradeTier++;
+                SoundManager.playUpgrade();
+                updateUI();
+                displaySelectedTowerInfo(this);
+                 createBurstParticles(this.x, this.y, 25 + this.upgradeTier*5, () => ['#FFD700', '#FFFF00', '#FFFFFF'][Math.floor(Math.random()*3)], [4,9+this.upgradeTier], [1,3+this.upgradeTier], [30,50], 'spark');
+                return true;
+            }
+
+            sell() {
+                const sellValue = Math.floor(this.totalCost * GAME_BALANCE_CONFIG.TOWER_SELL_PERCENTAGE);
+                money += sellValue;
+                SoundManager.playSell();
+                createBurstParticles(this.x, this.y, 30, () => '#FFD700', [3,7], [1,2.5], [30,50], 'coin', {gravity: 0.08, speed:[0.5,1.5]});
+                updateUI();
+                return true;
+            }
+
+            draw(ctx, isPreview = false) {
+                const currentIconSizeActual = this.iconSize + (this.upgradeTier * 2.5);
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if(!isPreview && selectedTower === this){
+                    const pulseRadius = this.range * (1 + Math.sin(Date.now()/250)*0.02);
+                    ctx.fillStyle = 'rgba(0, 180, 255, 0.1)';
+                    ctx.beginPath(); ctx.arc(0, 0, pulseRadius, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle = 'rgba(0, 180, 255, 0.4)'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+
+                    ctx.strokeStyle = 'cyan'; ctx.lineWidth=2;
+                    ctx.beginPath(); ctx.arc(0, 0, currentIconSizeActual + 6, 0, Math.PI*2); ctx.stroke();
+                }
+
+                if (this.type !== 'TackShooter' && this.type !== 'IceTower' && this.type !== 'SpikeFactory' && this.type !== 'BananaFarm') {
+                     ctx.rotate(this.angle);
+                }
+
+                 let upgTint1 = this.upg1Tint || null;
+                 let upgTint2 = this.upg2Tint || null;
+                 let upgTint3 = this.upg3Tint || null;
+                 let tierSizeMod = this.upgradeTier * 2.5;
+
+
+                 if (this.shape === 'monkey' || this.shape === 'wizard') {
+                    const baseSize = this.iconSize + tierSizeMod;
+                    const headRadius = baseSize * 0.6;
+                    const bodyRadius = baseSize * 0.8;
+                    const armWidth = baseSize * 0.3;
+                    const armLength = baseSize * 1.0;
+                    const earRadius = baseSize * 0.25;
+                    const handRadius = armWidth * 0.6;
+
+                    const earOffsetX = -headRadius * 0.1;
+                    const earOffsetY = headRadius * 0.85;
+                    const eyeRadius = headRadius * 0.15;
+                    const eyeForwardShift = headRadius * 0.10;
+                    const eyeSeparation = headRadius * 0.5;
+                    const eyeHeight = -headRadius * 0;
+
+
+                    if (this.type === 'SuperMonkey') {
+                        ctx.fillStyle = this.capeColor;
+                        ctx.beginPath(); ctx.moveTo(-bodyRadius * 0.5, -bodyRadius * 0.7); ctx.lineTo(bodyRadius * 0.5, -bodyRadius * 0.7); ctx.lineTo(0, bodyRadius * 1.3); ctx.closePath(); ctx.fill();
+                    }
+
+                    if(this.shape === 'wizard') {
+                         const hatHeight = baseSize * 1.5; const hatBaseWidth = baseSize * 1.2; const brimHeight = baseSize * 0.25; const brimWidth = hatBaseWidth * 1.4;
+                         ctx.fillStyle = (this.upgradeTier >=3 && upgTint3) ? upgTint3 : this.color;
+                         ctx.beginPath(); ctx.ellipse(0, headRadius * 0.4, brimWidth / 2, brimHeight / 2, 0, 0, Math.PI * 2); ctx.fill();
+                         ctx.beginPath(); ctx.moveTo(0, -hatHeight + headRadius*0.4); ctx.lineTo(hatBaseWidth / 2, headRadius * 0.4); ctx.lineTo(-hatBaseWidth / 2, headRadius*0.4); ctx.closePath(); ctx.fill();
+                         if(this.upgradeTier >= 1 && upgTint1) {ctx.strokeStyle=upgTint1; ctx.lineWidth=1.5; ctx.stroke();}
+                         ctx.fillStyle = this.hatDetailColor; ctx.fillRect(-hatBaseWidth/2 * 0.8, headRadius*0.4 - brimHeight*1.5, hatBaseWidth * 0.8, brimHeight*0.7);
+                         if(this.upgradeTier>=2 && upgTint2) {ctx.fillStyle=upgTint2; ctx.beginPath(); ctx.arc(0, -hatHeight*0.6, hatBaseWidth*0.15, 0,Math.PI*2); ctx.fill();}
+                    }
+
+
+                    ctx.fillStyle = (this.upgradeTier >= 1 && upgTint1) ? upgTint1 : this.color;
+                    ctx.beginPath(); ctx.arc(0, 0, bodyRadius, 0, Math.PI * 2); ctx.fill();
+
+                    if(this.shape === 'monkey') {
+                        ctx.fillStyle = (this.type === 'SniperMonkey' ? this.gunColor : ((this.upgradeTier >= 1 && upgTint1) ? upgTint1 : this.color));
+                        ctx.beginPath(); ctx.rect(bodyRadius * 0.15, -armWidth / 2, armLength, armWidth); ctx.fill();
+                        ctx.fillStyle = this.monkeySkinColor;
+                        ctx.beginPath(); ctx.arc(bodyRadius * 0.15 + armLength, 0, handRadius, 0, Math.PI * 2); ctx.fill();
+                    }
+
+                    const headOffsetX = 0;
+                    const faceOffsetX = headRadius * 0.15;
+
+                    ctx.fillStyle = (this.upgradeTier >= 1 && upgTint1) ? upgTint1 : this.color;
+                    ctx.beginPath(); ctx.arc(headOffsetX, 0, headRadius, 0, Math.PI*2); ctx.fill();
+
+                    ctx.fillStyle = this.monkeySkinColor;
+                    ctx.beginPath(); ctx.arc(headOffsetX + faceOffsetX, 0, headRadius * 0.80, 0, Math.PI * 2); ctx.fill();
+
+                    ctx.fillStyle = (this.upgradeTier >= 1 && upgTint1) ? upgTint1 : this.color;
+                    ctx.beginPath(); ctx.arc(earOffsetX, -earOffsetY, earRadius, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(earOffsetX, earOffsetY, earRadius, 0, Math.PI*2);  ctx.fill();
+                    ctx.fillStyle = this.monkeySkinColor;
+                    ctx.beginPath(); ctx.arc(earOffsetX, -earOffsetY, earRadius*0.6, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(earOffsetX, earOffsetY, earRadius*0.6, 0, Math.PI*2); ctx.fill();
+
+                    const eyeCenterX = headOffsetX + faceOffsetX + eyeForwardShift;
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath(); ctx.arc(eyeCenterX, eyeHeight - eyeSeparation/2, eyeRadius, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(eyeCenterX, eyeHeight + eyeSeparation/2, eyeRadius, 0, Math.PI*2); ctx.fill();
+
+
+                    if(this.shape === 'monkey'){
+                        ctx.strokeStyle = 'black'; ctx.lineWidth=1;
+                        ctx.beginPath(); ctx.moveTo(headOffsetX + faceOffsetX, headRadius*0.25); ctx.lineTo(headOffsetX + faceOffsetX + headRadius*0.05, headRadius*0.35); ctx.stroke();
+                    }
+
+                    if(this.upgradeTier >=3 && upgTint3) { ctx.strokeStyle=upgTint3; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(0,0, bodyRadius*1.2,0,Math.PI*2); ctx.stroke(); }
+                    if (this.type === 'FastDartMonkey' && this.upgradeTier >=1){ ctx.fillStyle = this.upg2Tint || '#DDD'; ctx.beginPath(); ctx.arc(headOffsetX + faceOffsetX + Math.cos(Math.PI/4)*headRadius*0.55, -headRadius*0.4, 3.5 + tierSizeMod*0.05, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(headOffsetX + faceOffsetX + Math.cos(-Math.PI/4)*headRadius*0.55, headRadius*0.4, 3.5 + tierSizeMod*0.05, 0, Math.PI*2); ctx.fill(); }
+                    if(this.type === 'HeavyDartMonkey' && this.upgradeTier >= 1){ ctx.fillStyle = this.upg1Tint || this.projectileColor; ctx.fillRect(bodyRadius*0.9, -armWidth*0.2, armWidth*0.5 + tierSizeMod*0.05, armWidth*0.4 + tierSizeMod*0.02); }
+                    if (this.type === 'SuperMonkey' && this.upgradeTier >= 2 && upgTint2) { ctx.fillStyle = upgTint2; ctx.beginPath(); ctx.moveTo(0, -bodyRadius * 0.95); ctx.lineTo(bodyRadius * 0.35, -bodyRadius * 1.25); ctx.lineTo(bodyRadius * 0.15, -bodyRadius * 0.85); ctx.closePath(); ctx.fill(); }
+
+
+                } else if (this.shape === 'tackshooter') {
+                    const baseSize = this.iconSize + tierSizeMod;
+                    const barrelLength = baseSize * 0.6; const barrelWidth = baseSize * 0.3;
+                    ctx.fillStyle = (this.upgradeTier >= 2 && upgTint2) ? upgTint2 : this.color;
+                    ctx.beginPath(); ctx.rect(-baseSize*0.7, -baseSize*0.7, baseSize*1.4, baseSize*1.4); ctx.fill();
+                    if (this.upgradeTier >= 1 && upgTint1) { ctx.strokeStyle = upgTint1; ctx.lineWidth = 2; ctx.stroke(); }
+
+                    ctx.fillStyle = (this.upgradeTier >= 3 && upgTint3) ? upgTint3 : this.barrelColor;
+                    for (let i = 0; i < this.tacks; i++) {
+                        ctx.save(); const angle = (i / this.tacks) * Math.PI * 2 + this.angle; ctx.rotate(angle);
+                        ctx.beginPath(); ctx.moveTo(baseSize*0.5, -barrelWidth/2); ctx.lineTo(baseSize*0.5 + barrelLength, -barrelWidth*0.3); ctx.lineTo(baseSize*0.5 + barrelLength, barrelWidth*0.3); ctx.lineTo(baseSize*0.5, barrelWidth/2); ctx.closePath(); ctx.fill();
+                        ctx.restore();
+                    }
+                     ctx.fillStyle = (this.upgradeTier >= 2 && upgTint2) ? upgTint2 : this.color; ctx.beginPath(); ctx.arc(0,0, baseSize*0.5, 0, Math.PI*2); ctx.fill();
+
+
+                } else if (this.shape === 'bombtower') {
+                    const baseRadius = this.iconSize + tierSizeMod;
+                    const cannonLength = baseRadius * 1.3; const cannonWidth = baseRadius * 0.8; const muzzleRadius = cannonWidth * 0.55;
+                    ctx.fillStyle = (this.upgradeTier >=3 && upgTint3) ? upgTint3 : this.color;
+                    ctx.beginPath(); ctx.arc(0, 0, baseRadius, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = (this.upgradeTier >= 1 && upgTint1) ? upgTint1 : this.cannonColor;
+                    ctx.beginPath(); ctx.rect(baseRadius * 0.1, -cannonWidth / 2, cannonLength, cannonWidth); ctx.fill();
+                    ctx.fillStyle = (this.upgradeTier >= 1 && upgTint1) ? upgTint1 : this.cannonColor;
+                    ctx.beginPath(); ctx.arc(baseRadius * 0.1 + cannonLength, 0, muzzleRadius, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(baseRadius * 0.1 + cannonLength, 0, muzzleRadius * 0.65, 0, Math.PI * 2); ctx.fill();
+                    if(this.upgradeTier>=2 && upgTint2) {
+                        ctx.fillStyle = upgTint2; ctx.fillRect(baseRadius*0.05, baseRadius*0.35, baseRadius*0.5, baseRadius*0.4);
+                        ctx.fillRect(baseRadius*-0.55, baseRadius*0.35, baseRadius*0.5, baseRadius*0.4);
+                    }
+
+                } else if (this.shape === 'icetower') {
+                     const s = this.iconSize+tierSizeMod;
+                     ctx.fillStyle = (this.upgradeTier>=3 && upgTint3) ? upgTint3 : this.color;
+                     ctx.beginPath();
+                     for(let i = 0; i < 6; i++) {
+                         const angle1 = i * Math.PI / 3;
+                         const angle2 = (i + 0.5) * Math.PI / 3;
+                         ctx.lineTo(Math.cos(angle1) * s, Math.sin(angle1) * s);
+                         ctx.lineTo(Math.cos(angle2) * s * 0.7, Math.sin(angle2) * s * 0.7);
+                     }
+                     ctx.closePath(); ctx.fill();
+                     ctx.fillStyle = (this.upgradeTier>=1 && upgTint1) ? upgTint1 : this.highlightColor;
+                     ctx.beginPath(); ctx.arc(0,0,s*0.4, 0, Math.PI*2); ctx.fill();
+                      if(this.upgradeTier>=2 && upgTint2){ ctx.fillStyle=upgTint2; ctx.beginPath(); ctx.arc(0,0,s*0.2,0,Math.PI*2); ctx.fill();}
+
+                } else if (this.shape === 'gluegunner') {
+                     const s = this.iconSize+tierSizeMod; const tankRadius = s * 0.9; const barrelLength = s * 1.4; const barrelWidth = s * 0.55; const nozzleLength = barrelWidth * 0.45; const nozzleWidth = barrelWidth * 1.3;
+                     ctx.fillStyle = (this.upgradeTier >= 1 && this.upg1Tint) ? this.upg1Tint : this.tankColor;
+                     ctx.beginPath(); ctx.ellipse(0, 0, tankRadius * 0.7, tankRadius * 1.1, 0, 0, Math.PI * 2); ctx.fill();
+                     if(this.upgradeTier>=2 && this.upg2Tint){ ctx.fillStyle=this.upg2Tint; ctx.beginPath(); ctx.ellipse(0,0, tankRadius*0.4, tankRadius*0.6,0,0,Math.PI*2);ctx.fill();}
+                     ctx.fillStyle = this.barrelColor; ctx.beginPath(); ctx.rect(tankRadius*0.1, -barrelWidth / 2, barrelLength, barrelWidth); ctx.fill();
+                     ctx.fillStyle = (this.upgradeTier >=3 && this.upg3Tint) ? this.upg3Tint : this.color;
+                     ctx.beginPath(); ctx.moveTo(tankRadius*0.1 + barrelLength, -nozzleWidth/2); ctx.lineTo(tankRadius*0.1 + barrelLength + nozzleLength, -nozzleWidth/2 * 0.5); ctx.lineTo(tankRadius*0.1 + barrelLength + nozzleLength, nozzleWidth/2 * 0.5); ctx.lineTo(tankRadius*0.1 + barrelLength, nozzleWidth/2); ctx.closePath(); ctx.fill();
+
+                } else if (this.shape === 'spikefactory') {
+                    const s = this.iconSize+tierSizeMod; const bodyWidth = s * 2.0; const bodyHeight = s * 1.2; const chuteWidth = s * 0.6; const chuteHeight = s * 0.8; const footSize = s * 0.3;
+                    ctx.fillStyle = this.baseColor; ctx.fillRect(-bodyWidth/2, bodyHeight/2 - footSize, footSize*1.2, footSize); ctx.fillRect(bodyWidth/2 - footSize*1.2, bodyHeight/2 - footSize, footSize*1.2, footSize);
+                    ctx.fillStyle = (this.upgradeTier >=1 && upgTint1) ? upgTint1 : this.color; ctx.fillRect(-bodyWidth / 2, -bodyHeight / 2, bodyWidth, bodyHeight);
+
+                    ctx.fillStyle = this.chuteColor; ctx.fillRect(-chuteWidth / 2, -bodyHeight/2 - chuteHeight, chuteWidth, chuteHeight);
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(-chuteWidth/2 * 0.7, -bodyHeight/2 - chuteHeight, chuteWidth*0.7, chuteHeight*0.3);
+                     if(this.upgradeTier>=2 && upgTint2){ctx.fillStyle=upgTint2; ctx.beginPath(); ctx.arc(0, -bodyHeight/2 -chuteHeight*0.7, chuteWidth*0.2,0,Math.PI*2);ctx.fill();}
+                     if(this.upgradeTier>=3 && upgTint3){ctx.strokeStyle = upgTint3; ctx.lineWidth=2.5; ctx.strokeRect(-bodyWidth/2*0.8, -bodyHeight/2*0.8, bodyWidth*0.8, bodyHeight*0.8);}
+                     ctx.fillStyle = '#444'; ctx.fillRect(-bodyWidth*0.3, -bodyHeight*0.1, bodyWidth*0.6, bodyHeight*0.2);
+
+
+                } else if (this.shape === 'farm') {
+                    const s = this.iconSize + tierSizeMod/2; const baseWidth = s * 2.0; const baseHeight = s * 0.9; const roofHeight = s * 1.0; const doorWidth = s * 0.5; const doorHeight = s * 0.7;
+                    ctx.fillStyle = (this.upgradeTier>=1 && upgTint1)? upgTint1: this.color; ctx.fillRect(-baseWidth / 2, 0, baseWidth, baseHeight);
+                    ctx.fillStyle = this.roofColor;
+                    ctx.beginPath(); ctx.moveTo(-baseWidth / 2 * 1.1, 0); ctx.lineTo(0, -roofHeight); ctx.lineTo(baseWidth / 2 * 1.1, 0); ctx.closePath(); ctx.fill();
+                    if(this.upgradeTier>=2 && upgTint2){ctx.strokeStyle=upgTint2;ctx.lineWidth=2; ctx.stroke();}
+
+                    ctx.fillStyle = this.doorColor; ctx.fillRect(-doorWidth/2, baseHeight - doorHeight, doorWidth, doorHeight);
+                    ctx.fillStyle = 'gold'; ctx.beginPath(); ctx.arc(-doorWidth/2 + doorWidth*0.2, baseHeight - doorHeight/2, doorWidth*0.06,0,Math.PI*2); ctx.fill();
+                     if(this.upgradeTier>=3 && upgTint3){ctx.fillStyle=upgTint3; ctx.fillRect(-doorWidth*0.15, -roofHeight*0.95, doorWidth*0.3, roofHeight*0.25);}
+                    ctx.fillStyle = '#A0522D'; ctx.fillRect(-baseWidth/2, baseHeight-5, baseWidth, 5);
+
+                }
+                else {
+                    ctx.fillStyle = (upgTint1|| upgTint2 || upgTint3) ? (upgTint3 || upgTint2 || upgTint1) : (this.color || 'magenta');
+                    ctx.beginPath(); ctx.arc(0, 0, this.iconSize+tierSizeMod, 0, Math.PI * 2); ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class Projectile {
+            constructor(tower, targetBalloon, data, angle) {
+                this.tower = tower;
+                this.target = targetBalloon;
+                this.x = tower.x;
+                this.y = tower.y;
+
+                Object.assign(this, data);
+
+                this.active = true;
+                 this.trail = [];
+                this.maxTrailLength = this.type === 'plasma' || this.type === 'magic_bolt' ? 8 : (this.type === 'dart' || this.type === 'heavy_dart' ? 5 : 3);
+
+
+                if (this.isSniper) {
+                    this.x = targetBalloon.x;
+                    this.y = targetBalloon.y;
+                } else if(this.isSpikePile) {
+                    this.x = data.customX;
+                    this.y = data.customY;
+                    this.life = data.duration;
+                    this.rotation = Math.random() * Math.PI*2;
+                } else {
+                    const barrelLength = (tower.iconSize + tower.upgradeTier*2.5) * (tower.type === 'GlueGunner' ? 1.3 : (tower.type === 'BombTower' ? 1.2 : 1));
+                    this.x += Math.cos(angle) * barrelLength;
+                    this.y += Math.sin(angle) * barrelLength;
+
+                    if (this.type === 'magic_bolt' && targetBalloon) {
+                        const dx = targetBalloon.x - this.x;
+                        const dy = targetBalloon.y - this.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                        this.vx = (dx / dist) * this.speed;
+                        this.vy = (dy / dist) * this.speed;
+                    } else {
+                        this.vx = Math.cos(angle) * this.speed;
+                        this.vy = Math.sin(angle) * this.speed;
+                    }
+                }
+            }
+
+            update(balloons, frame) {
+                if (!this.active) return;
+
+                this.trail.push({x:this.x, y:this.y});
+                if(this.trail.length > this.maxTrailLength) this.trail.shift();
+
+                if (this.isSpikePile) {
+                    this.life -= 1 * gameSpeed;
+                    if(this.life <=0) this.active = false;
+                    balloons.forEach(b => {
+                        if(!this.active || this.hitsLeft <=0) return;
+                        const dx = b.x - this.x;
+                        const dy = b.y - this.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < b.size + this.size / 2.5) {
+                            let canDamage = true;
+                            if (b.isLead && !this.canPopLead) canDamage=false;
+                            if(canDamage){
+                                const damageDealt = b.takeDamage(this.damage, 'sharp');
+                                if (damageDealt > 0) {
+                                    handleBalloonPop(b, this.x, this.y);
+                                    createBurstParticles(b.x, b.y, 4, () => ['#999', '#bbb'][Math.floor(Math.random()*2)], [1.5,3], [0.3,0.8], [12,18], 'shard');
+                                    this.hitsLeft--;
+                                    if(this.hitsLeft <= 0) this.active = false;
+                                }
+                            }
+                        }
+                    });
+                    return;
+                }
+
+                if (this.type === 'magic_bolt' && this.target && this.target.currentHealth > 0) {
+                    const dx = this.target.x - this.x;
+                    const dy = this.target.y - this.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                    const turnRate = 0.15;
+                    const targetAngle = Math.atan2(dy, dx);
+                    let currentAngle = Math.atan2(this.vy, this.vx);
+                    let angleDiff = targetAngle - currentAngle;
+                    while(angleDiff > Math.PI) angleDiff -= Math.PI*2;
+                    while(angleDiff < -Math.PI) angleDiff += Math.PI*2;
+                    currentAngle += Math.max(-turnRate, Math.min(turnRate, angleDiff));
+                    this.vx = Math.cos(currentAngle) * this.speed;
+                    this.vy = Math.sin(currentAngle) * this.speed;
+
+
+                }
+
+                this.x += this.vx * gameSpeed;
+                this.y += this.vy * gameSpeed;
+
+                if (this.x < -this.size - 20 || this.x > canvas.width + this.size + 20 || this.y < -this.size -20 || this.y > canvas.height + this.size + 20) {
+                    if (!this.isSniper) {
+                        createBurstParticles(this.x, this.y, 3, ()=>this.color, [this.size*0.5, this.size*0.8], [0.1,0.3], [10,15], 'smoke', {alphaStart:0.5});
+                        this.active = false;
+                    }
+                    return;
+                }
+
+                let targetsHitThisFrame = 0;
+                 balloons.forEach(b => {
+                    if (!this.active || targetsHitThisFrame >= this.pierce) return;
+                    if (b.currentHealth <=0) return;
+
+                    const dx = b.x - this.x;
+                    const dy = b.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    let hitCondition = false;
+                    if (this.isSniper && b === this.target) hitCondition = true;
+                    else if (!this.isSniper && distance < b.size + this.size) hitCondition = true;
+
+                    if (hitCondition) {
+
+                        let mainTarget = b;
+
+                        if (this.projectileEffect === 'explosion') {
+                            createBurstParticles(this.x, this.y, 40, () => ['orange', 'red', 'yellow', '#444'][Math.floor(Math.random()*4)], [4,12], [1.5,5], [25,50], 'smoke', {gravity: 0.02});
+                            SoundManager.playExplosion();
+                             balloons.forEach(splashTarget => {
+                                if (splashTarget.currentHealth <=0) return;
+                                const distToExplosion = Math.sqrt(Math.pow(splashTarget.x - this.x, 2) + Math.pow(splashTarget.y - this.y, 2));
+                                if (distToExplosion < this.splashRadius + splashTarget.size) {
+                                    if (!splashTarget.immune.includes('explosion')) {
+                                         const damageDealt = splashTarget.takeDamage(this.damage + (splashTarget.isMoab ? this.moabDamageBonus : 0) , this.projectileEffect);
+                                         if (damageDealt > 0 && splashTarget.currentHealth <= 0) handleBalloonPop(splashTarget, this.x, this.y);
+                                    }
+                                }
+                            });
+                             this.active = false;
+                        } else if (this.projectileEffect === 'freeze') {
+                            if(mainTarget) mainTarget.applyEffect('freeze', this.effectDuration);
+                            if(mainTarget) createBurstParticles(mainTarget.x, mainTarget.y, 15, () => 'rgba(150,200,255,0.5)', [3,6], [0.3,0.9], [18,28], 'spark');
+                            this.active = false;
+                        } else if (this.type === 'glue_shot') {
+                             if(mainTarget) {
+                                 if (mainTarget.effects.glue && mainTarget.effects.glue.strength < this.tower.glueStrength) {
+                                      mainTarget.applyEffect('glue', this.effectDuration, this.tower.glueStrength);
+                                 } else if (!mainTarget.effects.glue) {
+                                     mainTarget.applyEffect('glue', this.effectDuration, this.tower.glueStrength);
+                                 }
+
+                                 if(this.splashRadius > 0 && this.splashTargets > 1) {
+                                     let splashedCount = 0;
+                                     balloons.forEach(splashB => {
+                                         if (splashB === mainTarget || splashedCount >= this.splashTargets -1 || splashB.effects.glue) return;
+                                         const distToGlue = Math.sqrt(Math.pow(splashB.x-mainTarget.x,2) + Math.pow(splashB.y-mainTarget.y,2));
+                                         if(distToGlue < this.splashRadius + splashB.size){
+                                              if (!splashB.effects.glue || (splashB.effects.glue && splashB.effects.glue.strength > this.tower.glueStrength)) {
+                                                splashB.applyEffect('glue', this.effectDuration, this.tower.glueStrength);
+                                                splashedCount++;
+                                            }
+                                         }
+                                     });
+                                 }
+                            }
+                            if(mainTarget) createBurstParticles(mainTarget.x, mainTarget.y, 12, () => 'rgba(255,200,0,0.6)', [4,8], [0.2,0.5], [22,32], 'default');
+                            this.active = false;
+                        } else {
+                            if (mainTarget && mainTarget.currentHealth > 0) {
+                               const damageType = (this.canPopLead || this.projectileEffect === 'magic' || this.projectileEffect === 'plasma' || this.projectileEffect === 'fire') ? this.projectileEffect || 'magic' : 'sharp';
+                               const damageDealt = mainTarget.takeDamage(this.damage + (mainTarget.isMoab ? this.moabDamageBonus : 0) + (mainTarget.isCeramic && mainTarget.currentHealth > 0 ? this.ceramicBonus : 0), damageType);
+                               if (damageDealt > 0) {
+                                    if (mainTarget.currentHealth <= 0) handleBalloonPop(mainTarget);
+
+                                    let hitParticleColor = this.color;
+                                    if(this.type === 'plasma') hitParticleColor = () => ['cyan', 'lightblue', 'white'][Math.floor(Math.random()*3)];
+
+                                    if (this.isSniper) {
+                                        createBurstParticles(mainTarget.x, mainTarget.y, 10, () => '#aaa', [2.5,4], [1.2,2.5], [12,18], 'spark');
+                                    } else {
+                                        createBurstParticles(mainTarget.x, mainTarget.y, 6, hitParticleColor, [2.5,4.5], [0.6,1.8], [12,22], 'spark');
+                                    }
+                               } else if (mainTarget.isLead && damageType === 'sharp') {
+                                    createBurstParticles(mainTarget.x, mainTarget.y, 5, () => 'silver', [1.5,3], [0.8,1.5], [10,15], 'spark');
+                               }
+                            }
+                            targetsHitThisFrame++;
+                            if (targetsHitThisFrame >= this.pierce || this.isSniper) this.active = false;
+
+                        }
+                     }
+                 });
+            }
+
+            draw(ctx) {
+                if (!this.active) return;
+
+                 if(this.trail.length > 0 && this.type !== 'sniper_bullet' && this.type !== 'tack'){
+                     ctx.beginPath();
+                     ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                     for(let i=1; i<this.trail.length; i++){
+                         const t = this.trail[i];
+                         const prev_t = this.trail[i-1];
+                         const midX = (t.x + prev_t.x)/2;
+                         const midY = (t.y + prev_t.y)/2;
+                         ctx.quadraticCurveTo(prev_t.x, prev_t.y, midX, midY);
+                     }
+                     ctx.lineTo(this.x, this.y);
+                     ctx.lineWidth = this.size * (this.type === 'plasma' || this.type === 'magic_bolt' ? 1.2 : 0.8);
+                     ctx.strokeStyle = this.color;
+                     ctx.globalAlpha = 0.2;
+                     if(this.type==='plasma') {ctx.shadowBlur=5; ctx.shadowColor=this.color;}
+                     ctx.stroke();
+                     ctx.globalAlpha = 1;
+                     ctx.shadowBlur = 0;
+                 }
+
+
+                ctx.fillStyle = this.color;
+                if(this.isSpikePile){
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation);
+                    ctx.lineWidth = 2; ctx.strokeStyle = this.color;
+                    for(let i=0; i<8; i++){
+                        ctx.beginPath();
+                        const angle = i * Math.PI * 2 / 8;
+                        const spikeLength = this.size*0.4;
+                        ctx.moveTo(Math.cos(angle)*this.size*0.1, Math.sin(angle)*this.size*0.1);
+                        ctx.lineTo(Math.cos(angle)* (this.size*0.1 + spikeLength), Math.sin(angle)*(this.size*0.1 + spikeLength));
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                } else if(this.type === 'magic_bolt' || this.type === 'plasma') {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.age * 0.1);
+                    ctx.beginPath();
+                    for(let i = 0; i < 5; i++) {
+                        const angle = i * Math.PI * 2 / 5;
+                        const angle2 = (i + 0.5) * Math.PI * 2 / 5;
+                        ctx.lineTo(Math.cos(angle)*this.size*1.2, Math.sin(angle)*this.size*1.2);
+                        ctx.lineTo(Math.cos(angle2)*this.size*0.6, Math.sin(angle2)*this.size*0.6);
+                    }
+                    ctx.closePath();
+                    ctx.shadowBlur = 6; ctx.shadowColor = this.color; ctx.fill(); ctx.shadowBlur = 0;
+                    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(0,0,this.size*0.3,0,Math.PI*2);ctx.fill();
+                    ctx.restore();
+                } else if (this.type === 'bomb'){
+                     ctx.beginPath();
+                     ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                     ctx.fill();
+                     ctx.fillStyle = 'red';
+                     ctx.beginPath();
+                     ctx.rect(this.x - this.size*0.1, this.y-this.size*1.1, this.size*0.2, this.size*0.3);
+                     ctx.fill();
+                } else if (this.type === 'dart' || this.type === 'heavy_dart') {
+                    ctx.save();
+                    ctx.translate(this.x,this.y);
+                    ctx.rotate(Math.atan2(this.vy,this.vx));
+                    ctx.beginPath();
+                    ctx.moveTo(this.size*0.6, 0);
+                    ctx.lineTo(-this.size*0.8, -this.size*0.4);
+                    ctx.lineTo(-this.size*0.4, 0);
+                    ctx.lineTo(-this.size*0.8, this.size*0.4);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+                 else {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        const levelPaths = [
+            [
+                { x: 0, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 300 }, { x: 400, y: 300 },
+                { x: 400, y: 150 }, { x: 600, y: 150 }, { x: 600, y: 450 }, { x: 800, y: 450 }
+            ],
+             [
+                {x: 0, y: 300}, {x:150, y:300}, {x:150, y:100}, {x:300, y:100}, {x:300, y:500},
+                {x:450, y:500}, {x:450, y:50}, {x:600, y:50}, {x:600, y:400}, {x:750, y:400},
+                {x:750, y:200}, {x:800, y:200}
+            ],
+            [
+                { x: 50, y: 0 }, { x: 50, y: 250 }, { x: 300, y: 250 }, { x: 300, y: 500 },
+                { x: 500, y: 500 }, { x: 500, y: 100 }, { x: 750, y: 100 }, { x: 750, y: 600 }
+            ],
+             [
+                { x: 0, y: 50 }, { x: canvas.width-50, y: 50 }, { x: canvas.width-50, y: canvas.height-50 }, { x: 50, y: canvas.height-50 },
+                { x: 50, y: 150 }, { x: canvas.width-150, y: 150 }, { x: canvas.width-150, y: canvas.height-150 }, { x: 150, y: canvas.height-150 },
+                { x: 150, y: 250 }, { x: canvas.width/2, y: 250 }, {x:canvas.width/2,y:canvas.height/2 + 50}
+            ],
+            [
+                {x:0, y:150}, {x:200, y:150}, {x:200, y:50}, {x:100, y:50}, {x:100, y:250}, {x:300, y:250},
+                {x:300, y:450}, {x:500, y:450}, {x:500, y:350}, {x:400, y:350}, {x:400, y:550}, {x:600, y:550},
+                {x:600, y:100}, {x:800, y:100}
+            ]
+        ];
+
+
+        // Define the waves for each level manually
+        const gameLevels = [
+             // Level 1: Rovina (5 Waves) - Short, focused intro
+             {   pathId: 0, theme:'grassland', name: "Rovina", startMoney: 250, startLives: 150,
+                 waves: [
+                    { spawns: Array(40).fill('Red'), interval: 40 }, // Wave 1: Adjusted interval
+                    { spawns: [...Array(30).fill('Red'), ...Array(20).fill('Blue')], interval: 30 }, // Wave 2: Adjusted interval
+                    { spawns: [...Array(25).fill('Blue'), ...Array(35).fill('Green')], interval: 20 }, // Wave 3: More greens, faster
+                    { spawns: [...Array(20).fill('Green'), ...Array(30).fill('Yellow'), ...Array(10).fill('Pink'), ...Array(5).fill('CamoRed')], interval: 18 }, // Wave 4: Earlier Pinks/Camos
+                    { spawns: [...Array(20).fill('Yellow'), ...Array(30).fill('Pink'), ...Array(15).fill('Black'), ...Array(15).fill('White'), ...Array(5).fill('Lead')], interval: 15 }, // Wave 5: Dense mix, leads
+                 ]
+            },
+             // Level 2: Les (8 Waves) - Introduce Camo/Lead/Regrow
+            {   pathId: 2, theme:'forest', name: "Les", startMoney: 350, startLives: 100,
+                 waves: [
+                    { spawns: [...Array(30).fill('Blue'), ...Array(10).fill('Green')], interval: 35 }, // Wave 1: Easier start
+                    { spawns: [...Array(25).fill('Green'), ...Array(15).fill('Yellow')], interval: 30 }, // Wave 2: Easier start
+                    { spawns: [...Array(25).fill('Yellow'), ...Array(20).fill('Pink'), ...Array(8).fill('CamoGreen')], interval: 20 }, // Wave 3
+                    { spawns: [...Array(15).fill('Black'), ...Array(15).fill('White'), ...Array(30).fill('Pink')], interval: 18 }, // Wave 4
+                    { spawns: [...Array(15).fill('Lead'), ...Array(35).fill('Yellow')], interval: 20 }, // Wave 5
+                    { spawns: [...Array(25).fill('Zebra'), ...Array(20).fill('White'), ...Array(20).fill('Black')], interval: 18 }, // Wave 6
+                    { spawns: [...Array(15).fill('RegrowYellow'), ...Array(35).fill('Pink')], interval: 15 }, // Wave 7
+                    { spawns: [...Array(20).fill('Rainbow'), ...Array(15).fill('Lead')], interval: 25 }, // Wave 8
+                 ]
+            },
+             // Level 3: Poušť (12 Waves) - More complex mixes, Rainbows/Zebras
+            {   pathId: 1, theme:'sand', name: "Poušť", startMoney: 300, startLives: 120,
+                 waves: [
+                     { spawns: [...Array(40).fill('Green'), ...Array(30).fill('Yellow')], interval: 18 }, // Wave 1
+                     { spawns: [...Array(60).fill('Yellow'), ...Array(20).fill('Pink')], interval: 15 }, // Wave 2
+                     { spawns: [...Array(25).fill('Pink'), ...Array(20).fill('Black'), ...Array(20).fill('White')], interval: 16 }, // Wave 3
+                     { spawns: [...Array(18).fill('Lead'), ...Array(30).fill('Yellow'), ...Array(15).fill('CamoBlue')], interval: 18 }, // Wave 4
+                     { spawns: [...Array(50).fill('Zebra')], interval: 20 }, // Wave 5
+                     { spawns: [...Array(20).fill('Lead'), ...Array(20).fill('RegrowGreen')], interval: 14 }, // Wave 6
+                     { spawns: [...Array(40).fill('Rainbow')], interval: 16 }, // Wave 7
+                     { spawns: [...Array(25).fill('Black'), ...Array(25).fill('White'), ...Array(25).fill('Lead')], interval: 12 }, // Wave 8
+                     { spawns: [...Array(60).fill('Zebra'), ...Array(15).fill('CamoPink')], interval: 18 }, // Wave 9
+                     { spawns: [...Array(15).fill('Ceramic')], interval: 35 }, // Wave 10
+                     { spawns: [...Array(50).fill('Rainbow'), ...Array(25).fill('RegrowYellow')], interval: 15 }, // Wave 11
+                     { spawns: [...Array(25).fill('Ceramic'), ...Array(25).fill('Rainbow')], interval: 22 }, // Wave 12
+                 ]
+            },
+            // Level 4: Ledová tundra (15 Waves) - Ceramics, MOABs, tougher modifiers
+            {   pathId: 3, theme:'ice', name: "Ledová tundra", startMoney: 400, startLives: 80,
+                waves: [
+                    { spawns: [...Array(30).fill('Pink'), ...Array(20).fill('Black'), ...Array(20).fill('White')], interval: 15 }, // Wave 1
+                    { spawns: [...Array(25).fill('Lead'), ...Array(50).fill('Yellow')], interval: 16 }, // Wave 2
+                    { spawns: [...Array(35).fill('Zebra'), ...Array(15).fill('CamoWhite')], interval: 14 }, // Wave 3
+                    { spawns: [...Array(60).fill('Rainbow')], interval: 13 }, // Wave 4
+                    { spawns: [...Array(30).fill('Ceramic')], interval: 28 }, // Wave 5
+                    { spawns: [...Array(20).fill('RegrowZebra'), ...Array(30).fill('Lead')], interval: 18 }, // Wave 6
+                    { spawns: [...Array(70).fill('Rainbow'), ...Array(10).fill('CamoRainbow')], interval: 11 }, // Wave 7
+                    { spawns: [...Array(35).fill('Ceramic'), ...Array(15).fill('CamoLead')], interval: 22 }, // Wave 8
+                    { spawns: ['MOAB', ...Array(35).fill('Ceramic')], interval: 18 }, // Wave 9
+                    { spawns: [...Array(120).fill('Zebra')], interval: 7 }, // Wave 10
+                    { spawns: [...Array(6).fill('MOAB')], interval: 70 }, // Wave 11
+                    { spawns: [...Array(45).fill('Ceramic'), ...Array(20).fill('RegrowRainbow')], interval: 14 }, // Wave 12
+                    { spawns: [...Array(20).fill('CamoCeramic')], interval: 28 }, // Wave 13
+                    { spawns: ['MOAB', 'MOAB', ...Array(60).fill('Rainbow')], interval: 16 }, // Wave 14
+                    { spawns: ['BFB', ...Array(10).fill('MOAB')], interval: 40 }, // Wave 15
+                ]
+            },
+            // Level 5: Sopka (20 Waves) - BFBs, ZOMGs, high density
+            {   pathId: 4, theme:'lava', name: "Sopka", startMoney: 500, startLives: 60,
+                waves: [
+                    { spawns: [...Array(30).fill('Lead'), ...Array(30).fill('Black'), ...Array(30).fill('White')], interval: 12 }, // Wave 1
+                    { spawns: [...Array(40).fill('Zebra'), ...Array(40).fill('Rainbow')], interval: 10 }, // Wave 2
+                    { spawns: [...Array(35).fill('Ceramic')], interval: 18 }, // Wave 3
+                    { spawns: [...Array(15).fill('CamoRainbow'), ...Array(15).fill('RegrowRainbow')], interval: 14 }, // Wave 4
+                    { spawns: ['MOAB', ...Array(30).fill('Ceramic')], interval: 22 }, // Wave 5
+                    { spawns: [...Array(100).fill('Rainbow'), ...Array(20).fill('Lead')], interval: 8 }, // Wave 6
+                    { spawns: [...Array(50).fill('Ceramic'), ...Array(15).fill('CamoZebra')], interval: 16 }, // Wave 7
+                    { spawns: [...Array(4).fill('MOAB'), ...Array(40).fill('Rainbow')], interval: 20 }, // Wave 8
+                    { spawns: [...Array(20).fill('RegrowCeramic')], interval: 22 }, // Wave 9
+                    { spawns: ['BFB', ...Array(25).fill('Ceramic')], interval: 28 }, // Wave 10
+                    { spawns: [...Array(60).fill('Ceramic')], interval: 10 }, // Wave 11
+                    { spawns: [...Array(10).fill('MOAB')], interval: 35 }, // Wave 12
+                    { spawns: [...Array(35).fill('CamoCeramic')], interval: 18 }, // Wave 13
+                    { spawns: [...Array(3).fill('BFB')], interval: 80 }, // Wave 14
+                    { spawns: ['MOAB','MOAB','MOAB','MOAB','MOAB', ...Array(120).fill('Pink')], interval: 8 }, // Wave 15
+                    { spawns: [...Array(30).fill('RegrowCeramic'), ...Array(30).fill('CamoRainbow')], interval: 12 }, // Wave 16
+                    { spawns: ['BFB', 'MOAB', 'MOAB', 'MOAB', 'MOAB'], interval: 45 }, // Wave 17
+                    { spawns: ['ZOMG', ...Array(10).fill('MOAB')], interval: 30 }, // Wave 18
+                    { spawns: [...Array(5).fill('BFB')], interval: 50 }, // Wave 19
+                    { spawns: ['ZOMG', ...Array(15).fill('MOAB'), ...Array(60).fill('Ceramic')], interval: 12 }, // Wave 20
+                ]
+            },
+        ];
+
+
+        let waveSpawnEvents = [];
+        let waveFrameCounter = 0;
+
+        function isDecorationPlaceable(x, y, radius, currentPath, isBlocking = false) {
+             if (x - radius < 10 || x + radius > canvas.width - 10 ||
+                 y - radius < 10 || y + radius > canvas.height - 10) {
+                 return false;
+             }
+             if (!currentPath || currentPath.length < 2) return true;
+
+             const pathPadding = 32;
+             for (let i = 0; i < currentPath.length - 1; i++) {
+                 const p1 = currentPath[i];
+                 const p2 = currentPath[i + 1];
+                 if (distToSegmentSquared({ x, y }, p1, p2) < Math.pow(radius + pathPadding, 2)) return false;
+             }
+
+             if (isBlocking) {
+                 const checkRadiusLargeNonBlocking = 35;
+                 for (const deco of currentLevelDecorations) {
+                      if (!deco.blocksPlacement && (deco.type === 'oasis' || deco.type.includes('pond') || deco.type.includes('pool') || deco.type === 'dune' || deco.type === 'lava_pool')) {
+                          const largeDecoRadius = Math.max(deco.size, deco.height || deco.size) * 0.5;
+                          const distSqDeco = (x - deco.x) * (x - deco.x) + (y - deco.y) * (y - deco.y);
+                          if (distSqDeco < Math.pow(radius + largeDecoRadius + checkRadiusLargeNonBlocking, 2)) return false;
+                      }
+                  }
+              }
+             return true;
+         }
+
+
+        function addProp(type, x, y, size, options = {}){
+             currentLevelDecorations.push({ type, x, y, size, ...options});
+        }
+
+        function tryPlaceProp(type, sizeRange, options = {}, attempts = 20) {
+             const isBlockingProp = options.blocksPlacement !== false;
+             for(let i = 0; i < attempts; i++){
+                let x = Math.round(Math.random() * canvas.width);
+                let y = Math.round(Math.random() * canvas.height);
+                let size = Math.round(Math.random() * (sizeRange[1] - sizeRange[0]) + sizeRange[0]);
+                let placementRadius = options.placementRadiusFactor ? size * options.placementRadiusFactor : size * 0.7;
+                if (isDecorationPlaceable(x,y, placementRadius, path, isBlockingProp)) {
+                     addProp(type, x,y,size,options);
+                     return true;
+                }
+            }
+            return false;
+        }
+
+
+        function generateLevelDecorations(theme, currentPath) {
+            currentLevelDecorations = [];
+            let densityFactor = 0.8;
+            let propConfig = { blocksPlacement:true, placementRadiusFactor: 0.7 };
+            let nonBlockingConfig = { blocksPlacement:false };
+
+
+            if (theme === 'grassland' ) {
+                for (let i = 0; i < 7 * densityFactor; i++) tryPlaceProp( ['round_tree', 'pine_tree', 'oak_tree'][Math.floor(Math.random()*3)], [35, 70], propConfig );
+                for (let i = 0; i < 8 * densityFactor; i++) tryPlaceProp( Math.random() < 0.6 ? 'round_rock' : 'jagged_rock', [15,35], { ...propConfig, color: `hsl(20, 10%, ${50 + Math.random()*15}%)`, placementRadiusFactor: 0.8});
+                for (let i = 0; i < 14 * densityFactor; i++) tryPlaceProp( 'bush', [20, 40], {...nonBlockingConfig, color1: `hsl(120, 30%, ${35+Math.random()*10}%)`, color2: `hsl(120, 35%, ${25+Math.random()*10}%)`, placementRadiusFactor:0.5 });
+                for (let i = 0; i < 24 * densityFactor; i++) tryPlaceProp( 'grass_tuft', [6,12], {...nonBlockingConfig, color: `hsl(110, 40%, ${40+Math.random()*15}%)`});
+                for (let i=0; i< 8 * densityFactor; i++) tryPlaceProp( 'flower', [8,15], {...nonBlockingConfig, petalColor: ['#FFC0CB','#FFFFE0','#ADD8E6','#FFB6C1','#E6E6FA'][Math.floor(Math.random()*5)], centerColor: '#FFD700'});
+                for (let i=0; i< 1 * densityFactor; i++) tryPlaceProp( 'simple_pond', [60,120], {...nonBlockingConfig, color1: '#6495ED', color2: '#4682B4'});
+                for (let i=0; i< 2 * densityFactor; i++) tryPlaceProp( 'park_bench', [30,50], propConfig);
+                for (let i=0; i< 1 * densityFactor; i++) tryPlaceProp( 'fallen_log', [40,70], propConfig);
+                for (let i=0; i< 1 * densityFactor; i++) tryPlaceProp( 'scarecrow', [50,60], propConfig);
+                for (let i=0; i< 1 * densityFactor; i++) tryPlaceProp( 'wooden_fence', [40,60], propConfig);
+
+
+            } else if (theme === 'sand') {
+                for(let i=0; i<4 * densityFactor; i++) tryPlaceProp( 'palm_tree', [50,90], propConfig );
+                for(let i=0; i<10 * densityFactor; i++) tryPlaceProp( Math.random() < 0.5 ? 'flat_rock' : 'pointy_rock', [20,50], { ...propConfig, color: `hsl(30, 30%, ${60+Math.random()*15}%)`, placementRadiusFactor:0.9});
+                for(let i=0; i<4 * densityFactor; i++){
+                    let x = Math.round(Math.random() * canvas.width); let y = Math.round(Math.random() * canvas.height);
+                    let w = Math.round(Math.random() * 180 + 100); let h = Math.round(w * (0.15 + Math.random()*0.15));
+                    addProp( 'dune', x, y, w, {...nonBlockingConfig, height:h, color1: '#EAC995', color2: '#D8B875'});
+                }
+                 for(let i=0; i<2 * densityFactor; i++){
+                     let x = Math.random() < 0.5 ? -40 : canvas.width + 40; let y = Math.random() * canvas.height * 0.8 + canvas.height * 0.1;
+                     addProp( 'tumbleweed', Math.round(x), Math.round(y), Math.round(Math.random()*25+18), {...nonBlockingConfig, speedX: (x < 0 ? 1 : -1) * (0.15 + Math.random()*0.2), speedY: (Math.random()-0.5)*0.05, rotation:Math.random()*Math.PI*2, rotationSpeed: (Math.random()-0.5)*0.03 });
+                 }
+                for(let i=0; i<3 * densityFactor; i++) tryPlaceProp( 'cactus', [40,80], propConfig );
+                for(let i=0; i<2 * densityFactor; i++) tryPlaceProp( 'animal_bones', [25,45], {...nonBlockingConfig, placementRadiusFactor:0.5 });
+                for(let i=0; i<1 * densityFactor; i++) tryPlaceProp( 'sandstone_arch', [70,120], propConfig );
+                for(let i=0; i<1 * densityFactor; i++) tryPlaceProp( 'oasis', [70,140], {...nonBlockingConfig, placementRadiusFactor: 0.9});
+
+
+            } else if (theme === 'forest') {
+                for (let i = 0; i < 9 * densityFactor; i++) tryPlaceProp( ['oak_tree', 'pine_tree', 'birch_tree'][Math.floor(Math.random()*3)], [40,80], propConfig );
+                for (let i = 0; i < 12 * densityFactor; i++) tryPlaceProp( 'forest_bush', [25,45], {...propConfig, color1: `hsl(120, 40%, ${25+Math.random()*10}%)`, color2: `hsl(110, 45%, ${18+Math.random()*8}%)`, placementRadiusFactor:0.4 });
+                for (let i = 0; i < 6 * densityFactor; i++) tryPlaceProp( 'mushroom_cluster', [18,28], {...nonBlockingConfig, placementRadiusFactor:0.8});
+                for (let i=0; i<1 * densityFactor; i++) tryPlaceProp( 'simple_pond', [50,100], {...nonBlockingConfig, color1: '#3A5F0B', color2: '#2E4D0A'});
+                for (let i=0; i< 2 * densityFactor; i++) tryPlaceProp( 'fallen_log', [45,75], propConfig);
+                for (let i=0; i< 1 * densityFactor; i++) tryPlaceProp( 'totem_pole', [60,90], propConfig);
+                for (let i=0; i< 2 * densityFactor; i++) tryPlaceProp( 'signpost', [30,40], propConfig);
+                for (let i=0; i<1 * densityFactor; i++) tryPlaceProp( 'simple_hut', [50,70], propConfig);
+
+
+            } else if (theme === 'ice') {
+                 for (let i = 0; i < 7 * densityFactor; i++) tryPlaceProp( 'ice_spire', [35,70], {...propConfig, placementRadiusFactor:0.6} );
+                 for (let i = 0; i < 18 * densityFactor; i++) tryPlaceProp( 'snow_drift', [30,75], {...nonBlockingConfig, placementRadiusFactor:0.8} );
+                 for (let i = 0; i < 2 * densityFactor; i++) tryPlaceProp( 'frozen_pond', [60,120], {...nonBlockingConfig, placementRadiusFactor:0.9} );
+                 for (let i=0; i < 1 * densityFactor; i++) tryPlaceProp( 'igloo', [50,70], propConfig);
+                 for (let i=0; i < 16 * densityFactor; i++) tryPlaceProp( 'ice_shard_cluster', [15,30], {...nonBlockingConfig, placementRadiusFactor:0.5});
+                 for (let i=0; i< 1 * densityFactor; i++) tryPlaceProp( 'dead_tree', [40,60], {...propConfig, color1:'#B0C4DE', color2:'#87CEEB'} );
+                 for (let i=0; i < 2 * densityFactor; i++) tryPlaceProp( 'snow_covered_ruin_piece', [40,70], propConfig);
+                 for (let i=0; i < 1 * densityFactor; i++) tryPlaceProp( 'ice_cave_entrance_small', [60,90], propConfig);
+                 for (let i=0; i < 3 * densityFactor; i++) tryPlaceProp( 'penguin_lowpoly', [20,30], {...nonBlockingConfig, placementRadiusFactor:0.5});
+                 for (let i=0; i < 1 * densityFactor; i++) tryPlaceProp( 'ice_lantern', [25,40], propConfig);
+                 for (let i=0; i < 25 * densityFactor; i++) tryPlaceProp( 'snowball', [8, 16], nonBlockingConfig );
+                 for (let i=0; i < 18 * densityFactor; i++) tryPlaceProp( 'small_ice_chunk', [10, 20], {...nonBlockingConfig, color: '#C0DDEE'} );
+                 for (let i=0; i< 7 * densityFactor; i++) tryPlaceProp( 'jagged_rock', [12, 28], {...propConfig, color: `hsl(200, 30%, ${60+Math.random()*10}%)`, placementRadiusFactor:0.8} );
+
+            } else if (theme === 'lava') {
+                 for(let i=0; i<15 * densityFactor; i++) tryPlaceProp( 'lava_rock', [45,95], {...propConfig, color: `hsl(15, 80%, ${10+Math.random()*10}%)`, placementRadiusFactor:0.7} );
+                 for(let i=0; i<4 * densityFactor; i++){
+                     let x = Math.round(Math.random() * canvas.width); let y = Math.round(Math.random() * canvas.height);
+                     let w = Math.round(Math.random() * 140 + 80); let h = Math.round(w * (0.3 + Math.random()*0.3));
+                     addProp( 'lava_pool', x,y,w, {...nonBlockingConfig, height:h, color1: '#FF4500', color2: '#FFA500' });
+                 }
+                  for(let i=0; i<25 * densityFactor; i++) tryPlaceProp( 'ember_ground', [16,35], nonBlockingConfig);
+                 for(let i=0; i<2 * densityFactor; i++) tryPlaceProp( 'mini_volcano_cone', [50,85], propConfig);
+                 for(let i=0; i<2 * densityFactor; i++) tryPlaceProp( 'animal_bones', [30,50], {...nonBlockingConfig, color:'#303030', placementRadiusFactor:0.5});
+                 for(let i=0; i<1 * densityFactor; i++) tryPlaceProp( 'lavafall_rock', [70,120], {...propConfig, placementRadiusFactor:0.6} );
+                 for(let i=0; i<3 * densityFactor; i++) tryPlaceProp( 'fire_pit', [60,90], nonBlockingConfig);
+             }
+        }
+
+
+        function initGame(levelIdx) {
+            levelSelectionScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            victoryScreen.style.display = 'none';
+
+            if(levelIdx < 0 || levelIdx > maxLevelUnlocked || levelIdx >= gameLevels.length || !gameLevels[levelIdx]){
+                populateLevelSelection();
+                return;
+            }
+            currentLevelIndex = levelIdx;
+            currentLevelData = gameLevels[currentLevelIndex];
+             if(!currentLevelData.waves || !Array.isArray(currentLevelData.waves)) {
+                populateLevelSelection();
+                return;
+            }
+
+            path = levelPaths[currentLevelData.pathId % levelPaths.length];
+            generateLevelDecorations(currentLevelData.theme, path);
+
+            money = currentLevelData.startMoney;
+            lives = currentLevelData.startLives;
+            score = 0;
+            currentWaveNumber = 0;
+            screenShake.trauma = 0;
+
+            balloons = [];
+            towers = [];
+            projectiles = [];
+            particles = [];
+            environmentalParticles = [];
+            selectedTowerType = null;
+            selectedTower = null;
+            placingTower = null;
+            waveInProgress = false;
+            gameRunning = true;
+            gameSpeed = 1;
+            waveFrameCounter = 0;
+            fastForwardButton.textContent = `Zrychlit (1x)`;
+            if(animationFrameId) cancelAnimationFrame(animationFrameId);
+
+             Object.values(towerTypes).forEach(tt => tt.purchaseCount = 0);
+
+            updateUI();
+             updateSelectedTowerPanel();
+            prepareNextWave();
+            gameLoop(0);
+        }
+
+        function prepareNextWave() {
+            waveInProgress = false;
+            startWaveButton.disabled = false;
+            startWaveButton.classList.add('ready');
+            waveFrameCounter = 0;
+            waveSpawnEvents = [];
+
+            if (!currentLevelData || currentWaveNumber >= currentLevelData.waves.length) {
+                return;
+            }
+
+            const waveData = currentLevelData.waves[currentWaveNumber];
+             if(!waveData || !waveData.spawns || !Array.isArray(waveData.spawns)) {
+                 waveSpawnEvents = [];
+            } else {
+                let time = 0;
+                for(const balloonType of waveData.spawns){
+                    waveSpawnEvents.push({ type: balloonType, spawnFrame: time});
+                    time += waveData.interval;
+                }
+            }
+            totalWavesDisplay.textContent = currentLevelData.waves.length;
+            waveDisplay.textContent = currentWaveNumber + 1;
+            updateUI();
+        }
+
+        function startNextWave() {
+            if (waveInProgress || !currentLevelData || currentWaveNumber >= currentLevelData.waves.length) {
+                return;
+            }
+             startWaveButton.classList.remove('ready');
+
+            const currentWaveData = currentLevelData.waves[currentWaveNumber];
+            if (!currentWaveData || !currentWaveData.spawns || currentWaveData.spawns.length === 0) {
+                waveInProgress = false;
+                currentWaveNumber++;
+
+                if (currentWaveNumber >= currentLevelData.waves.length) {
+                    const hasActualWaves = currentLevelData.waves.some(w => w && w.spawns && w.spawns.length > 0);
+                    if (hasActualWaves) {
+                         gameWon();
+                    } else {
+                        gameRunning = false;
+                        if(animationFrameId) cancelAnimationFrame(animationFrameId);
+                        populateLevelSelection();
+                    }
+                } else {
+                    prepareNextWave();
+                }
+                updateUI();
+                startWaveButton.disabled = false;
+                return;
+            }
+
+            waveInProgress = true;
+            startWaveButton.disabled = true;
+            createBurstParticles(canvas.width/2, 50, 60, () => ['#FFD700', '#FFDF00', '#FFFFFF'][Math.floor(Math.random()*3)], [6,18], [1.5,4], [70,100], 'confetti', {rotationSpeed: 0.1});
+            waveFrameCounter = 0;
+            updateUI();
+        }
+
+        function updateEnvironmentalParticles() {
+            if(!currentLevelData || !currentLevelData.theme) return;
+
+             environmentalParticles = environmentalParticles.filter(p => p.life > 0 && p.alpha > 0);
+             environmentalParticles.forEach(p => p.update());
+
+             currentLevelDecorations.forEach(deco => {
+                 if(deco.type === 'tumbleweed') {
+                     deco.x += deco.speedX * gameSpeed;
+                     deco.y += deco.speedY * gameSpeed;
+                     deco.rotation += deco.rotationSpeed * gameSpeed;
+                      if(deco.x < -deco.size - 20 || deco.x > canvas.width + deco.size + 20 || deco.y < -deco.size - 20 || deco.y > canvas.height + deco.size + 20 ){
+                          deco.x = deco.speedX > 0 ? -deco.size -5 : canvas.width + deco.size + 5;
+                          deco.y = Math.random() * canvas.height * 0.8 + canvas.height * 0.1;
+                      }
+                 }
+                  if (deco.type === 'fire_pit' && Math.random() < 0.28 * gameSpeed) {
+                     createBurstParticles(deco.x, deco.y - deco.size * 0.3, 1, () => ['#FF4500', '#FFA500'][Math.floor(Math.random()*2)], [deco.size*0.15, deco.size*0.3], [0.35,0.7], [40,75], 'ember', {gravity: -0.04, angleRange: [-Math.PI/2 - 0.45, -Math.PI/2 + 0.45], lifeRange: [40, 85]});
+                 }
+                 if(deco.type === 'lava_pool' && Math.random() < 0.05 * gameSpeed){
+                     createBurstParticles(deco.x + Math.random()*deco.size, deco.y + Math.random()*deco.height, 1,
+                     () => ['rgba(255,165,0,0.75)','rgba(255,100,0,0.65)'][Math.floor(Math.random()*2)],
+                     [deco.size*0.02, deco.size*0.04], [0,0], [60,100], 'ember', { fadeRate: 0.016, sizeDecay: 1.008, alphaStart: 0.8});
+                 }
+                  if(deco.type === 'mini_volcano_cone' && Math.random() < 0.055 * gameSpeed) {
+                       createBurstParticles(deco.x, deco.y - deco.size * 0.7, 1, () => `rgba(70, 70, 70, ${0.25 + Math.random()*0.4})`, [deco.size*0.12, deco.size*0.4], [0.2, 0.5], [90,180], 'smoke', {gravity:-0.055});
+                       if(Math.random() < 0.35) createBurstParticles(deco.x, deco.y-deco.size*0.7,1,()=>'#FF8C00',[deco.size*0.06,deco.size*0.13],[0.2,0.4],[40,60],'ember', {gravity:-0.028});
+                  }
+             });
+
+            if(currentLevelData.theme === 'lava' && Math.random() < 0.09 * gameSpeed) {
+                 environmentalParticles.push(new Particle(
+                    Math.random() * canvas.width, canvas.height + 10,
+                    () => ['#FF4500', '#FFA500', '#FF8C00'][Math.floor(Math.random()*3)],
+                    Math.random() * 3.5 + 1.5, Math.random() * 0.7 + 0.35,
+                    -Math.PI/2 + (Math.random()-0.5)*0.4, Math.random() * 60 + 65, 'ember',
+                    { gravity: -0.022, fadeRate: 0.009, alphaStart: 0.70, rotationSpeed: (Math.random()-0.5)*0.045}
+                ));
+                 if(Math.random() < 0.04) environmentalParticles.push(new Particle(Math.random()*canvas.width, canvas.height-10, 'rgba(60,60,60,0.35)', Math.random() * 10 + 4.5, Math.random() * 0.14 + 0.04, -Math.PI/2, Math.random() * 95 + 95,'smoke', {gravity:-0.0045, alphaStart:0.25}));
+            } else if ( (currentLevelData.theme === 'grassland' || currentLevelData.theme === 'forest') && Math.random() < 0.03 * gameSpeed){
+                 if (Math.random() < 0.2) {
+                     environmentalParticles.push(new Particle(
+                        (Math.random() < 0.5 ? -10 : canvas.width+10), Math.random()*canvas.height,
+                        ()=>['#90EE90', '#ADFF2F', '#98FB98'][Math.floor(Math.random()*3)],
+                        Math.random()*3+2, Math.random()*0.5+0.3, (Math.random()<0.5?0:Math.PI) + (Math.random()-0.5)*0.5, Math.random()*120+100, 'leaf',
+                        {gravity:-0.005, fadeRate:0.006, alphaStart: 0.4, waveAmplitude:3, waveFrequency:0.08, rotationSpeed:(Math.random()-0.5)*0.03}
+                    ));
+                }
+            } else if (currentLevelData.theme === 'sand' && Math.random() < 0.018 * gameSpeed){
+                 if (Math.random() > 0.05) {
+                    environmentalParticles.push(new Particle(
+                        Math.random()*canvas.width, Math.random()*canvas.height,
+                        'rgba(222,184,135,0.03)', Math.random()*26+14, Math.random()*0.03+0.03, Math.random()*Math.PI*2, Math.random()*55+60, 'dust_mote',
+                        {gravity:-0.0015, fadeRate:0.015, alphaStart:0.06}
+                    ));
+                 }
+            } else if (currentLevelData.theme === 'ice' && Math.random() < 0.11 * gameSpeed) {
+                environmentalParticles.push(new Particle(
+                    Math.random() * canvas.width, -10,
+                    () => `rgba(220, 235, 255, ${0.18 + Math.random() * 0.18})`,
+                    Math.random() * 2.5 + 1.0, Math.random() * 0.4 + 0.08, Math.PI / 2 + (Math.random() - 0.5) * 0.35,
+                    Math.random() * 85 + 85, 'default',
+                    { gravity: 0.0085, fadeRate: 0.007, rotationSpeed: (Math.random() - 0.5) * 0.022, sizeDecay:0.993 }
+                ));
+            }
+        }
+
+        function spawnBalloon(type) {
+            const startPoint = path[0];
+            balloons.push(new Balloon(type, startPoint.x, startPoint.y, path));
+            createBurstParticles(startPoint.x, startPoint.y, 8, () => 'rgba(180,180,180,0.6)', [3,7], [0.6,1.2], [18,28], 'smoke');
+        }
+
+        function handleBalloonPop(balloon, customX, customY) {
+            const popX = customX !== undefined ? customX : balloon.x;
+            const popY = customY !== undefined ? customY : balloon.y;
+
+            SoundManager.playPop(balloon.type);
+            money += (RBE_VALUES[balloon.baseType] || RBE_VALUES[balloon.type] || 1);
+            score += (RBE_VALUES[balloon.baseType] || RBE_VALUES[balloon.type] || 1);
+
+            let particleColor = balloon.color;
+            let particleCount = 12;
+            let particleType = 'default';
+            let pOptions = {};
+
+            switch(balloon.baseType){
+                case 'Red': particleColor = 'red'; particleCount=8; break;
+                case 'Blue': particleColor = 'blue'; particleCount=10; break;
+                case 'Green': particleColor = 'green'; particleCount=12; break;
+                case 'Yellow': particleColor = 'yellow'; particleCount=14; break;
+                case 'Pink': particleColor = 'pink'; particleCount=16; break;
+                case 'Black': particleColor = ['#333', '#555', 'orange']; particleType = 'smoke'; particleCount=20; pOptions.gravity=0.01; break;
+                case 'White': particleColor = ['#eee', '#ccf', 'lightblue']; particleType = 'spark'; particleCount=20; break;
+                case 'Lead': particleColor = ['#666', '#888', '#aaa']; particleType = 'shard'; particleCount=18; pOptions.rotationSpeed=0.1; break;
+                case 'Zebra': particleColor = () => Math.random() > 0.5 ? 'black' : 'white'; particleCount=22; pOptions.gravity=0.01; break;
+                case 'Rainbow': particleColor = () => ['red','orange','yellow','green','blue','purple'][Math.floor(Math.random()*6)]; particleType='confetti'; particleCount=30; pOptions.rotationSpeed=0.2; break;
+                case 'Ceramic': particleColor = ['#a52a2a', '#800000', '#5d1414']; particleType = 'shard'; particleCount = 25; pOptions.rotationSpeed=0.15; pOptions.gravity=0.03; break;
+                case 'MOAB': case 'BFB': case 'ZOMG':
+                    particleColor = balloon.outerColor; particleType = 'smoke'; particleCount = 60; pOptions.gravity=0.01;
+                    createBurstParticles(popX, popY, 30, () => balloon.color, [6,18], [2.5,6], [45,80], 'shard', {rotationSpeed:0.1, gravity:0.04});
+                    createBurstParticles(popX, popY, 40, () => ['#FF4500','#FFA500','#FF6347'][Math.floor(Math.random()*3)], [12,30], [2.5,7], [55,90], 'smoke', {gravity:0.015, alphaStart:0.8});
+                    break;
+            }
+             createBurstParticles(popX, popY, particleCount, particleColor, [2.5,6], [0.8,3.0], [25,45], particleType, pOptions);
+
+            if (balloon.children) {
+                balloon.children.forEach(childType => {
+                    const offsetX = (Math.random() - 0.5) * balloon.size * 0.6;
+                    const offsetY = (Math.random() - 0.5) * balloon.size * 0.6;
+                    const newBalloon = new Balloon(childType, popX + offsetX, popY + offsetY, balloon.path)
+                    newBalloon.pathIndex = balloon.pathIndex;
+                    newBalloon.distanceTraveled = balloon.distanceTraveled;
+                    if(balloon.effects.glue) newBalloon.applyEffect('glue', Math.floor(balloon.effects.glue.duration / 1.5), balloon.effects.glue.strength);
+                    if(balloon.effects.freeze) newBalloon.applyEffect('freeze', Math.floor(balloon.effects.freeze.duration / 1.5));
+
+                    balloons.push(newBalloon);
+                });
+            }
+            const index = balloons.indexOf(balloon);
+            if (index > -1) balloons.splice(index,1);
+            updateUI();
+        }
+
+        function updateUI() {
+            moneyDisplay.textContent = money;
+            livesDisplay.textContent = lives;
+            waveDisplay.textContent = waveInProgress ? (currentWaveNumber + 1) : (currentWaveNumber +1);
+            totalWavesDisplay.textContent = currentLevelData ? currentLevelData.waves.length : 0;
+            scoreDisplay.textContent = score;
+
+            document.querySelectorAll('.tower-shop-item').forEach(item => {
+                const typeKey = item.dataset.type;
+                if(!towerTypes[typeKey]) return;
+
+                const purchaseCount = towerTypes[typeKey].purchaseCount || 0;
+                let currentCost = Math.floor(towerTypes[typeKey].cost * (1 + purchaseCount * GAME_BALANCE_CONFIG.TOWER_COST_INCREASE_PER_PURCHASE_FACTOR));
+
+                 item.querySelector('.tower-shop-cost').textContent = ` (${currentCost}$)`;
+
+
+                if (money < currentCost) {
+                    item.classList.add('disabled');
+                    const button = item.querySelector('button');
+                    if(button) button.disabled = true;
+                } else {
+                    item.classList.remove('disabled');
+                    const button = item.querySelector('button');
+                     if(button) button.disabled = false;
+                }
+            });
+
+            if (selectedTower) {
+                displaySelectedTowerInfo(selectedTower);
+            }
+        }
+
+         function displaySelectedTowerInfo(tower) {
+            if(!tower){
+                selectedTowerNameH3.textContent = "";
+                selectedTowerInfoDiv.innerHTML = "";
+                upgradeButton.style.display = 'none';
+                upgradeDescriptionP.textContent = "";
+                sellButton.style.display = 'none';
+
+                return;
+            }
+
+            selectedTowerNameH3.textContent = `${tower.name} (Úroveň ${tower.upgradeTier})`;
+
+            selectedTowerInfoDiv.innerHTML = `
+                <p><span class="stat-label">Poškození:</span> <span class="stat-value">${tower.damage}</span></p>
+                <p><span class="stat-label">Dosah:</span> <span class="stat-value">${tower.range.toFixed(0)}</span></p>
+                <p><span class="stat-label">Rychlost útoku:</span> <span class="stat-value">${(60 / tower.fireRate).toFixed(2)}/s</span></p>
+                 ${tower.pierce > 1 ? `<p><span class="stat-label">Průraz:</span> <span class="stat-value">${tower.pierce}</span></p>` : ''}
+                <p><span class="stat-label">Celková cena:</span> <span class="stat-value">${tower.totalCost}$</span></p>
+                ${tower.canSeeCamo ? '<p><span class="stat-label">Speciální:</span> <span class="stat-value">Vidí Maskované</span></p>' : ''}
+                ${tower.canPopLead ? '<p><span class="stat-label">Speciální:</span> <span class="stat-value">Prorazí Olovo</span></p>' : ''}
+                ${tower.ceramicBonus ? `<p><span class="stat-label">Bonus Keramika:</span> <span class="stat-value">+${tower.ceramicBonus}</span></p>` : ''}
+                ${tower.moabDamageBonus ? `<p><span class="stat-label">Bonus MOAB:</span> <span class="stat-value">+${tower.moabDamageBonus}</span></p>` : ''}
+                ${tower.isSupport ? `<p><span class="stat-label">Typ:</span> <span class="stat-value">Podpora</span></p>` : ''}
+                ${tower.income ? `<p><span class="stat-label">Příjem:</span> <span class="stat-value">${tower.income}$</span></p>` : ''}
+             `;
+
+            if (tower.upgrades && tower.upgradeTier < tower.upgrades.length) {
+                const nextUpgrade = tower.upgrades[tower.upgradeTier];
+                upgradeButton.style.display = 'block';
+                upgradeButton.textContent = `Vylepšit (${nextUpgrade.cost}$)`;
+                upgradeButton.disabled = money < nextUpgrade.cost;
+                upgradeDescriptionP.textContent = `${nextUpgrade.name}: ${nextUpgrade.description}`;
+                 upgradeButton.onclick = () => {
+                    if (tower.upgrade()){
+                    }
+                 };
+            } else {
+                upgradeButton.style.display = 'none';
+                 upgradeDescriptionP.textContent = "Maximální úroveň dosažena!";
+            }
+
+             sellButton.style.display = 'block';
+             sellButton.textContent = `Prodat (${Math.floor(tower.totalCost * GAME_BALANCE_CONFIG.TOWER_SELL_PERCENTAGE)}$)`;
+             sellButton.onclick = () => {
+                 const index = towers.findIndex(t => t.id === tower.id);
+                 if(index > -1) {
+                    tower.sell();
+                    towers.splice(index,1);
+                    selectTower(null);
+                 }
+             }
+
+        }
+
+        function updateSelectedTowerPanel(){
+             if(selectedTower){
+                 towerShopContainer.style.display = 'none';
+                 selectedTowerContainer.style.display = 'flex';
+                 displaySelectedTowerInfo(selectedTower);
+             } else {
+                  towerShopContainer.style.display = 'flex';
+                 selectedTowerContainer.style.display = 'none';
+             }
+        }
+
+        function selectTower(tower){
+             selectedTower = tower;
+             updateSelectedTowerPanel();
+             if (!tower) {
+                 placingTower = null;
+                 selectedTowerType = null;
+                 document.querySelectorAll('.tower-shop-item.selected').forEach(btn => btn.classList.remove('selected'));
+             }
+        }
+
+        function canPlaceTower(x, y, towerRadius) {
+            if (x - towerRadius < 0 || x + towerRadius > canvas.width ||
+                y - towerRadius < 0 || y + towerRadius > canvas.height) {
+                return false;
+            }
+            if(!path || path.length === 0) return true;
+
+            for (let i = 0; i < path.length - 1; i++) {
+                const p1 = path[i];
+                const p2 = path[i+1];
+                 const pathPadding = 22;
+                if (distToSegmentSquared({x,y}, p1, p2) < Math.pow(towerRadius + pathPadding, 2) ) return false;
+            }
+            for (const t of towers) {
+                 const placeDist = t.iconSize + t.upgradeTier*2.5 + 8;
+                const distSq = (x - t.x)*(x - t.x) + (y - t.y)*(y - t.y);
+                if (distSq < Math.pow(towerRadius + placeDist, 2)) return false;
+            }
+            for (const deco of currentLevelDecorations){
+                 if (deco.blocksPlacement){
+                     const radiusCheck = (deco.placementRadiusFactor ? deco.size * deco.placementRadiusFactor : deco.size * 0.7);
+                    const distSqDeco = (x - deco.x)*(x-deco.x) + (y - deco.y)*(y-deco.y);
+                    if(distSqDeco < Math.pow(towerRadius + radiusCheck, 2)) return false;
+                 } else if (deco.type === 'oasis' || deco.type.includes('pond') || deco.type.includes('pool') || deco.type === 'dune' || deco.type === 'lava_pool') {
+                     const largeDecoRadius = Math.max(deco.size, deco.height || deco.size) * 0.45;
+                     const checkRadiusLargeNonBlocking = 10;
+                     const distSqDeco = (x - deco.x) * (x-deco.x) + (y - deco.y) * (y-deco.y);
+                     if(distSqDeco < Math.pow(towerRadius + largeDecoRadius + checkRadiusLargeNonBlocking, 2)) return false;
+                 }
+            }
+            return true;
+        }
+
+        function distToSegmentSquared(p, v, w) {
+            var l2 = (v.x-w.x)*(v.x-w.x) + (v.y-w.y)*(v.y-w.y);
+            if (l2 == 0) return (p.x-v.x)*(p.x-v.x) + (p.y-v.y)*(p.y-v.y);
+            var t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            const projX = v.x + t * (w.x - v.x);
+            const projY = v.y + t * (w.y - v.y);
+            return (p.x - projX)*(p.x - projX) + (p.y - projY)*(p.y - projY);
+        }
+
+        function findClosestPathPoint(x, y, currentPath, maxDist) {
+            let closestPoint = null;
+            let minDistSq = maxDist * maxDist;
+
+            for(let i = 0; i < currentPath.length - 1; i++) {
+                const p1 = currentPath[i];
+                const p2 = currentPath[i+1];
+                const l2 = (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y);
+                if (l2 == 0) {
+                     const dSq = (x-p1.x)*(x-p1.x) + (y-p1.y)*(y-p1.y);
+                     if(dSq < minDistSq) { minDistSq = dSq; closestPoint = p1;}
+                     continue;
+                }
+                let t = ((x - p1.x) * (p2.x - p1.x) + (y - p1.y) * (p2.y - p1.y)) / l2;
+                t = Math.max(0, Math.min(1, t));
+                const projX = p1.x + t * (p2.x - p1.x);
+                const projY = p1.y + t * (p2.y - p1.y);
+                const distSq = (x - projX)*(x - projX) + (y - projY)*(y - projY);
+
+                if (distSq < minDistSq) {
+                    minDistSq = distSq;
+                    closestPoint = { x: projX, y: projY };
+                }
+            }
+             if(currentPath && currentPath.length > 0){
+                for(const p of [currentPath[0], currentPath[currentPath.length-1]]){
+                    if(!p) continue;
+                    const dSq = (x-p.x)*(x-p.x) + (y-p.y)*(y-p.y);
+                    if(dSq < minDistSq) { minDistSq = dSq; closestPoint = p;}
+                }
+            }
+            return closestPoint;
+        }
+
+        function isBalloonInRange(tower, balloon) {
+            const dx = balloon.x - tower.x;
+            const dy = balloon.y - tower.y;
+            return Math.sqrt(dx*dx + dy*dy) < tower.range + balloon.size;
+        }
+
+        function selectTowerToPlace(type) {
+            if(!towerTypes[type]) {return;}
+
+            const purchaseCount = towerTypes[type].purchaseCount || 0;
+            let currentCost = Math.floor(towerTypes[type].cost * (1 + purchaseCount * GAME_BALANCE_CONFIG.TOWER_COST_INCREASE_PER_PURCHASE_FACTOR));
+
+
+            if(currentCost > money) {
+                SoundManager.playNoMoney();
+                const moneyElemPos = moneyDisplay.getBoundingClientRect();
+                createBurstParticles(moneyElemPos.left - 15, moneyElemPos.top + moneyElemPos.height/2, 8, () => 'red', [3,5], [0.8,1.8], [18,28], 'spark');
+                return;
+            }
+            selectTower(null);
+            selectedTowerType = type;
+            placingTower = new Tower(type, canvas.width/2, canvas.height/2);
+            placingTower.cost = currentCost;
+
+            document.querySelectorAll('.tower-shop-item').forEach(item => {
+                 item.classList.remove('selected');
+                 if(item.dataset.type === type) {
+                     item.classList.add('selected');
+                      const icon = item.querySelector('.tower-shop-icon canvas');
+                      if (icon && item.offsetParent !== null) {
+                         createBurstParticles(item.offsetLeft + icon.offsetLeft + towerShopDiv.offsetLeft + icon.width/2,
+                                           item.offsetTop + icon.offsetTop + towerShopDiv.offsetTop + icon.height/2,
+                                           10, ()=>towerTypes[type].color, [2,4], [0.5,1], [10,15], 'spark', {alphaStart:0.7});
+                      }
+                 }
+            });
+
+        }
+
+        function populateTowerShop() {
+            towerShopDiv.innerHTML = '';
+            for (const typeKey in towerTypes) {
+                const definition = towerTypes[typeKey];
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('tower-shop-item');
+                itemDiv.dataset.type = typeKey;
+                itemDiv.dataset.cost = definition.cost;
+
+                const iconCanvas = document.createElement('canvas');
+                iconCanvas.width = 25; iconCanvas.height = 25;
+                const iconCtx = iconCanvas.getContext('2d');
+                new Tower(typeKey, 12.5, 12.5).draw(iconCtx, true);
+
+                const iconContainer = document.createElement('div');
+                iconContainer.classList.add('tower-shop-icon');
+                iconContainer.appendChild(iconCanvas);
+
+                const detailsDiv = document.createElement('div');
+                detailsDiv.classList.add('tower-shop-details');
+                const nameSpan = document.createElement('span');
+                nameSpan.classList.add('tower-shop-name');
+                nameSpan.textContent = definition.name;
+                const costSpan = document.createElement('span');
+                costSpan.classList.add('tower-shop-cost');
+
+                const purchaseCount = definition.purchaseCount || 0;
+                let currentCost = Math.floor(definition.cost * (1 + purchaseCount * GAME_BALANCE_CONFIG.TOWER_COST_INCREASE_PER_PURCHASE_FACTOR));
+                costSpan.textContent = ` (${currentCost}$)`;
+
+                detailsDiv.appendChild(nameSpan);
+                detailsDiv.appendChild(costSpan);
+
+                const towerButton = document.createElement('button');
+                towerButton.style.cssText = "width:100%; display:flex; align-items:center; background:none; border:none; padding:0; text-align:left; cursor:pointer; box-shadow:none; text-shadow:none;";
+                towerButton.appendChild(iconContainer);
+                towerButton.appendChild(detailsDiv);
+
+                itemDiv.appendChild(towerButton);
+                itemDiv.onclick = () => {
+                    SoundManager.playUISelect();
+                    if(!itemDiv.classList.contains('disabled')) selectTowerToPlace(typeKey);
+                };
+
+                towerShopDiv.appendChild(itemDiv);
+            }
+        }
+
+        function loadGameProgress(){
+            const savedMaxLevel = localStorage.getItem('bloonsTDMaxLevelUnlocked_juicy_upg_cz');
+            if(savedMaxLevel !== null) {
+                maxLevelUnlocked = parseInt(savedMaxLevel, 10);
+            } else {
+                maxLevelUnlocked = 0;
+            }
+        }
+        function saveGameProgress(){
+            localStorage.setItem('bloonsTDMaxLevelUnlocked_juicy_upg_cz', maxLevelUnlocked);
+        }
+
+
+        function populateLevelSelection() {
+            gameOverScreen.style.display = 'none';
+            victoryScreen.style.display = 'none';
+            levelSelectionScreen.style.display = 'none';
+
+            const container = document.getElementById('levelSelectionScreen').querySelector('.level-button-container');
+            container.innerHTML = '';
+            gameLevels.forEach((level, index) => {
+                const btn = document.createElement('button');
+                btn.classList.add('level-button');
+                btn.textContent = index + 1;
+                btn.title = level.name || `Úroveň ${index+1}`;
+                if (index > maxLevelUnlocked) {
+                    btn.disabled = true;
+                    btn.title += " (Zamčeno)";
+                } else {
+                    btn.onclick = () => { SoundManager.playUIConfirm(); initGame(index); }
+                }
+                container.appendChild(btn);
+            });
+            levelSelectionScreen.style.display = 'flex';
+        }
+
+        let lastFrameTime = 0;
+
+        function drawLowPolyShape(ctx, x, y, size, points, color, options = {}) {
+             if (!points || points.length === 0) return;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x + points[0].x * size, y + points[0].y * size);
+            for (let i = 1; i < points.length; i++) {
+                 if(points[i] === undefined) continue;
+                 ctx.lineTo(x + points[i].x * size, y + points[i].y * size);
+             }
+            ctx.closePath();
+            ctx.fill();
+            if (options.stroke) {
+                ctx.strokeStyle = options.stroke;
+                ctx.lineWidth = options.lineWidth || 1;
+                ctx.stroke();
+            }
+        }
+
+         function drawCircle(ctx, x, y, radius, color){
+             if (radius <= 0) return;
+             ctx.fillStyle = color;
+             ctx.beginPath();
+             ctx.arc(x,y, radius, 0, Math.PI*2);
+             ctx.fill();
+         }
+
+         function drawRect(ctx, x, y, width, height, color, rotation = 0){
+             if (width <= 0 || height <= 0) return;
+             ctx.save();
+             ctx.translate(x + width / 2, y + height / 2);
+             ctx.rotate(rotation * Math.PI / 180);
+             ctx.fillStyle = color;
+             ctx.fillRect(-width / 2, -height / 2, width, height);
+             ctx.restore();
+         }
+
+        function drawLevelDecorations(ctx, theme) {
+            const backgroundProps = [];
+            const foregroundProps = [];
+
+             currentLevelDecorations.forEach(deco => {
+                  if(deco.type === 'dune' || deco.type.includes('pond') || deco.type.includes('pool') || deco.type === 'oasis' || deco.type.includes('ground') || deco.type.includes('patch') || deco.type === 'tumbleweed' ){
+                     backgroundProps.push(deco);
+                 } else {
+                     foregroundProps.push(deco);
+                 }
+            });
+
+
+            foregroundProps.sort((a,b) => (a.y + (a.height || a.size || 0) * 0.5) - (b.y + (b.height || b.size || 0) * 0.5));
+
+            const drawProps = (props) => {
+                 props.forEach(deco => {
+                     ctx.save();
+                     const x = deco.x;
+                     const y = deco.y;
+                     const s = deco.size;
+
+                     if (deco.type === 'round_tree' || deco.type === 'oak_tree') {
+                        drawRect(ctx, x-s*0.15, y-s*0.1, s*0.3, s*0.9, deco.trunkColor || '#654321');
+                        const leafColor1 = deco.leafColor1 || '#3F803F'; const leafColor2 = deco.leafColor2 || '#2A5A2A';
+                        drawCircle(ctx, x, y - s * 0.65, s * 0.45, leafColor2);
+                        for(let i=0; i<5; i++) drawCircle(ctx, x + Math.cos(i*1.3)*s*0.25, y-s*0.4 + Math.sin(i*1.8)*s*0.2, s*(0.2 + 0.05 * (i % 3)), leafColor1);
+                     } else if (deco.type === 'pine_tree') {
+                          drawRect(ctx, x - s * 0.08, y - s*0.1, s * 0.16, s * 0.9, '#5E402A');
+                          drawLowPolyShape(ctx, x, y + s * 0.4, s * 0.7, [{ x: 0, y: -1 }, { x: 0.8, y: 0.2 }, { x: -0.8, y: 0.2 }], '#1E401E');
+                          drawLowPolyShape(ctx, x, y + s * 0.1, s * 0.5, [{ x: 0, y: -0.8 }, { x: 0.6, y: 0.1 }, { x: -0.6, y: 0.1 }], '#2E5C2E');
+                          drawLowPolyShape(ctx, x, y - s * 0.2, s * 0.3, [{ x: 0, y: -0.6 }, { x: 0.4, y: 0 }, { x: -0.4, y: 0 }], '#1E401E');
+                     } else if (deco.type === 'birch_tree') {
+                         drawRect(ctx, x - s * 0.07, y - s * 0.9, s * 0.14, s, '#EAE0C8');
+                         for (let m = 0; m < 7; m++) { drawRect(ctx, x - s * 0.06 + (m % 2 === 0 ? s * 0.01 : -s * 0.01), y - s * 0.8 + m * s * 0.12, s * 0.018, s * 0.07, '#333'); }
+                         const leafColor1 = '#9ACD32'; const leafColor2 = '#90EE90';
+                         for(let i=0; i<5; i++) drawCircle(ctx, x + (Math.cos(i*1.2)*s*0.2), y-s*0.7 + (Math.sin(i*1.5)*s*0.2), s*(0.18 + Math.sin(i)*0.03), leafColor2);
+                         for(let i=0; i<4; i++) drawCircle(ctx, x + (Math.cos(i*1.8)*s*0.15), y-s*0.6 + (Math.sin(i*1.2)*s*0.15), s*(0.14 + Math.sin(i)*0.02), leafColor1);
+                     } else if (deco.type === 'palm_tree') {
+                         drawRect(ctx, x - s * 0.06, y - s * 0.9, s * 0.12, s * 0.9, '#B8860B');
+                         for (let k = 0; k < 5; k++) {
+                              ctx.save();
+                              ctx.translate(x, y - s * 0.9);
+                              ctx.rotate(k * Math.PI * 2 / 5 + Math.PI / 10);
+                              drawLowPolyShape(ctx, 0, s * 0.05, s * 0.55, [{ x: 0, y: 0 }, { x: 0.1, y: 0.9 }, { x: 0, y: 1.0 }, { x: -0.1, y: 0.9 }], '#2E8B57');
+                              ctx.restore();
+                         }
+                    } else if (deco.type === 'round_rock') {
+                         drawLowPolyShape(ctx, x, y, s, [{x:-0.9,y:0.2},{x:-0.2,y:-0.8},{x:0.7,y:-0.5},{x:0.8,y:0.4},{x:0.1,y:0.7},{x:-0.5,y:0.6}], deco.color || '#808080');
+                    } else if (deco.type === 'jagged_rock') {
+                        drawLowPolyShape(ctx, x, y, s, [{x:-0.8,y:0.5},{x:-0.3,y:-0.9},{x:0.2,y:-0.4},{x:0.9,y:0.4},{x:0.1,y:0.6}], deco.color || '#696969');
+                    } else if (deco.type === 'flat_rock') {
+                        drawLowPolyShape(ctx, x, y, s, [{x:-1,y:0.1},{x:-0.3,y:-0.2},{x:0.8,y:-0.1},{x:1,y:0.3},{x:0.2,y:0.4},{x:-0.7,y:0.3}], deco.color || '#A0522D');
+                    } else if (deco.type === 'pointy_rock') {
+                         drawLowPolyShape(ctx, x, y, s, [{x:0,y:-1},{x:0.4,y:0.3},{x:0,y:0.5},{x:-0.4,y:0.3}], deco.color || '#8B4513');
+                    } else if (deco.type === 'bush' || deco.type === 'forest_bush') {
+                         const color1 = deco.color1 || '#006400'; const color2 = deco.color2 || '#228B22';
+                         for(let i=0; i<7; i++) drawCircle(ctx, x + Math.cos(i*0.9)*s*0.45, y + Math.sin(i*1.3)*s*0.3, s*(0.30 + Math.sin(i*1.8)*0.05), color2);
+                         for(let i=0; i<5; i++) drawCircle(ctx, x + Math.cos(i*1.3)*s*0.3, y + Math.sin(i*2.0)*s*0.25, s*(0.25 + Math.sin(i*1.6)*0.04), color1);
+                    } else if (deco.type === 'grass_tuft') {
+                         for(let k=0;k<3;k++) drawLowPolyShape(ctx, x+(k-1)*s*0.15, y+s*0.1, s*0.6, [{x:0,y:0.2},{x:0.05*(k+1)*0.7, y:-0.8},{x:0.1*(k+1)*0.7, y:0.2}], deco.color || '#90EE90');
+                     } else if (deco.type === 'flower') {
+                         drawRect(ctx, x-s*0.05,y-s*0.1, s*0.1, s*0.9, '#228B22');
+                         for(let k=0;k<5;k++) {
+                             ctx.save(); ctx.translate(x,y-s*0.1); ctx.rotate(k*Math.PI*2/5);
+                             drawCircle(ctx, 0, -s*0.35, s*0.25, deco.petalColor || '#FFC0CB');
+                             ctx.restore();
+                         }
+                         drawCircle(ctx, x,y-s*0.1,s*0.18, deco.centerColor || '#FFD700');
+                      } else if (deco.type === 'mushroom_cluster' ) {
+                          for(let m=0; m < 2; m++){
+                              const mx = x + (m*2-1)*s*0.3; const my = y + (m*0.1)*s; const mSize = s * (0.4 + m*0.1);
+                              drawRect(ctx, mx-mSize*0.1, my - mSize*0.05, mSize*0.2, mSize*0.3, '#D2B48C');
+                              let capColor = ['#FF6347', '#FF4500', '#DC143C'][m%3];
+                              drawCircle(ctx, mx, my - mSize*0.2, mSize*0.4, capColor);
+                          }
+                     }
+                    else if (deco.type === 'dune') {
+                          const w = s; const h = deco.height;
+                          drawLowPolyShape(ctx, x,y, w*0.5, [{x:-1, y:0.5},{x:0,y:-0.5*h/s*2},{x:1,y:0.5},{x:0.5,y:0.6},{x:-0.5,y:0.6}], deco.color2 || '#D2B48C');
+                          drawLowPolyShape(ctx, x,y+h*0.05, w*0.45, [{x:-1, y:0.45},{x:0,y:-0.45*h/s*2},{x:1,y:0.45},{x:0.5,y:0.55},{x:-0.5,y:0.55}], deco.color1 || '#EAC995');
+                    } else if (deco.type === 'tumbleweed') {
+                          ctx.save(); ctx.translate(x,y); ctx.rotate(deco.rotation);
+                          const coreColor = '#A0522D'; const branchColor = '#8B4513'; const layer2Color = 'rgba(160, 82, 45, 0.7)';
+                          drawCircle(ctx, 0,0, s*0.8, layer2Color);
+                          drawCircle(ctx, 0,0,s*0.6, coreColor);
+                          ctx.lineWidth = s*0.08;
+                          for(let k=0; k<12; k++) {
+                              const angle = k*Math.PI*2/12; const len = s*(0.7+ Math.random()*0.6);
+                              ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(angle)*len, Math.sin(angle)*len); ctx.strokeStyle=branchColor; ctx.stroke();
+                          }
+                          ctx.restore();
+                    } else if (deco.type === 'cactus') {
+                        const cColor = '#556B2F'; const cHighlight = '#6B8E23';
+                        const trunkWidth = s*0.3; const trunkX = x - trunkWidth/2; const trunkY = y - s*0.9; const trunkH = s*0.9;
+                        drawRect(ctx, trunkX, trunkY, trunkWidth, trunkH, cColor);
+                        drawRect(ctx, trunkX+trunkWidth*0.1, trunkY, trunkWidth*0.3, trunkH, cHighlight);
+                        const armWidth = trunkWidth * 0.7; const armHeight = s*0.4;
+
+                        drawRect(ctx, trunkX - armWidth*0.7, trunkY + trunkH*0.3, armWidth, armHeight, cColor);
+                        drawRect(ctx, trunkX - armWidth*0.6, trunkY + trunkH*0.3, armWidth*0.3, armHeight, cHighlight);
+                        drawRect(ctx, trunkX - armWidth*0.7, trunkY + trunkH*0.3 - armHeight*0.3, armWidth, armHeight*0.3, cColor);
+
+                        drawRect(ctx, trunkX + trunkWidth - armWidth*0.3, trunkY + trunkH*0.4, armWidth, armHeight, cColor);
+                        drawRect(ctx, trunkX + trunkWidth + armWidth*0.1 - armWidth*0.3, trunkY + trunkH*0.4, armWidth*0.3, armHeight, cHighlight);
+                        drawRect(ctx, trunkX + trunkWidth + armWidth*0.1 - armWidth*0.3, trunkY + trunkH*0.4 - armHeight*0.3, armWidth, armHeight*0.3, cColor);
+                    } else if (deco.type === 'animal_bones') {
+                        const boneColor = deco.color || '#F5F5DC'; const darkBoneColor = '#D2B4AA';
+                        const boneLength = s*0.9; const boneWidth = s*0.18; const knobRadius = s*0.15;
+                        drawRect(ctx, x - boneLength/2 + knobRadius*0.8, y - boneWidth/2, boneLength - knobRadius*1.6, boneWidth, boneColor);
+                        drawCircle(ctx, x - boneLength/2 + knobRadius*0.8, y, knobRadius, boneColor);
+                        drawCircle(ctx, x + boneLength/2 - knobRadius*0.8, y, knobRadius, boneColor);
+                        drawLowPolyShape(ctx, x + s*0.1, y - s*0.3, s*0.3, [{x:-0.5,y:0.5},{x:0,y:-0.5},{x:0.5,y:0.5}], darkBoneColor);
+                     } else if (deco.type === 'sandstone_arch') {
+                         const base = '#DAA520'; const shadow = '#CD853F';
+                         const legW = s*0.2; const legH = s*0.8; const topH = s*0.3;
+                         drawRect(ctx,x-s*0.45,y-legH/2,legW,legH,shadow);
+                         drawRect(ctx,x+s*0.25,y-legH/2,legW,legH,shadow);
+                         drawRect(ctx,x-s*0.45,y-legH/2-topH,s*0.9,topH,base);
+                         drawRect(ctx,x-s*0.45,y-legH/2-topH*0.7,s*0.9,topH*0.3,shadow);
+                     } else if (deco.type === 'oasis') {
+                         drawCircle(ctx, x, y, s * 0.5, '#4682B4');
+                         drawCircle(ctx, x+s*0.03, y-s*0.03, s * 0.35, '#6495ED');
+                        for(let k=0;k<2;k++){
+                            let px = x + Math.cos(k*Math.PI + 0.5)*s*0.4; let py = y+Math.sin(k*Math.PI + 0.5)*s*0.4;
+                            drawRect(ctx, px-s*0.03, py-s*0.2, s*0.06, s*0.2, '#B8860B');
+                            for(let j=0;j<3;j++){ ctx.save(); ctx.translate(px, py-s*0.2); ctx.rotate(j*Math.PI*2/3 + k*0.3); drawLowPolyShape(ctx, 0, s*0.02, s*0.1, [{x:0,y:0},{x:0.2,y:0.9},{x:0,y:1.2},{x:-0.2,y:0.9}], '#2E8B57'); ctx.restore(); }
+                        }
+                     }
+                      else if (deco.type === 'simple_pond') {
+                           drawCircle(ctx, x, y, s * 0.5, deco.color1 || '#6495ED');
+                           drawCircle(ctx, x+s*0.03, y-s*0.03, s * 0.35, deco.color2 || '#4682B4');
+                      }
+                     else if (deco.type === 'frozen_pond') {
+                         drawCircle(ctx, x, y, s * 0.5, '#A8D8F0');
+                         drawCircle(ctx, x+s*0.05, y-s*0.05, s * 0.35, '#D0E0F0');
+                     }
+                      else if (deco.type === 'fallen_log') {
+                           drawRect(ctx, x - s * 0.4, y - s * 0.1, s * 0.8, s * 0.2, '#8B4513');
+                           drawCircle(ctx, x - s * 0.4, y, s * 0.1, '#654321');
+                           drawCircle(ctx, x + s * 0.4, y, s * 0.1, '#654321');
+                      } else if (deco.type === 'park_bench') {
+                           drawRect(ctx,x-s*0.45, y + s*0.15, s*0.15, s*0.35,'#7A5230');
+                           drawRect(ctx,x+s*0.3, y + s*0.15, s*0.15, s*0.35,'#7A5230');
+                           drawRect(ctx,x-s*0.45, y + s*0.1, s*0.9, s*0.1, '#A0522D');
+                           drawRect(ctx,x-s*0.45, y, s*0.9, s*0.1, '#A0522D');
+                           drawRect(ctx,x-s*0.45,y-s*0.3,s*0.9,s*0.1,'#8B4513');
+                       } else if (deco.type === 'scarecrow') {
+                           drawRect(ctx, x - s * 0.05, y - s * 0.9, s * 0.1, s, '#DEB887');
+                           drawRect(ctx, x - s * 0.4, y - s * 0.7, s * 0.8, s * 0.1, '#A0522D');
+                           drawCircle(ctx, x, y - s * 0.9, s * 0.2, '#F5DEB3');
+                           drawLowPolyShape(ctx, x, y - s, s * 0.15, [{ x: 0, y: -1 }, { x: 1, y: -0.5 }, { x: 0, y: 0.5 }, { x: -1, y: -0.5 }], '#4A3B31');
+                      } else if (deco.type === 'totem_pole') {
+                           drawRect(ctx,x-s*0.1,y-s*0.9,s*0.2,s,'#8B4513');
+                           drawRect(ctx,x-s*0.12,y-s*0.8,s*0.24,s*0.2,'#A0522D');
+                           drawRect(ctx,x-s*0.12,y-s*0.5,s*0.24,s*0.2,'#CD853F');
+                           drawRect(ctx,x-s*0.12,y-s*0.2,s*0.24,s*0.2,'#DEB887');
+                      } else if (deco.type === 'signpost') {
+                           drawRect(ctx, x-s*0.05, y-s*0.7, s*0.1, s*0.7, '#654321');
+                           drawRect(ctx, x-s*0.25, y-s*0.7, s*0.5, s*0.3, '#DEB887');
+                      } else if (deco.type === 'simple_hut') {
+                          drawRect(ctx, x-s*0.3, y-s*0.3, s*0.6, s*0.6, '#DEB887');
+                          drawLowPolyShape(ctx,x, y-s*0.3, s*0.35, [{x:-1.1,y:0},{x:0,y:-1},{x:1.1,y:0}], '#A0522D');
+                          drawRect(ctx, x-s*0.1, y, s*0.2, s*0.3, '#5c4033');
+                          drawRect(ctx, x+s*0.15, y-s*0.1, s*0.1, s*0.1, '#607B8B');
+                     } else if (deco.type === 'wooden_fence') {
+                          for(let i=-1;i<=1;i++) drawRect(ctx, x+i*s*0.4-s*0.05,y-s*0.2,s*0.1,s*0.4,'#8B4513');
+                          drawRect(ctx, x-s*0.5, y-s*0.05, s, s*0.1, '#A0522D');
+                          drawRect(ctx, x-s*0.5, y-s*0.25, s, s*0.1, '#A0522D');
+                      }
+                     else if (deco.type === 'ice_spire') {
+                          drawLowPolyShape(ctx,x,y+s*0.1,s, [{x:0,y:-1},{x:0.3,y:0.2},{x:-0.3,y:0.2}], '#B0E0E6');
+                          drawLowPolyShape(ctx,x,y-s*0.05,s*0.8, [{x:0,y:-0.9},{x:0.2,y:0.15},{x:-0.2,y:0.15}], '#D0F0F6');
+                      } else if (deco.type === 'snow_drift') {
+                           drawCircle(ctx, x, y, s * 0.5, '#F0F8FF');
+                           drawCircle(ctx, x + s * 0.1, y - s * 0.1, s * 0.4, '#FFFFFF');
+                     } else if (deco.type === 'igloo') {
+                        drawCircle(ctx, x, y, s*0.5, '#E0FFFF');
+                        drawCircle(ctx, x, y+s*0.05, s*0.45, '#FFFFFF');
+                        drawRect(ctx, x-s*0.2, y+s*0.05, s*0.4, s*0.4, '#ADD8E6');
+                        drawCircle(ctx, x, y+s*0.1, s*0.2, '#607880');
+                    } else if (deco.type === 'ice_shard_cluster') {
+                        for(let i=0;i<5;i++){
+                            const shx = x+(i-2)*s*0.15; const shy = y+(i%2)*s*0.1; const shs = s*(0.3 + (i*0.05));
+                            drawLowPolyShape(ctx,shx, shy, shs, [{x:0,y:-1},{x:0.25,y:0.2},{x:-0.25,y:0.2}], ['#B0E0E6','#AFEEEE'][i%2]);
+                        }
+                     } else if (deco.type === 'dead_tree') {
+                          drawRect(ctx,x-s*0.075,y-s*0.8, s*0.15, s*0.8, deco.color1||'#A9A9A9');
+                          drawLowPolyShape(ctx,x-s*0.1,y-s*0.3,s*0.3,[{x:0,y:0}, {x:-0.8, y:-0.5}, {x:-0.6, y:0.3}],deco.color2||'#808080');
+                          drawLowPolyShape(ctx,x+s*0.1,y-s*0.2,s*0.25,[{x:0,y:0}, {x:0.7,y:-0.6},{x:0.4, y:0.2}],deco.color2||'#808080');
+                     } else if (deco.type === 'snow_covered_ruin_piece'){
+                         drawLowPolyShape(ctx,x,y,s*0.7, [{x:-1,y:-0.8},{x:0.8,y:-1},{x:1,y:0.7},{x:-0.5,y:0.8},{x:-1.1,y:0.2}], '#888888');
+                         drawCircle(ctx,x+s*0.2,y-s*0.4,s*0.4,'#F0F8FF');
+                         drawCircle(ctx,x-s*0.3,y+s*0.2,s*0.3,'#FFFFFF');
+                    } else if (deco.type === 'ice_cave_entrance_small'){
+                         drawCircle(ctx,x,y,s*0.7,'#4682B4');
+                         drawCircle(ctx,x,y+s*0.05,s*0.4,'#1E2D3A');
+                         drawLowPolyShape(ctx,x-s*0.3,y+s*0.1, s*0.15, [{x:0,y:-1},{x:0.3,y:0.2},{x:-0.3,y:0.2}], '#87CEEB');
+                         drawLowPolyShape(ctx,x+s*0.3,y+s*0.1, s*0.15, [{x:0,y:-1},{x:0.3,y:0.2},{x:-0.3,y:0.2}], '#87CEEB');
+                    } else if (deco.type === 'penguin_lowpoly'){
+                         drawCircle(ctx, x, y, s*0.45, '#111111');
+                         drawCircle(ctx, x, y + s*0.15, s*0.3, '#FFFFFF');
+                         drawLowPolyShape(ctx,x-s*0.4, y+s*0.1, s*0.2, [{x:0,y:0}, {x:-0.4, y:-0.2}, {x:-0.2,y:0.6}], '#111111');
+                         drawLowPolyShape(ctx,x+s*0.4, y+s*0.1, s*0.2, [{x:0,y:0}, {x:0.4, y:-0.2}, {x:0.2,y:0.6}], '#111111');
+                         drawLowPolyShape(ctx,x,y-s*0.4, s*0.15, [{x:-0.5,y:0},{x:0.5,y:0},{x:0,y:-1}], '#FFA500');
+                         drawCircle(ctx, x-s*0.15, y-s*0.2, s*0.05, 'black');
+                         drawCircle(ctx, x+s*0.15, y-s*0.2, s*0.05, 'black');
+                     } else if (deco.type === 'ice_lantern'){
+                         drawRect(ctx, x-s*0.4, y-s*0.4, s*0.8, s*0.8, '#B0E0E6');
+                         drawRect(ctx, x-s*0.3, y-s*0.3, s*0.6, s*0.6, '#AFEEEE');
+                         drawCircle(ctx, x,y,s*0.25, '#FFDAB9');
+                     } else if (deco.type === 'snowball'){
+                        drawCircle(ctx, x, y, s * 0.5, '#FFFFFF');
+                        drawCircle(ctx, x+s*0.05, y-s*0.05, s * 0.35, '#F0F8FF');
+                     } else if (deco.type === 'small_ice_chunk'){
+                          drawLowPolyShape(ctx,x,y,s, [{x:0,y:-1},{x:0.3,y:0.2},{x:-0.3,y:0.2}], deco.color || '#C0DDEE');
+                      }
+                    else if (deco.type === 'lava_rock') {
+                         const points = []; for(let k=0; k<6; k++) points.push({x:Math.cos(k*Math.PI/3)*(0.7+Math.random()*0.3),y:Math.sin(k*Math.PI/3)*(0.7+Math.random()*0.3)});
+                         drawLowPolyShape(ctx, x, y, s, points, deco.color || '#200000');
+                         const emberColor = `rgba(255, ${Math.floor(100 + Math.sin(Date.now()/300 + x/30)*60)}, 0, ${0.6 + Math.sin(Date.now()/400 + y/40)*0.3})`;
+                         drawCircle(ctx, x,y, s*(0.25 + Math.abs(Math.sin(Date.now()/500+x/50))*0.2), emberColor);
+                     } else if (deco.type === 'lava_pool') {
+                           drawCircle(ctx, x, y, s*0.5, '#FF4500');
+                           drawCircle(ctx, x+s*0.05,y+s*0.05, s*0.35, '#FFA500');
+                           if (Math.random() < 0.04 * gameSpeed) { createBurstParticles(x + (Math.random()-0.5)*s*0.4, y + (Math.random()-0.5)*s*0.4, 1, ()=>['rgba(255,69,0,0.5)','rgba(255,165,0,0.4)'][Math.floor(Math.random()*2)], [s*0.02,s*0.05], [0.1,0.3], [30,60], 'ember', {gravity: -0.01} ); }
+                    } else if (deco.type === 'ember_ground') {
+                           drawCircle(ctx, x,y, s*0.6, 'rgba(48,16,0,0.25)');
+                           for(let i=0; i<9; i++){
+                               let ex = x + (Math.random()-0.5)*s*0.7; let ey = y + (Math.random()-0.5)*s*0.7; let es = s*(0.1 + Math.random()*0.15);
+                               let emberColor = `rgba(255, ${100 + Math.floor(Math.random()*80)}, 0, ${0.4 + Math.random()*0.3})`;
+                               drawCircle(ctx, ex, ey, es, emberColor);
+                           }
+                    } else if (deco.type === 'mini_volcano_cone') {
+                           drawLowPolyShape(ctx,x,y+s*0.1,s*0.9,[{x:-1,y:0.5},{x:0,y:-0.8},{x:1,y:0.5}], '#4A3B31');
+                           drawCircle(ctx,x,y-s*0.55,s*0.12, '#FF4500');
+                           if (Math.random() < 0.06 * gameSpeed){ createBurstParticles(x, y-s*0.6,1,()=>['#FF8C00','#FFA500'][Math.floor(Math.random()*2)],[s*0.04,s*0.09],[0.1,0.25],[35,55],'ember', {gravity:-0.02}); }
+                    } else if (deco.type === 'lavafall_rock') {
+                           drawRect(ctx,x-s*0.4,y-s*0.8,s*0.8,s*1.4, '#333333');
+                           drawRect(ctx,x-s*0.1,y-s*0.7,s*0.2,s*1.3, '#FF4500');
+                           drawRect(ctx,x-s*0.05,y-s*0.6,s*0.1,s*1.1, '#FFA500');
+                           if (Math.random() < 0.05 * gameSpeed){ createBurstParticles(x+(Math.random()-0.5)*s*0.1, y+s*0.4,1,()=>'#FF8C00',[s*0.02,s*0.04],[0.1,0.2],[20,40],'ember', {gravity:0.05}); }
+                     } else if (deco.type === 'fire_pit') {
+                         const baseRockColor = deco.baseRockColor || '#4A4A4A';
+                         for (let i=0; i<5; i++) drawCircle(ctx, x + Math.cos(i*Math.PI*2/5)*s*0.6, y+Math.sin(i*Math.PI*2/5)*s*0.6,s*0.30, baseRockColor);
+                         if(Math.random() < 0.8) {
+                            drawLowPolyShape(ctx,x, y-s*0.25, s*0.55, [{x:0,y:-1},{x:0.3,y:0},{x:-0.3,y:0}], '#FF4500');
+                            drawLowPolyShape(ctx,x, y-s*0.35, s*0.45, [{x:0,y:-1},{x:0.3,y:0},{x:-0.3,y:0}], '#FFA500');
+                            if(Math.random() < 0.15 * gameSpeed) createBurstParticles(x, y-s*0.2, 1, '#FFA500', [s*0.1, s*0.18], [0.15, 0.4], [25,40], 'ember', {gravity:-0.045});
+                         }
+                    }
+
+                     ctx.restore();
+                 });
+             };
+
+             drawProps(backgroundProps);
+             drawProps(foregroundProps);
+        }
+
+        function gameLoop(timestamp) {
+            if (!gameRunning) return;
+            animationFrameId = requestAnimationFrame(gameLoop);
+
+            const now = timestamp || 0;
+            const deltaTime = (now - lastFrameTime) / (1000/60);
+            lastFrameTime = now;
+            const effectiveDeltaTime = Math.min(deltaTime, 3) * gameSpeed;
+
+            ctx.save();
+            if (screenShake.trauma > 0) {
+                const shakePower = screenShake.trauma * screenShake.trauma;
+                screenShake.offsetX = screenShake.maxShakeMagnitude * shakePower * (Math.random() * 2 - 1);
+                screenShake.offsetY = screenShake.maxShakeMagnitude * shakePower * (Math.random() * 2 - 1);
+                ctx.translate(screenShake.offsetX, screenShake.offsetY);
+                screenShake.trauma = Math.max(0, screenShake.trauma - screenShake.traumaDecay * effectiveDeltaTime);
+            } else {
+                screenShake.offsetX = 0;
+                screenShake.offsetY = 0;
+            }
+
+            if (waveInProgress) {
+                waveFrameCounter += effectiveDeltaTime;
+                waveSpawnEvents.forEach(event => {
+                    if (!event.spawned && waveFrameCounter >= event.spawnFrame) {
+                        spawnBalloon(event.type);
+                        event.spawned = true;
+                    }
+                });
+            }
+            updateEnvironmentalParticles();
+
+
+            for (let i = balloons.length - 1; i >= 0; i--) {
+                const b = balloons[i];
+                const atEnd = b.move();
+                if (atEnd) {
+                    lives -= (RBE_VALUES[b.baseType] || RBE_VALUES[b.type] || 1);
+                    balloons.splice(i, 1);
+                    createBurstParticles(canvas.width - 20, b.y, 15, () => '#FF3333', [4,9], [1.2,3.0], [35,55], 'shard', {rotationSpeed:0.05});
+                    addScreenShake(0.1);
+                    updateUI();
+                    if (lives <= 0 && gameRunning) {
+                        gameOver();
+                        ctx.restore();
+                        return;
+                    }
+                }
+            }
+
+            if(!gameRunning) {
+                ctx.restore();
+                return;
+            }
+
+            towers.forEach(t => t.update(now, balloons, projectiles));
+            projectiles.forEach(p => p.update(balloons, now));
+            particles.forEach(p => p.update());
+
+            projectiles = projectiles.filter(p => p.active);
+            particles = particles.filter(p => p.life > 0 && p.alpha > 0 && p.size > 0.1);
+
+            if (waveInProgress) {
+                const allSpawned = waveSpawnEvents.every(event => event.spawned);
+                if (allSpawned && balloons.length === 0) {
+                    waveInProgress = false;
+                    money += GAME_BALANCE_CONFIG.WAVE_BONUS_MONEY_BASE + Math.floor(currentWaveNumber * GAME_BALANCE_CONFIG.WAVE_BONUS_MONEY_PER_WAVE);
+                    currentWaveNumber++;
+
+                    if (currentWaveNumber >= currentLevelData.waves.length) {
+                        gameWon();
+                    } else {
+                        prepareNextWave();
+                    }
+                    updateUI();
+                }
+            }
+
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+
+            if (currentLevelData && currentLevelData.theme) {
+                 if (currentLevelData.theme === 'grassland') { canvas.style.backgroundColor = '#6EAA4A'; }
+                 else if (currentLevelData.theme === 'sand') { canvas.style.backgroundColor = '#E8C585'; }
+                 else if (currentLevelData.theme === 'forest') { canvas.style.backgroundColor = '#2A6A3D'; }
+                 else if (currentLevelData.theme === 'ice') { canvas.style.backgroundColor = '#A0CFE8'; }
+                 else if (currentLevelData.theme === 'lava') { canvas.style.backgroundColor = '#2C1A1A'; }
+                 else { canvas.style.backgroundColor = '#77dd77'; }
+            } else {
+                 canvas.style.backgroundColor = '#77dd77';
+            }
+
+
+            drawLevelDecorations(ctx, currentLevelData ? currentLevelData.theme : 'grassland');
+
+
+            environmentalParticles.forEach(p => p.draw(ctx));
+
+
+             let pathStrokeColor1 = '#A0522D';
+             let pathStrokeColor2 = '#CD853F';
+             if(currentLevelData){
+                 if(currentLevelData.theme === 'sand'){pathStrokeColor1='#B8860B'; pathStrokeColor2='#DAA520';}
+                 else if(currentLevelData.theme === 'forest'){pathStrokeColor1='#556B2F'; pathStrokeColor2='#6B8E23';}
+                 else if(currentLevelData.theme === 'ice'){pathStrokeColor1='#87CEEB'; pathStrokeColor2='#B0E0E6';}
+                 else if(currentLevelData.theme === 'lava'){pathStrokeColor1='#444'; pathStrokeColor2='#666';}
+             }
+
+            ctx.strokeStyle = pathStrokeColor1;
+            ctx.lineWidth = 44;
+            ctx.lineCap = "round"; ctx.lineJoin = "round";
+            ctx.beginPath();
+            if(path.length > 0) ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) { ctx.lineTo(path[i].x, path[i].y); }
+            ctx.stroke();
+
+            ctx.strokeStyle = pathStrokeColor2;
+            ctx.lineWidth = 36;
+            ctx.beginPath();
+            if(path.length > 0) ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) { ctx.lineTo(path[i].x, path[i].y); }
+            ctx.stroke();
+
+
+            towers.forEach(t => t.draw(ctx));
+
+
+            balloons.sort((a,b) => a.distanceTraveled - b.distanceTraveled);
+            balloons.forEach(b => b.draw(ctx));
+
+
+            projectiles.forEach(p => p.draw(ctx));
+
+
+            particles.forEach(p => p.draw(ctx));
+
+
+            if (placingTower) {
+                placingTower.draw(ctx);
+                const canPlace = canPlaceTower(placingTower.x, placingTower.y, placingTower.iconSize + 5);
+                ctx.fillStyle = canPlace ? 'rgba(0,255,0,0.15)' : 'rgba(255,0,0,0.2)';
+                ctx.beginPath();
+                ctx.arc(placingTower.x, placingTower.y, placingTower.range > 0 ? placingTower.range : placingTower.iconSize + 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = canPlace ? 'rgba(0,200,0,0.5)' : 'rgba(200,0,0,0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(placingTower.x, placingTower.y, placingTower.iconSize + 5, 0, Math.PI*2);
+                ctx.stroke();
+
+            }
+            if (selectedTower && !placingTower) {
+                 ctx.save();
+                 ctx.translate(selectedTower.x, selectedTower.y);
+                 const pulseRadius = selectedTower.range * (1 + Math.sin(Date.now()/250)*0.02);
+                 ctx.beginPath();
+                 ctx.arc(0, 0, pulseRadius, 0, Math.PI*2);
+                 ctx.strokeStyle = 'rgba(0, 180, 255, 0.4)'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+                 ctx.restore();
+            }
+
+
+            ctx.restore();
+        }
+
+        function gameOver() {
+            if (!gameRunning) return;
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            gameOverScreen.style.display = 'flex';
+            finalWaveGODisplay.textContent = currentWaveNumber + 1;
+            finalScoreGODisplay.textContent = score;
+        }
+
+        function gameWon() {
+            if (!gameRunning) return;
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+            completedWavesVDisplay.textContent = currentLevelData.waves.length;
+            finalScoreVDisplay.textContent = score;
+            victoryScreen.style.display = 'flex';
+
+            if(currentLevelIndex === maxLevelUnlocked && maxLevelUnlocked < gameLevels.length -1){
+                maxLevelUnlocked++;
+                saveGameProgress();
+            }
+            if(currentLevelIndex < gameLevels.length -1 && currentLevelIndex < maxLevelUnlocked) {
+                nextLevelButtonV.style.display = 'inline-block';
+                nextLevelButtonV.onclick = () => {
+                    SoundManager.playUIConfirm();
+                    victoryScreen.style.display = 'none';
+                    initGame(currentLevelIndex + 1);
+                }
+            } else {
+                nextLevelButtonV.style.display = 'none';
+            }
+        }
+
+        startWaveButton.addEventListener('click', ()=> { SoundManager.playUIConfirm(); startNextWave();});
+
+        fastForwardButton.addEventListener('click', () => {
+            SoundManager.playUISelect();
+            if (gameSpeed === 1) gameSpeed = 2;
+            else if (gameSpeed === 2) gameSpeed = 3;
+            else gameSpeed = 1;
+            fastForwardButton.textContent = `Zrychlit (${gameSpeed}x)`;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (placingTower) {
+                const rect = canvas.getBoundingClientRect();
+                placingTower.x = e.clientX - rect.left;
+                placingTower.y = e.clientY - rect.top;
+            }
+        });
+
+        canvas.addEventListener('click', (e) => {
+             const rect = canvas.getBoundingClientRect();
+             const clickX = e.clientX - rect.left;
+             const clickY = e.clientY - rect.top;
+
+            if (placingTower) {
+                if (canPlaceTower(clickX, clickY, placingTower.iconSize + 5)) {
+                     let costToPlace = placingTower.cost;
+                    money -= costToPlace;
+                    SoundManager.playTowerPlace();
+                    towerTypes[selectedTowerType].purchaseCount = (towerTypes[selectedTowerType].purchaseCount || 0) + 1;
+
+                    const newTower = new Tower(selectedTowerType, clickX, clickY);
+                     newTower.totalCost = costToPlace;
+
+                    if (newTower.type === 'TackShooter' || newTower.type === 'IceTower' || newTower.type === 'SpikeFactory' || newTower.type === 'BananaFarm') {
+                        newTower.angle = 0;
+                    } else {
+                        newTower.angle = -Math.PI/2;
+                    }
+                    towers.push(newTower);
+                    createBurstParticles(clickX, clickY, 20, () => ['#FFD700', '#C0C0C0'][Math.floor(Math.random()*2)], [3,7], [0.8,2.0], [25,40], 'spark', {rotationSpeed: 0.05});
+
+                    selectTower(newTower);
+
+                    const nextPurchaseCount = towerTypes[selectedTowerType].purchaseCount || 0;
+                    let nextPurchaseCost = Math.floor(towerTypes[selectedTowerType].cost * (1 + nextPurchaseCount * GAME_BALANCE_CONFIG.TOWER_COST_INCREASE_PER_PURCHASE_FACTOR));
+
+
+                    if (money < nextPurchaseCost) {
+                         placingTower = null;
+                         selectedTowerType = null;
+                         document.querySelectorAll('.tower-shop-item.selected').forEach(btn => btn.classList.remove('selected'));
+
+                    } else {
+                        placingTower = new Tower(selectedTowerType, clickX, clickY);
+                         placingTower.cost = nextPurchaseCost;
+                    }
+                    updateUI();
+                     populateTowerShop();
+                } else {
+                    SoundManager.playNoMoney();
+                    createBurstParticles(clickX, clickY, 12, () => '#FF6347', [3.5,6.5], [1.0,2.2], [18,28], 'spark', {rotationSpeed:0.02});
+                }
+            } else {
+                let clickedTower = null;
+                 for(let i = towers.length -1; i>=0; i--){
+                    const t = towers[i];
+                    const towerVisualRadius = t.iconSize + t.upgradeTier * 2.5 + 8;
+                    const dx = clickX - (t.x); const dy = clickY - (t.y);
+                    if(dx*dx + dy*dy < towerVisualRadius * towerVisualRadius){
+                         clickedTower = t;
+                         SoundManager.playUISelect();
+                         break;
+                    }
+                 }
+                 selectTower(clickedTower);
+            }
+        });
+
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (placingTower) {
+                placingTower = null;
+                selectedTowerType = null;
+                document.querySelectorAll('.tower-shop-item.selected').forEach(btn => btn.classList.remove('selected'));
+                selectTower(null);
+            } else if(selectedTower){
+                 selectTower(null);
+            }
+        });
+
+        document.getElementById('restartButtonGO').addEventListener('click', () => { SoundManager.playUIConfirm(); populateLevelSelection();});
+        document.getElementById('restartButtonV').addEventListener('click', () => { SoundManager.playUIConfirm(); populateLevelSelection(); });
+
+
+        gameOverScreen.style.display = 'none';
+        victoryScreen.style.display = 'none';
+        levelSelectionScreen.style.display = 'none';
+
+        loadGameProgress();
+        populateTowerShop();
+        updateUI();
+        populateLevelSelection();
+
+    </script>
+</body>
+</html>
