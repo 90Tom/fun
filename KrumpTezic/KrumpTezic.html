@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>KrumpáčMánie - Absolutní Oprava Funkcí</title>
+    <title>KrumpTezic</title>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background-color: skyblue; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; -webkit-tap-highlight-color: transparent; }
         #appContainer { 
@@ -20,22 +20,24 @@
         #miningAreaContainer { display: flex; justify-content: center; align-items: center; position: relative; perspective: 1200px; z-index: 1; flex-grow: 1; }
         #miningAreaGrid { position: relative; width: 320px; height: 320px; cursor: pointer; transform-style: preserve-3d; }
         
-        #miningAreaGrid img.block-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 10px; backface-visibility: hidden; z-index: 10; }
-        #nextBlockImage { object-fit: cover; opacity: 0; }
-        #currentBlockImage { object-fit: cover; opacity: 1; box-shadow: 0 8px 25px rgba(0,0,0,0.35);  }
-        #miningHitEffectImage { position:absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; display: none; pointer-events: none; border-radius: 10px; z-index: 11; }
+        #miningAreaGrid img.block-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 10px; backface-visibility: hidden; z-index: 10; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;}
+        #nextBlockImage { object-fit: cover; opacity: 0; image-rendering: pixelated; }
+        #currentBlockImage { object-fit: cover; opacity: 1; box-shadow: 0 8px 25px rgba(0,0,0,0.35); image-rendering: pixelated; }
+        #miningHitEffectImage { position:absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; display: none; pointer-events: none; border-radius: 10px; z-index: 11; image-rendering: pixelated;}
         #powerSurgeOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('fire.gif'); background-size: cover; background-repeat: repeat; opacity: 0; mix-blend-mode: hard-light; pointer-events: none; z-index: 12; transition: opacity 0.3s; }
         #pickaxeImage {
             object-fit: contain; width: 360px; height: 360px; position: absolute; 
             top: 0; left: 0;
-            transform-origin: 80% 80%; transition: transform 0.05s linear; 
+            transform-origin: 80% 80%; 
             pointer-events: none; z-index: 15; 
             box-shadow: none !important; filter: none !important; outline: none !important; border: none !important;
+            image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;
+            transition: transform 0.05s linear; 
         }
 
         #particleCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 20; overflow: hidden; }
-        .particle { position: absolute; object-fit: contain; display: none; border-radius: 4px; }
-        .flying-block-particle { position: absolute; width: 30px; height: 30px; object-fit: cover; border-radius: 4px; box-shadow: 3px 3px 6px rgba(0,0,0,0.6); z-index: 22; transition: transform 0.7s cubic-bezier(0.3, -0.4, 0.1, 1.5), opacity 0.7s ease-out; }
+        .particle { position: absolute; object-fit: contain; display: none; border-radius: 4px; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;}
+        .flying-block-particle { position: absolute; width: 30px; height: 30px; object-fit: cover; border-radius: 4px; box-shadow: 3px 3px 6px rgba(0,0,0,0.6); z-index: 22; transition: transform 0.7s cubic-bezier(0.3, -0.4, 0.1, 1.5), opacity 0.7s ease-out; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;}
         #shopAndTabsContainer { background: linear-gradient(to bottom, rgba(40,40,60,0.7), rgba(20,20,30,0.85)); border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 10; box-shadow: 0 -3px 15px rgba(0,0,0,0.3); display: flex; flex-direction: column; border-top: 2px solid rgba(255,255,255,0.1); }
         #shopTabs { display: flex; justify-content: space-around; padding: 10px 8px 8px 8px; background-color: rgba(0,0,0,0.2); border-top-left-radius: 20px; border-top-right-radius: 20px; }
         .shopTabButton { padding: 10px 15px; font-size: 14px; font-weight: bold; color: white; background: linear-gradient(to bottom, rgba(100,100,120,0.5), rgba(70,70,90,0.6)); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; cursor: pointer; transition: all 0.2s ease-out; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.3); }
@@ -43,13 +45,33 @@
         .shopSection { display: none; padding: 12px; flex-wrap: wrap; justify-content: center; gap: 10px; align-items: flex-start; max-height: 160px; overflow-y: auto; background-color: rgba(0,0,0,0.1); }
         .shopSection.active { display: flex; }
         .shopButton { width: 105px; height: 85px; font-size: 10px; word-break: break-word; white-space: normal; border: 2px solid #333; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: space-around; text-align: center; padding: 5px; box-sizing: border-box; cursor: pointer; background: linear-gradient(to bottom, #e8e8e8, #c8c8c8); color: #333; transition: all 0.15s ease-out; box-shadow: 0 2px 3px rgba(0,0,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.1); }
-        .shopButton:hover { background: linear-gradient(to bottom, #f5f5f5, #d5d5d5); transform: translateY(-1px) scale(1.03); box-shadow: 0 3px 5px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(0,0,0,0.05); }
-        .shopButton:active { transform: translateY(1px) scale(0.98); box-shadow: 0 1px 1px rgba(0,0,0,0.2), inset 0 1px 2px rgba(0,0,0,0.2); }
-        .shopButton.can-afford { animation: pulseAffordable 1.5s infinite ease-in-out; }
+        .shopButton:hover:not(:disabled) { background: linear-gradient(to bottom, #f5f5f5, #d5d5d5); transform: translateY(-1px) scale(1.03); box-shadow: 0 3px 5px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(0,0,0,0.05); }
+        .shopButton:active:not(:disabled) { transform: translateY(1px) scale(0.98); box-shadow: 0 1px 1px rgba(0,0,0,0.2), inset 0 1px 2px rgba(0,0,0,0.2); }
+        .shopButton.can-afford:not(:disabled) { animation: pulseAffordable 1.5s infinite ease-in-out; }
         @keyframes pulseAffordable { 0%, 100% { border-color: #333; box-shadow: 0 2px 3px rgba(0,0,0,0.2), inset 0 -2px 0 rgba(0,0,0,0.1); } 50% { border-color: #FFD700; box-shadow: 0 2px 8px rgba(255,215,0,0.5), inset 0 -2px 0 rgba(255,215,0,0.2); } }
-        .shopButton:disabled { cursor: not-allowed; opacity: 0.6; background: linear-gradient(to bottom, #d0d0d0, #b0b0b0); box-shadow: 0 1px 1px rgba(0,0,0,0.1), inset 0 -1px 0 rgba(0,0,0,0.05); }
-        .shopButton img { max-width: 35px; max-height: 35px; margin-bottom: 2px; }
+        .shopButton:disabled { cursor: not-allowed; background: linear-gradient(to bottom, #d0d0d0, #b0b0b0); box-shadow: 0 1px 1px rgba(0,0,0,0.1), inset 0 -1px 0 rgba(0,0,0,0.05); filter: grayscale(50%) opacity(70%); }
+        .shopButton img { max-width: 35px; max-height: 35px; margin-bottom: 2px; object-fit: contain; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;}
         .enchantButton { width: 120px; height: 45px; font-size: 11px; }
+        .enchant-ui-button {
+            width: 70px; height: 70px; padding: 5px;
+            background: rgba(255,255,255,0.1); 
+            background-size: contain !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            border: 1px solid rgba(255,255,255,0.3); color:white; font-size:9px; text-shadow: 1px 1px black;
+            image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;
+        }
+        .enchant-ui-button:hover:not(:disabled) {
+            background-color: rgba(255,255,255,0.2) !important; 
+            transform: scale(1.05);
+        }
+        .enchant-ui-button:disabled {
+            filter: grayscale(70%) opacity(60%);
+            transform: scale(1);
+            cursor: not-allowed;
+        }
+        #enchantInfoDisplay { width: 100%; text-align: center; color: white; margin-top: 8px; font-size: 11px; padding: 6px; background-color: rgba(0,0,0,0.3); border-radius: 5px; line-height:1.3; }
+
         .floatingText { position: absolute; font-size: 22px; font-weight: bold; color: white; text-shadow: 2px 2px 3px black, 0 0 12px gold, 0 0 5px gold; pointer-events: none; animation: floatUpAndFadeBounce 1.2s cubic-bezier(0.25, 0.1, 0.25, 1.5) forwards; z-index: 25; }
         @keyframes floatUpAndFadeBounce { 0% { transform: translateY(0) scale(0.8); opacity: 0; } 20% { transform: translateY(-15px) scale(1.2); opacity: 1; } 80% { transform: translateY(-70px) scale(0.9); opacity: 1; } 100% { transform: translateY(-90px) scale(0.7); opacity: 0; } }
         .creeper { position: absolute; width: 90px; height: 180px; background-size: contain; background-repeat: no-repeat; background-position: center; z-index: 6; cursor: pointer; transition: left 0.03s linear, right 0.03s linear; filter: drop-shadow(3px 3px 5px rgba(0,0,0,0.5)); }
@@ -58,8 +80,16 @@
         .creeperHpBar { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 70px; height: 8px; background-color: rgba(0,0,0,0.5); border: 1px solid white; border-radius: 3px; }
         .creeperHpFill { height: 100%; background-color: red; border-radius: 2px; transition: width 0.1s linear; }
         #statsDisplay { position: absolute; bottom: 10px; right: 10px; background-color: rgba(0,0,0,0.4); padding: 8px; border-radius: 5px; font-size: 11px; color: #f0f0f0; z-index: 15; text-align: right; line-height: 1.4; }
-        .petDisplayArea { position: absolute; bottom: 200px; left: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 5; }
-        .activePet { width: 65px; height: 65px; background-size: contain; background-repeat: no-repeat; opacity: 0.9; animation: petBobSlightly 2.5s ease-in-out infinite; position: relative; transition: transform 0.2s ease-out; }
+        #petDisplayArea { position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index: 5;}
+        .activePet { 
+            width: 65px; height: 65px; 
+            background-size: contain; background-repeat: no-repeat; 
+            opacity: 0.9; 
+            animation: petBobSlightly 2.5s ease-in-out infinite; 
+            position: absolute; 
+            transition: transform 0.2s ease-out, left 0.5s ease-out, top 0.5s ease-out;
+            image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;
+        }
         .activePet.mining-visual { animation: petMiningActionBob 0.3s ease-in-out 1; }
         @keyframes petMiningActionBob { 0% { transform: scale(1) translateY(0); } 50% { transform: scale(1.15) translateY(-7px) rotate(-5deg); } 100% {transform: scale(1) translateY(0); } }
         .pet-mining-particle { position: absolute; width: 12px; height: 12px; background-color: #FFD700; border-radius: 50%; opacity: 0; animation: petMineSparkleVisual 0.7s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; pointer-events: none; box-shadow: 0 0 6px #FFD700, 0 0 12px #FFF; z-index: 16; }
@@ -74,7 +104,7 @@
         .enchantmentOption h4 { margin: 0 0 6px 0; color: #f7fafc; }
         .enchantmentOption p { margin: 0 0 10px 0; font-size: 0.9em; color: #cbd5e0; }
         .biome-transition-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); color: white; font-size: 3em; text-align: center; display: flex; justify-content: center; align-items: center; z-index: 2000; opacity: 0; transition: opacity 0.5s ease-in-out; pointer-events: none; }
-        @media (max-width: 380px) { #miningAreaGrid { width: 280px; height: 280px; } #pickaxeImage { width: 300px; height: 300px; } #blokyCountLabel { font-size: 24px; } .shopButton { width: 90px; height: 70px; font-size: 9px;} .petDisplayArea { bottom: 180px; } .creeper { width: 70px; height: 140px; }  .activePet { width: 55px; height: 55px; } }
+        @media (max-width: 380px) { #miningAreaGrid { width: 280px; height: 280px; } #pickaxeImage { width: 300px; height: 300px; } #blokyCountLabel { font-size: 24px; } .shopButton { width: 90px; height: 70px; font-size: 9px;} .creeper { width: 70px; height: 140px; }  .activePet { width: 55px; height: 55px; } }
         @media (min-width: 600px) { #miningAreaGrid { width: 400px; height: 400px; } #pickaxeImage { width: 440px; height: 440px; } }
     </style>
 </head>
@@ -90,39 +120,35 @@
                 <div id="powerSurgeOverlay"></div>
                 <div id="miningAreaGrid"> 
                     <img id="nextBlockImage" class="block-image" src="" alt="Další Blok">
-                    <img id="currentBlockImage" class="block-image" src="dirt_block.jpg" alt="Aktuální Blok">
+                    <img id="currentBlockImage" class="block-image" src="newtextures/grass_block.png" alt="Aktuální Blok">
                     <img id="miningHitEffectImage" src="" alt="Efekt Úderu"> 
-                    <img id="pickaxeImage" src="wooden_pickaxe.jpg" alt="Krumpáč">
+                    <img id="pickaxeImage" src="newtextures/hand.png" alt="Nástroj">
                 </div>
                 <div id="petDisplayArea"></div>
                  <div id="statsDisplay">
                     Celkem Vytěženo: 0<br>
                     Celkem Kliknutí: 0<br>
-                    Síla Krumpáče: 1
+                    Síla Nástroje: 1
                 </div>
             </div>
             <div id="particleCanvas"></div>
             <div id="shopAndTabsContainer">
                 <div id="shopTabs">
-                    <button class="shopTabButton active" data-tab="pickaxes">Krumpáče</button>
+                    <button class="shopTabButton active" data-tab="pickaxes">Nástroje</button>
                     <button class="shopTabButton" data-tab="pets">Mazlíčci</button>
                     <button class="shopTabButton" data-tab="enchantments">Očarování</button>
                 </div>
                 <div id="pickaxesShop" class="shopSection active"></div>
                 <div id="petsShop" class="shopSection"></div>
                 <div id="enchantmentsShop" class="shopSection">
-                    <button id="openEnchantModalButton" class="shopButton">Otevřít Očarování</button>
+                    <button id="enchantLapisButton" class="shopButton enchant-ui-button" title="Vylepšit Stůl"></button>
+                    <button id="enchantTableActionButton" class="shopButton enchant-ui-button" title="Očarovat"></button>
+                    <button id="enchantGrinderButton" class="shopButton enchant-ui-button" title="Odstranit Očarování"></button>
+                    <div id="enchantInfoDisplay">
+                        Stůl Úroveň: <span id="enchantTableLevelDisplay">0</span> / <span id="enchantTableMaxLevelDisplay">3</span><br>
+                        <span id="currentPickaxeEnchantInfo">Ruka: Žádné</span>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-    <div id="enchantmentModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span class="close-button" id="closeEnchantModalButton">×</span>
-                Očarovat Krumpáč
-            </div>
-            <div id="enchantmentOptionsContainer">
             </div>
         </div>
     </div>
@@ -150,11 +176,13 @@
             powerSurgeOverlay: document.getElementById('powerSurgeOverlay'),
             statsDisplay: document.getElementById('statsDisplay'),
             petDisplayArea: document.getElementById('petDisplayArea'),
-            enchantmentModal: document.getElementById('enchantmentModal'),
-            closeEnchantModalButton: document.getElementById('closeEnchantModalButton'),
-            enchantmentOptionsContainer: document.getElementById('enchantmentOptionsContainer'),
-            openEnchantModalButton: document.getElementById('openEnchantModalButton'),
             biomeTransitionOverlay: document.getElementById('biomeTransitionOverlay'),
+            enchantLapisButton: document.getElementById('enchantLapisButton'),
+            enchantTableActionButton: document.getElementById('enchantTableActionButton'),
+            enchantGrinderButton: document.getElementById('enchantGrinderButton'),
+            enchantTableLevelDisplay: document.getElementById('enchantTableLevelDisplay'),
+            enchantTableMaxLevelDisplay: document.getElementById('enchantTableMaxLevelDisplay'),
+            currentPickaxeEnchantInfo: document.getElementById('currentPickaxeEnchantInfo'),
         },
         GameState: {
             blokyCount: 0, totalBlokyMined: 0, totalClicks: 0,
@@ -163,12 +191,16 @@
             activeBlockDisplayImage: null, standbyBlockDisplayImage: null, 
             currentBlockData: null, nextBlockData: null,   
             currentPickaxe: null, currentPickaxePower: 1, ownedPickaxeIds: new Set(),
+            equippedPickaxeId: null, 
+            pickaxeEnchantments: {}, 
+            enchantTableLevel: 0,
             isShakeCooldownActive: false, lastAcceleration: { x: 0, y: 0, z: 0 },
             isFirstAccelReading: true, isAccelerometerSupported: false,
             isPowerSurgeActive: false, powerSurgeDurationTimer: null, powerSurgeCooldownTimer: null,
             activeCreepers: [], bps: 0, ownedPets: [], gameTime: 0, 
-            pickaxeBaseTransformValues: { x: 80, y: -80, r: -10 }, 
-            pickaxeEnchantments: { efficiency: 0, fortune: 0 },
+            handBaseTransformValues: { x: 300, y: 200, r: -25, s: 1.1 }, 
+            pickaxeBaseTransformValues: { x: 150, y: -10, r: -10, s: 1.0 },
+            currentToolTransformValues: {},
             currentBiomeIndex: 0,
             nextBiomeTransitionAt: 50, 
         },
@@ -177,35 +209,93 @@
             MAX_HIT_PARTICLES_PER_HIT: 20, MAX_BREAK_CHUNK_PARTICLES: 30, 
             PARTICLE_POOL_SIZE: 120, POWER_SURGE_CHANCE_ON_BREAK: 0.07, 
             POWER_SURGE_DURATION_MS: 8000, POWER_SURGE_COOLDOWN_MS: 18000,  
-            POWER_SURGE_POWER_MULTIPLIER: 3.5, CREEPER_BASE_HP: 6, 
-            CREEPER_HP_SCALING_PER_1000_MINED: 0.75, CREEPER_BASE_SPEED_PX_PER_TICK: 5, 
-            CREEPER_SPEED_SCALING_PER_1000_MINED: 0.2, CREEPER_SPAWN_INTERVAL_MIN: 9000, 
-            CREEPER_SPAWN_INTERVAL_MAX: 18000, CREEPER_REWARD_PARTICLE_COUNT: 50, 
-            CREEPER_REWARD_EXPLOSION_RADIUS: 250, CREEPER_DAMAGE_TO_BLOKY_PERCENT: 0.25, 
-            CREEPER_STEALS_PET_CHANCE: 0.6, CREEPER_REWARD_BLOCK_BREAKS: 20,
-            EFFICIENCY_POWER_BONUS_PER_LEVEL: 0.15, FORTUNE_BONUS_CHANCE_PER_LEVEL: 0.05, 
-            FORTUNE_BONUS_MULTIPLIER: 2, 
+            POWER_SURGE_POWER_MULTIPLIER: 3.5, CREEPER_BASE_HP: 5, 
+            CREEPER_HP_SCALING_PER_1000_MINED: 0.6, CREEPER_BASE_SPEED_PX_PER_TICK: 4, 
+            CREEPER_SPEED_SCALING_PER_1000_MINED: 0.15, CREEPER_SPAWN_INTERVAL_MIN: 15000, 
+            CREEPER_SPAWN_INTERVAL_MAX: 30000, CREEPER_REWARD_PARTICLE_COUNT: 40, 
+            CREEPER_REWARD_EXPLOSION_RADIUS: 220, CREEPER_DAMAGE_TO_BLOKY_PERCENT: 0.20, 
+            CREEPER_STEALS_PET_CHANCE: 0.5, CREEPER_REWARD_BLOCK_BREAKS: 12,
+            EFFICIENCY_POWER_BONUS_PER_LEVEL: 0.15, 
             BIOME_TRANSITION_INTERVAL: 75, 
+            ENCHANT_TABLE_MAX_LEVEL: 3,
+            ENCHANT_TABLE_UPGRADE_COSTS: [300, 1200, 4000], 
+            ENCHANT_COST_BASE: 60,
+            ENCHANT_COST_TIER_MULTIPLIER: 1.9, 
+            GRINDER_COST_BASE: 25,
+            GRINDER_COST_ENCHANT_LEVEL_MULTIPLIER: 12,
+            MAX_PETS_DISPLAYED: 50, 
+            PET_SPAWN_MIN_RADIUS_FACTOR: 0.65, 
+            PET_SPAWN_MAX_RADIUS_FACTOR: 1.1, 
         },
         Assets: {
-            IMAGE_FILES: { DIRT: "dirt_block.jpg", STONE: "stone_block.jpg", OAK_LOG: "oak.png", CHEST: "chest.png", LEAVES: "leaves.png", COBBLESTONE: "cobblestone.png", SAND: "sand_block.jpg", CACTUS: "cactus_block.jpg", SANDSTONE_BLOCK: "sandstone_block.png",  WATER: "water.png", COAL_ORE_BLOCK: "coal_ore_block.png", IRON_ORE_BLOCK: "iron_ore_block.png", OBSIDIAN: "obsidian.png", PACKED_ICE: "packed.png", NETHERRACK: "netherrack.png", QUARTZ_ORE: "quarz.png", NETHER_BRICK: "nether_brick.png", GLOWSTONE: "glowstone.png", LAVA: "lava.png", WOODEN_PICKAXE: "wooden_pickaxe.jpg", STONE_PICKAXE: "stone_pickaxe.jpg", IRON_PICKAXE: "iron_pickaxe.jpg", DIAMOND_PICKAXE: "diamond_pickaxe.jpg", EMERALD_PICKAXE: "emerald_pickaxe.jpg", OBSIDIAN_PICKAXE: "obsidian_pickaxe.jpg", NETHERITE_PICKAXE: "netherite_pickaxe.jpg", CREEPER: "creeper.png", CAT1: "cat1.png", CAT2: "cat2.png", CAT3: "cat3.png", CAT4: "cat4.png", CAT5: "cat5.png", TANI1: "tani1.png", TANI2: "tani2.png", TANI3: "tani3.png", TANI4: "tani4.png", TANI5: "tani5.png", TANI6: "tani6.png", BG_PLAINS: "plains.png", BG_FOREST: "forest.png", BG_DESERT: "desert.png", BG_CAVE: "cave.png", BG_NETHER: "nether.png", },
+            IMAGE_FILES: { 
+                DIRT: "dirt_block.jpg", 
+                STONE: "stone_block.jpg", 
+                OAK_LOG: "oak.png", 
+                CHEST: "chest.png", 
+                LEAVES: "leaves.png", 
+                COBBLESTONE: "cobblestone.png", 
+                SAND: "sand_block.jpg", 
+                CACTUS: "cactus_block.jpg", 
+                SANDSTONE_BLOCK: "sandstone_block.png",  
+                WATER: "water.png", 
+                OBSIDIAN: "obsidian.png", 
+                PACKED_ICE: "packed.png", 
+                NETHERRACK: "netherrack.png", 
+                QUARTZ_ORE: "newtextures/quarz.png", 
+                NETHER_BRICK: "nether_brick.png", 
+                GLOWSTONE: "glowstone.png", 
+                LAVA: "lava.png", 
+                HAND_IMG: "newtextures/hand.png",
+                WOODEN_PICKAXE: "wooden_pickaxe.jpg", STONE_PICKAXE: "stone_pickaxe.jpg", IRON_PICKAXE: "iron_pickaxe.jpg", DIAMOND_PICKAXE: "diamond_pickaxe.jpg", EMERALD_PICKAXE: "emerald_pickaxe.jpg", OBSIDIAN_PICKAXE: "obsidian_pickaxe.jpg", NETHERITE_PICKAXE: "netherite_pickaxe.jpg", 
+                CREEPER: "creeper.png", 
+                CAT1: "cat1.png", CAT2: "cat2.png", CAT3: "cat3.png", CAT4: "cat4.png", CAT5: "cat5.png", 
+                TANI1: "tani1.png", TANI2: "tani2.png", TANI3: "tani3.png", TANI4: "tani4.png", TANI5: "tani5.png", TANI6: "tani6.png", 
+                BG_PLAINS: "plains.png", BG_FOREST: "forest.png", BG_DESERT: "desert.png", BG_CAVE: "cave.png", BG_NETHER: "nether.png",
+                
+                COAL_ORE_BLOCK: "newtextures/coalore.png",
+                IRON_ORE_BLOCK: "newtextures/ironore.png",
+                GRASS_BLOCK: "newtextures/grass_block.png",
+                POPPY: "newtextures/poppy.png",
+                SUNFLOWER: "newtextures/vinihearth.png",
+                PUMPKIN: "newtextures/pumpkin.png",
+                GRAVEL: "newtextures/gravel.png",
+                BIRCH_LOG: "newtextures/birch.png",
+                BEEHIVE: "newtextures/beehive.png",
+                DEAD_BUSH: "newtextures/deadbush.png",
+                BONE_BLOCK: "newtextures/bone.png",
+                CHISELED_SANDSTONE: "newtextures/chiseledsandstone.png",
+                GOLD_ORE_BLOCK: "newtextures/goldore.png",
+                DIAMOND_ORE_BLOCK: "newtextures/diamond.png",
+                EMERALD_ORE_BLOCK: "newtextures/emerald.png",
+                REDSTONE_ORE_BLOCK: "newtextures/redstone.png",
+                LAPIS_ORE_BLOCK: "newtextures/lapisore.png",
+                ANDESITE: "newtextures/andesite.png",
+                DIORITE: "newtextures/diorite.png",
+                GRANITE: "newtextures/granite.png",
+                CLAY: "newtextures/clay.png",
+                SOUL_SAND: "newtextures/soulsand.png",
+                SOUL_SOIL: "newtextures/soulsoil.png",
+                BASALT: "newtextures/basalt.png",
+                BLACKSTONE: "newtextures/blackstone.png",
+                ANCIENT_DEBRIS: "newtextures/ancientdebris.png",
+                GRASS_TALL: "newtextures/grass.png",
+                DESERT_GRASS: "newtextures/desertgrass.png",
+
+                LAPIS_IMG: "newtextures/lapis.png", 
+                ENCHANT_TABLE_IMG: "newtextures/enchant.gif", 
+                GRINDER_IMG: "newtextures/grindstone.png",
+            },
             BLOCK_TYPES_POOL: {}, BIOMES: [], PICKAXE_TYPES: [], PET_TYPES: [], ENCHANTMENT_DEFINITIONS: {}, TANI_FRAMES: [], PARTICLE_POOL: [],
         },
-
-        // START OF FULLY DEFINED FUNCTIONS
         init: function() { 
             this.GameState.activeBlockDisplayImage = this.DOM.currentBlockImage;
             this.GameState.standbyBlockDisplayImage = this.DOM.nextBlockImage;
             this.setupAssetsAndBalanceCosts(); 
             this.setupBiomes();
-            
-            const miningGridWidth = this.DOM.miningAreaGrid.offsetWidth; 
-            if (miningGridWidth <= 280) { this.GameState.pickaxeBaseTransformValues = { x: 70, y: -70, r: -10 };} 
-            else if (miningGridWidth > 320 && miningGridWidth <= 400) { this.GameState.pickaxeBaseTransformValues = { x: 110, y: -110, r: -10 };}
-            else {this.GameState.pickaxeBaseTransformValues = { x: 80, y: -80, r: -10 }; } 
-            if(this.DOM.pickaxeImage) this.DOM.pickaxeImage.style.transform = `translateX(${this.GameState.pickaxeBaseTransformValues.x}px) translateY(${this.GameState.pickaxeBaseTransformValues.y}px) rotate(${this.GameState.pickaxeBaseTransformValues.r}deg)`;
+            this.setInitialToolTransform();
 
-            this.setupShopTabs(); // THIS IS THE CALL THAT WAS FAILING
+            this.setupShopTabs();
             this.loadPickaxes(); 
             this.loadPets(); 
             this.loadEnchantments();
@@ -220,21 +310,113 @@
             this.startCreeperSpawner(); 
             this.startGameLoop();
         },
+        setInitialToolTransform: function() {
+            const toolData = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
+            if (toolData && toolData.IdName === "Hand") {
+                this.GameState.currentToolTransformValues = {...this.GameState.handBaseTransformValues};
+            } else {
+                this.GameState.currentToolTransformValues = {...this.GameState.pickaxeBaseTransformValues};
+            }
+            if(this.DOM.pickaxeImage) {
+                this.DOM.pickaxeImage.style.transformOrigin = (toolData && toolData.IdName === "Hand") ? '50% 90%' : '80% 80%';
+                this.DOM.pickaxeImage.style.transform = `translateX(${this.GameState.currentToolTransformValues.x}px) translateY(${this.GameState.currentToolTransformValues.y}px) rotate(${this.GameState.currentToolTransformValues.r}deg) scale(${this.GameState.currentToolTransformValues.s})`;
+            }
+        },
 
         setupAssetsAndBalanceCosts: function() { 
             this.Assets.TANI_FRAMES = [ this.Assets.IMAGE_FILES.TANI1, this.Assets.IMAGE_FILES.TANI2, this.Assets.IMAGE_FILES.TANI3, this.Assets.IMAGE_FILES.TANI4, this.Assets.IMAGE_FILES.TANI5, this.Assets.IMAGE_FILES.TANI6 ]; 
-            this.Assets.PICKAXE_TYPES = [ { IdName: "Wooden", CzechName: "Dřevěný Krumpáč", ImageSource: this.Assets.IMAGE_FILES.WOODEN_PICKAXE, Power: 1, Cost: 0 }, { IdName: "Stone", CzechName: "Kamenný Krumpáč", ImageSource: this.Assets.IMAGE_FILES.STONE_PICKAXE, Power: 2, Cost: 20 }, { IdName: "Iron", CzechName: "Železný Krumpáč", ImageSource: this.Assets.IMAGE_FILES.IRON_PICKAXE, Power: 5, Cost: 80 },  { IdName: "Diamond", CzechName: "Diamantový Krumpáč", ImageSource: this.Assets.IMAGE_FILES.DIAMOND_PICKAXE, Power: 10, Cost: 300 }, { IdName: "Emerald", CzechName: "Smaragdový Krumpáč", ImageSource: this.Assets.IMAGE_FILES.EMERALD_PICKAXE, Power: 20, Cost: 1000 }, { IdName: "Obsidian", CzechName: "Obsidiánový Krumpáč", ImageSource: this.Assets.IMAGE_FILES.OBSIDIAN_PICKAXE, Power: 40, Cost: 3500 }, { IdName: "Netherite", CzechName: "Netheritový Krumpáč", ImageSource: this.Assets.IMAGE_FILES.NETHERITE_PICKAXE, Power: 100, Cost: 12000 } ]; 
-            this.Assets.PET_TYPES = [ { IdName: "Cat1", Name: "Kotě Těžař", ImageSource: this.Assets.IMAGE_FILES.CAT1, Bps: 1, Cost: 40 }, { IdName: "Cat2", Name: "Kočičí Horník", ImageSource: this.Assets.IMAGE_FILES.CAT2, Bps: 5, Cost: 150 }, { IdName: "Cat3", Name: "Panter Drtič", ImageSource: this.Assets.IMAGE_FILES.CAT3, Bps: 20, Cost: 600 }, { IdName: "Cat4", Name: "Lví Král Dolů", ImageSource: this.Assets.IMAGE_FILES.CAT4, Bps: 100, Cost: 2500 },  { IdName: "Cat5", Name: "Tygr Ničitel", ImageSource: this.Assets.IMAGE_FILES.CAT5, Bps: 500, Cost: 10000 } ]; 
-            this.Assets.ENCHANTMENT_DEFINITIONS = { efficiency: { name: "Efektivita", maxLevel: 5, baseCost: 80, costMultiplier: 2.2, description: "Zvyšuje rychlost těžení." }, fortune: { name: "Štěstí", maxLevel: 3, baseCost: 300, costMultiplier: 2.8, description: "Šance na více bloků." } };
+            this.Assets.PICKAXE_TYPES = [ 
+                { IdName: "Hand", CzechName: "Ruka", ImageSource: this.Assets.IMAGE_FILES.HAND_IMG, Power: 1, Cost: 0, Tier: -1, NotEnchantable: true },
+                { IdName: "Wooden", CzechName: "Dřevěný K.", ImageSource: this.Assets.IMAGE_FILES.WOODEN_PICKAXE, Power: 1, Cost: 5, Tier: 0 }, 
+                { IdName: "Stone", CzechName: "Kamenný K.", ImageSource: this.Assets.IMAGE_FILES.STONE_PICKAXE, Power: 2, Cost: 25, Tier: 1 }, 
+                { IdName: "Iron", CzechName: "Železný K.", ImageSource: this.Assets.IMAGE_FILES.IRON_PICKAXE, Power: 5, Cost: 100, Tier: 2 },  
+                { IdName: "Diamond", CzechName: "Diamantový K.", ImageSource: this.Assets.IMAGE_FILES.DIAMOND_PICKAXE, Power: 10, Cost: 350, Tier: 3 }, 
+                { IdName: "Emerald", CzechName: "Smaragdový K.", ImageSource: this.Assets.IMAGE_FILES.EMERALD_PICKAXE, Power: 20, Cost: 1200, Tier: 4 }, 
+                { IdName: "Obsidian", CzechName: "Obsidiánový K.", ImageSource: this.Assets.IMAGE_FILES.OBSIDIAN_PICKAXE, Power: 40, Cost: 4000, Tier: 5 }, 
+                { IdName: "Netherite", CzechName: "Netheritový K.", ImageSource: this.Assets.IMAGE_FILES.NETHERITE_PICKAXE, Power: 100, Cost: 15000, Tier: 6 } 
+            ]; 
+            this.Assets.PET_TYPES = [ { IdName: "Cat1", Name: "Kotě Těžař", ImageSource: this.Assets.IMAGE_FILES.CAT1, Bps: 1, Cost: 60 }, { IdName: "Cat2", Name: "Kočičí Horník", ImageSource: this.Assets.IMAGE_FILES.CAT2, Bps: 4, Cost: 250 }, { IdName: "Cat3", Name: "Panter Drtič", ImageSource: this.Assets.IMAGE_FILES.CAT3, Bps: 15, Cost: 900 }, { IdName: "Cat4", Name: "Lví Král Dolů", ImageSource: this.Assets.IMAGE_FILES.CAT4, Bps: 50, Cost: 3500 },  { IdName: "Cat5", Name: "Tygr Ničitel", ImageSource: this.Assets.IMAGE_FILES.CAT5, Bps: 120, Cost: 12000 } ]; 
+            this.Assets.ENCHANTMENT_DEFINITIONS = { efficiency: { name: "Efektivita", maxLevel: 5, description: "Zvyšuje sílu krumpáče." }, fortune: { name: "Štěstí", maxLevel: 3, description: "Šance na více bloků." } };
+            
+            this.Assets.PICKAXE_TYPES.forEach(pt => {
+                this.GameState.pickaxeEnchantments[pt.IdName] = { efficiency: 0, fortune: 0 };
+            });
+             this.GameState.equippedPickaxeId = this.Assets.PICKAXE_TYPES[0].IdName; 
         },
 
         setupBiomes: function() {
             this.Assets.BLOCK_TYPES_POOL = {
-                plains: [ { Name: "Hlína", ImageSource: this.Assets.IMAGE_FILES.DIRT, BaseHp: 12, Rarity: 5 }, { Name: "Kámen", ImageSource: this.Assets.IMAGE_FILES.STONE, BaseHp: 25, Rarity: 4 }, { Name: "Dubové Dřevo", ImageSource: this.Assets.IMAGE_FILES.OAK_LOG, BaseHp: 18, Rarity: 3 }, { Name: "Listí", ImageSource: this.Assets.IMAGE_FILES.LEAVES, BaseHp: 6, Rarity: 3, ParticleMultiplier: 1.5 }, { Name: "Dlažba", ImageSource: this.Assets.IMAGE_FILES.COBBLESTONE, BaseHp: 22, Rarity: 2 }, { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 30, Rarity: 1, IsSpecial: true, SpecialValueMin: 15, SpecialValueMax: 70 } ],
-                forest: [ { Name: "Dubové Dřevo", ImageSource: this.Assets.IMAGE_FILES.OAK_LOG, BaseHp: 18, Rarity: 5 }, { Name: "Listí", ImageSource: this.Assets.IMAGE_FILES.LEAVES, BaseHp: 6, Rarity: 6, ParticleMultiplier: 2.0 }, { Name: "Hlína", ImageSource: this.Assets.IMAGE_FILES.DIRT, BaseHp: 12, Rarity: 3 }, { Name: "Dlažba", ImageSource: this.Assets.IMAGE_FILES.COBBLESTONE, BaseHp: 22, Rarity: 2 }, { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 30, Rarity: 1, IsSpecial: true, SpecialValueMin: 25, SpecialValueMax: 90 } ],
-                desert: [ { Name: "Písek", ImageSource: this.Assets.IMAGE_FILES.SAND, BaseHp: 10, Rarity: 6, ParticleMultiplier: 1.5 }, { Name: "Kaktus", ImageSource: this.Assets.IMAGE_FILES.CACTUS, BaseHp: 16, Rarity: 4 }, { Name: "Pískovec", ImageSource: this.Assets.IMAGE_FILES.SANDSTONE_BLOCK || this.Assets.IMAGE_FILES.SAND, BaseHp: 18, Rarity: 3 }, { Name: "Dlažba", ImageSource: this.Assets.IMAGE_FILES.COBBLESTONE, BaseHp: 22, Rarity: 1 }, { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 30, Rarity: 1, IsSpecial: true, SpecialValueMin: 20, SpecialValueMax: 80 } ],
-                cave: [ { Name: "Kámen", ImageSource: this.Assets.IMAGE_FILES.STONE, BaseHp: 25, Rarity: 6 }, { Name: "Dlažba", ImageSource: this.Assets.IMAGE_FILES.COBBLESTONE, BaseHp: 22, Rarity: 5 }, { Name: "Uhelná Ruda", ImageSource: this.Assets.IMAGE_FILES.COAL_ORE_BLOCK || this.Assets.IMAGE_FILES.STONE, BaseHp: 30, Rarity: 3, BlokyMultiplier: 1.5 }, { Name: "Železná Ruda", ImageSource: this.Assets.IMAGE_FILES.IRON_ORE_BLOCK || this.Assets.IMAGE_FILES.STONE, BaseHp: 35, Rarity: 2, BlokyMultiplier: 2.0 }, { Name: "Voda", ImageSource: this.Assets.IMAGE_FILES.WATER, BaseHp: 1, Rarity: 2, IsSpecial: true, NoBloky: true, ParticleType: 'splash' }, { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 35, Rarity: 1, IsSpecial: true, SpecialValueMin: 40, SpecialValueMax: 150 } ],
-                nether: [ { Name: "Netherrack", ImageSource: this.Assets.IMAGE_FILES.NETHERRACK, BaseHp: 10, Rarity: 6, ParticleColor: 'darkred' }, { Name: "Světlit", ImageSource: this.Assets.IMAGE_FILES.GLOWSTONE, BaseHp: 8, Rarity: 3, BlokyMultiplier: 2.5, ParticleType: 'light_shards' }, { Name: "Křemenná Ruda", ImageSource: this.Assets.IMAGE_FILES.QUARTZ_ORE, BaseHp: 30, Rarity: 3, BlokyMultiplier: 3.0 }, { Name: "Netheritová Cihla", ImageSource: this.Assets.IMAGE_FILES.NETHER_BRICK, BaseHp: 40, Rarity: 2 }, { Name: "Láva", ImageSource: this.Assets.IMAGE_FILES.LAVA, BaseHp: 1, Rarity: 2, IsSpecial: true, NoBloky: true, ParticleType: 'lava_splash', Hazard: true }, { Name: "Obsidián", ImageSource: this.Assets.IMAGE_FILES.OBSIDIAN, BaseHp: 100, Rarity: 1, BlokyMultiplier: 5.0 }, { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 40, Rarity: 1, IsSpecial: true, SpecialValueMin: 70, SpecialValueMax: 300 } ],
+                plains: [ 
+                    { Name: "Hlína", ImageSource: this.Assets.IMAGE_FILES.DIRT, BaseHp: 12, Rarity: 4 }, 
+                    { Name: "Kámen", ImageSource: this.Assets.IMAGE_FILES.STONE, BaseHp: 25, Rarity: 3 }, 
+                    { Name: "Dubové Dřevo", ImageSource: this.Assets.IMAGE_FILES.OAK_LOG, BaseHp: 18, Rarity: 2.5 }, 
+                    { Name: "Listí", ImageSource: this.Assets.IMAGE_FILES.LEAVES, BaseHp: 1, Rarity: 2, ParticleMultiplier: 1.5, IsTransparent: true, IsOneHit: true }, 
+                    { Name: "Dlažba", ImageSource: this.Assets.IMAGE_FILES.COBBLESTONE, BaseHp: 22, Rarity: 1.5 }, 
+                    { Name: "Tráva Blok", ImageSource: this.Assets.IMAGE_FILES.GRASS_BLOCK, BaseHp: 10, Rarity: 5 },
+                    { Name: "Štěrk", ImageSource: this.Assets.IMAGE_FILES.GRAVEL, BaseHp: 15, Rarity: 2 },
+                    { Name: "Mák", ImageSource: this.Assets.IMAGE_FILES.POPPY, BaseHp: 1, Rarity: 1.5, BlokyMultiplier: 0.5, IsTransparent: true, IsOneHit: true },
+                    { Name: "Slunečnice", ImageSource: this.Assets.IMAGE_FILES.SUNFLOWER, BaseHp: 1, Rarity: 1, BlokyMultiplier: 0.7, IsTransparent: true, IsOneHit: true },
+                    { Name: "Dýně", ImageSource: this.Assets.IMAGE_FILES.PUMPKIN, BaseHp: 12, Rarity: 0.8, BlokyMultiplier: 1.5 },
+                    { Name: "Vysoká Tráva", ImageSource: this.Assets.IMAGE_FILES.GRASS_TALL, BaseHp: 1, Rarity: 3, BlokyMultiplier: 0.2, IsTransparent: true, IsOneHit: true},
+                    { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 25, Rarity: 0.3, IsSpecial: true, SpecialValueMin: 5, SpecialValueMax: 30 } 
+                ],
+                forest: [ 
+                    { Name: "Dubové Dřevo", ImageSource: this.Assets.IMAGE_FILES.OAK_LOG, BaseHp: 18, Rarity: 4 }, 
+                    { Name: "Březové Dřevo", ImageSource: this.Assets.IMAGE_FILES.BIRCH_LOG, BaseHp: 16, Rarity: 3.5 },
+                    { Name: "Listí", ImageSource: this.Assets.IMAGE_FILES.LEAVES, BaseHp: 1, Rarity: 5, ParticleMultiplier: 2.0, IsTransparent: true, IsOneHit: true }, 
+                    { Name: "Hlína", ImageSource: this.Assets.IMAGE_FILES.DIRT, BaseHp: 12, Rarity: 2 }, 
+                    { Name: "Dlažba", ImageSource: this.Assets.IMAGE_FILES.COBBLESTONE, BaseHp: 22, Rarity: 1 }, 
+                    { Name: "Vysoká Tráva", ImageSource: this.Assets.IMAGE_FILES.GRASS_TALL, BaseHp: 1, Rarity: 3, BlokyMultiplier: 0.2, IsTransparent: true, IsOneHit: true},
+                    { Name: "Mák", ImageSource: this.Assets.IMAGE_FILES.POPPY, BaseHp: 1, Rarity: 1.2, BlokyMultiplier: 0.5, IsTransparent: true, IsOneHit: true },
+                    { Name: "Slunečnice", ImageSource: this.Assets.IMAGE_FILES.SUNFLOWER, BaseHp: 1, Rarity: 0.8, BlokyMultiplier: 0.7, IsTransparent: true, IsOneHit: true },
+                    { Name: "Včelí Úl", ImageSource: this.Assets.IMAGE_FILES.BEEHIVE, BaseHp: 15, Rarity: 0.7, IsSpecial: true, SpecialValueMin: 10, SpecialValueMax: 40},
+                    { Name: "Dýně", ImageSource: this.Assets.IMAGE_FILES.PUMPKIN, BaseHp: 12, Rarity: 0.5, BlokyMultiplier: 1.5 },
+                    { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 30, Rarity: 0.4, IsSpecial: true, SpecialValueMin: 10, SpecialValueMax: 45 } 
+                ],
+                desert: [ 
+                    { Name: "Písek", ImageSource: this.Assets.IMAGE_FILES.SAND, BaseHp: 10, Rarity: 6, ParticleMultiplier: 1.5 }, 
+                    { Name: "Pískovec", ImageSource: this.Assets.IMAGE_FILES.SANDSTONE_BLOCK, BaseHp: 18, Rarity: 4 }, 
+                    { Name: "Dlátovaný Pískovec", ImageSource: this.Assets.IMAGE_FILES.CHISELED_SANDSTONE, BaseHp: 20, Rarity: 1.5 },
+                    { Name: "Kaktus", ImageSource: this.Assets.IMAGE_FILES.CACTUS, BaseHp: 1, Rarity: 3, IsTransparent: true, IsOneHit: true }, 
+                    { Name: "Suchý Keř", ImageSource: this.Assets.IMAGE_FILES.DEAD_BUSH, BaseHp: 1, Rarity: 4, BlokyMultiplier: 0.3, IsTransparent: true, IsOneHit: true },
+                    { Name: "Pouštní Tráva", ImageSource: this.Assets.IMAGE_FILES.DESERT_GRASS, BaseHp: 1, Rarity: 2.5, BlokyMultiplier: 0.2, IsTransparent: true, IsOneHit: true },
+                    { Name: "Kostěný Blok", ImageSource: this.Assets.IMAGE_FILES.BONE_BLOCK, BaseHp: 25, Rarity: 0.8, BlokyMultiplier: 2.5 },
+                    { Name: "Jíl", ImageSource: this.Assets.IMAGE_FILES.CLAY, BaseHp: 12, Rarity: 1.2, BlokyMultiplier: 1.2 },
+                    { Name: "Dlažba", ImageSource: this.Assets.IMAGE_FILES.COBBLESTONE, BaseHp: 22, Rarity: 0.5 }, 
+                    { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 28, Rarity: 0.5, IsSpecial: true, SpecialValueMin: 15, SpecialValueMax: 60 } 
+                ],
+                cave: [ 
+                    { Name: "Kámen", ImageSource: this.Assets.IMAGE_FILES.STONE, BaseHp: 25, Rarity: 5 }, 
+                    { Name: "Dlažba", ImageSource: this.Assets.IMAGE_FILES.COBBLESTONE, BaseHp: 22, Rarity: 4 }, 
+                    { Name: "Andesit", ImageSource: this.Assets.IMAGE_FILES.ANDESITE, BaseHp: 26, Rarity: 3 },
+                    { Name: "Diorit", ImageSource: this.Assets.IMAGE_FILES.DIORITE, BaseHp: 26, Rarity: 3 },
+                    { Name: "Granit", ImageSource: this.Assets.IMAGE_FILES.GRANITE, BaseHp: 26, Rarity: 3 },
+                    { Name: "Uhelná Ruda", ImageSource: this.Assets.IMAGE_FILES.COAL_ORE_BLOCK, BaseHp: 30, Rarity: 3.5, BlokyMultiplier: 1.5 }, 
+                    { Name: "Železná Ruda", ImageSource: this.Assets.IMAGE_FILES.IRON_ORE_BLOCK, BaseHp: 35, Rarity: 2.5, BlokyMultiplier: 2.0 }, 
+                    { Name: "Zlatá Ruda", ImageSource: this.Assets.IMAGE_FILES.GOLD_ORE_BLOCK, BaseHp: 40, Rarity: 1.5, BlokyMultiplier: 3.0 },
+                    { Name: "Lapis Lazuli Ruda", ImageSource: this.Assets.IMAGE_FILES.LAPIS_ORE_BLOCK, BaseHp: 38, Rarity: 1.2, BlokyMultiplier: 2.5 },
+                    { Name: "Redstone Ruda", ImageSource: this.Assets.IMAGE_FILES.REDSTONE_ORE_BLOCK, BaseHp: 38, Rarity: 1.2, BlokyMultiplier: 2.5 },
+                    { Name: "Diamantová Ruda", ImageSource: this.Assets.IMAGE_FILES.DIAMOND_ORE_BLOCK, BaseHp: 50, Rarity: 0.5, BlokyMultiplier: 5.0 },
+                    { Name: "Smaragdová Ruda", ImageSource: this.Assets.IMAGE_FILES.EMERALD_ORE_BLOCK, BaseHp: 50, Rarity: 0.4, BlokyMultiplier: 6.0 },
+                    { Name: "Voda", ImageSource: this.Assets.IMAGE_FILES.WATER, BaseHp: 1, Rarity: 1.8, IsSpecial: true, NoBloky: true, ParticleType: 'splash', IsTransparent: true, IsOneHit: true }, 
+                    { Name: "Láva", ImageSource: this.Assets.IMAGE_FILES.LAVA, BaseHp: 1, Rarity: 1.0, IsSpecial: true, NoBloky: true, ParticleType: 'lava_splash', Hazard: true, IsTransparent: true, IsOneHit: true },
+                    { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 35, Rarity: 0.6, IsSpecial: true, SpecialValueMin: 25, SpecialValueMax: 100 } 
+                ],
+                nether: [ 
+                    { Name: "Netherrack", ImageSource: this.Assets.IMAGE_FILES.NETHERRACK, BaseHp: 10, Rarity: 6, ParticleColor: 'darkred' }, 
+                    { Name: "Písek Duší", ImageSource: this.Assets.IMAGE_FILES.SOUL_SAND, BaseHp: 12, Rarity: 3.5 },
+                    { Name: "Půda Duší", ImageSource: this.Assets.IMAGE_FILES.SOUL_SOIL, BaseHp: 12, Rarity: 3 },
+                    { Name: "Čedič", ImageSource: this.Assets.IMAGE_FILES.BASALT, BaseHp: 35, Rarity: 2.5 },
+                    { Name: "Černokámen", ImageSource: this.Assets.IMAGE_FILES.BLACKSTONE, BaseHp: 40, Rarity: 2 },
+                    { Name: "Netheritová Cihla", ImageSource: this.Assets.IMAGE_FILES.NETHER_BRICK, BaseHp: 40, Rarity: 1.5 }, 
+                    { Name: "Křemenná Ruda", ImageSource: this.Assets.IMAGE_FILES.QUARTZ_ORE, BaseHp: 30, Rarity: 3, BlokyMultiplier: 3.0 }, 
+                    { Name: "Světlit", ImageSource: this.Assets.IMAGE_FILES.GLOWSTONE, BaseHp: 1, Rarity: 2.5, BlokyMultiplier: 2.5, ParticleType: 'light_shards', IsTransparent: true, IsOneHit: true }, 
+                    { Name: "Obsidián", ImageSource: this.Assets.IMAGE_FILES.OBSIDIAN, BaseHp: 100, Rarity: 1, BlokyMultiplier: 5.0 }, 
+                    { Name: "Prastaré Úlomky", ImageSource: this.Assets.IMAGE_FILES.ANCIENT_DEBRIS, BaseHp: 250, Rarity: 0.2, BlokyMultiplier: 10.0},
+                    { Name: "Kostěný Blok", ImageSource: this.Assets.IMAGE_FILES.BONE_BLOCK, BaseHp: 25, Rarity: 0.5, BlokyMultiplier: 2.5 },
+                    { Name: "Láva", ImageSource: this.Assets.IMAGE_FILES.LAVA, BaseHp: 1, Rarity: 2, IsSpecial: true, NoBloky: true, ParticleType: 'lava_splash', Hazard: true, IsTransparent: true, IsOneHit: true }, 
+                    { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 40, Rarity: 0.7, IsSpecial: true, SpecialValueMin: 50, SpecialValueMax: 200 } 
+                ],
             };
             this.Assets.BIOMES = [ { Name: "Planiny", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_PLAINS}')`, BlockPoolKey: "plains" }, { Name: "Les", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_FOREST}')`, BlockPoolKey: "forest" }, { Name: "Poušť", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_DESERT}')`, BlockPoolKey: "desert" }, { Name: "Jeskyně", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_CAVE}')`, BlockPoolKey: "cave" }, { Name: "Nether", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_NETHER}')`, BlockPoolKey: "nether" } ];
         },
@@ -285,7 +467,7 @@
             }
         },
         
-        setupShopTabs: function() { // THIS FUNCTION IS NOW GUARANTEED TO BE HERE
+        setupShopTabs: function() { 
             if(!this.DOM.shopTabsContainer) return;
             const buttons = this.DOM.shopTabsContainer.querySelectorAll('.shopTabButton');
             buttons.forEach(button => {
@@ -300,30 +482,430 @@
             });
         },
 
-        loadPickaxes: function() { this.GameState.currentPickaxe = this.Assets.PICKAXE_TYPES[0]; this.GameState.currentPickaxePower = this.calculateCurrentPickaxePower(); if(this.DOM.pickaxeImage) this.DOM.pickaxeImage.src = this.GameState.currentPickaxe.ImageSource; this.GameState.ownedPickaxeIds.add("Wooden"); this.populateShopSection(this.DOM.pickaxesShopSection, this.Assets.PICKAXE_TYPES, this.buyPickaxe.bind(this), (item) => this.GameState.ownedPickaxeIds.has(item.IdName), "Vlastníš"); },
-        loadPets: function() { this.populateShopSection(this.DOM.petsShopSection, this.Assets.PET_TYPES, this.buyPet.bind(this), (item) => this.GameState.ownedPets.filter(p=>p.IdName === item.IdName).length >= 10, "Max (10)"); },
-        loadEnchantments: function() { if(this.DOM.openEnchantModalButton) this.DOM.openEnchantModalButton.addEventListener('click', () => this.openEnchantmentModal()); if(this.DOM.closeEnchantModalButton) this.DOM.closeEnchantModalButton.addEventListener('click', () => {if(this.DOM.enchantmentModal)this.DOM.enchantmentModal.style.display = "none"}); window.addEventListener('click', (event) => { if (event.target == this.DOM.enchantmentModal) { if(this.DOM.enchantmentModal) this.DOM.enchantmentModal.style.display = "none"; } }); },
-        openEnchantmentModal: function() { if(!this.DOM.enchantmentOptionsContainer || !this.DOM.enchantmentModal) return; this.DOM.enchantmentOptionsContainer.innerHTML = ''; for (const enchantId in this.Assets.ENCHANTMENT_DEFINITIONS) { const definition = this.Assets.ENCHANTMENT_DEFINITIONS[enchantId]; const currentLevel = this.GameState.pickaxeEnchantments[enchantId] || 0; const optionDiv = document.createElement('div'); optionDiv.classList.add('enchantmentOption'); const title = document.createElement('h4'); title.textContent = `${definition.name} ${currentLevel > 0 ? this.romanize(currentLevel) : ''}`; optionDiv.appendChild(title); const description = document.createElement('p'); description.textContent = definition.description; optionDiv.appendChild(description); if (currentLevel < definition.maxLevel) { const cost = Math.floor(definition.baseCost * Math.pow(definition.costMultiplier, currentLevel)); const upgradeButton = document.createElement('button'); upgradeButton.classList.add('shopButton', 'enchantButton'); upgradeButton.textContent = `Vylepšit na ${this.romanize(currentLevel + 1)} (${cost} Bloků)`; upgradeButton.disabled = this.GameState.blokyCount < cost; upgradeButton.onclick = () => this.buyEnchantment(enchantId, cost, definition.maxLevel); optionDiv.appendChild(upgradeButton); } else { const maxLevelText = document.createElement('p'); maxLevelText.textContent = "Max Úroveň Dosažena"; optionDiv.appendChild(maxLevelText); } this.DOM.enchantmentOptionsContainer.appendChild(optionDiv); } this.DOM.enchantmentModal.style.display = "flex"; },
-        buyEnchantment: function(enchantId, cost, maxLevel) { const currentLevel = this.GameState.pickaxeEnchantments[enchantId] || 0; if (this.GameState.blokyCount >= cost && currentLevel < maxLevel) { this.GameState.blokyCount -= cost; this.GameState.pickaxeEnchantments[enchantId]++; this.GameState.currentPickaxePower = this.calculateCurrentPickaxePower(); this.updateBlokyLabel(); this.updateShopSections(); this.updateStatsDisplay(); this.openEnchantmentModal(); this.showFloatingText(`Očarováno!`, this.DOM.miningAreaGrid, 'gold'); } },
-        calculateCurrentPickaxePower: function() { let pickaxeBasePower = this.GameState.currentPickaxe ? this.GameState.currentPickaxe.Power : 1; let efficiencyBonusPercentage = (this.GameState.pickaxeEnchantments.efficiency || 0) * this.Config.EFFICIENCY_POWER_BONUS_PER_LEVEL; let totalPower = pickaxeBasePower + (pickaxeBasePower * efficiencyBonusPercentage); return Math.max(1, Math.round(totalPower)); },
-        populateShopSection: function(sectionElement, items, buyCallback, isOwnedCallback, ownedText) { if (!sectionElement) return; sectionElement.innerHTML = ''; items.forEach(item => { const button = document.createElement('button'); button.classList.add('shopButton'); const itemImg = document.createElement('img'); itemImg.src = item.ImageSource; itemImg.alt = item.CzechName || item.Name; button.appendChild(itemImg); const nameLabel = document.createElement('span'); nameLabel.textContent = item.CzechName || item.Name; button.appendChild(nameLabel); const costLabel = document.createElement('span'); costLabel.textContent = `(${item.Cost} Bloků)`; if (item.Bps) costLabel.textContent += ` / ${item.Bps} BPS`; button.appendChild(costLabel); const canAfford = this.GameState.blokyCount >= item.Cost; if (isOwnedCallback(item)) { button.disabled = true; button.textContent = ownedText; button.prepend(itemImg); }  else { button.disabled = !canAfford; if(canAfford && !button.disabled) button.classList.add('can-afford'); else button.classList.remove('can-afford'); button.onclick = () => buyCallback(item); } sectionElement.appendChild(button); }); },
-        updateShopSections: function() { this.populateShopSection(this.DOM.pickaxesShopSection, this.Assets.PICKAXE_TYPES, this.buyPickaxe.bind(this), (item) => this.GameState.ownedPickaxeIds.has(item.IdName), "Vlastníš"); this.populateShopSection(this.DOM.petsShopSection, this.Assets.PET_TYPES, this.buyPet.bind(this), (item) => this.GameState.ownedPets.filter(p=>p.IdName === item.IdName).length >= 10, "Max (10)"); if(this.DOM.enchantmentModal && this.DOM.enchantmentModal.style.display === "flex") { this.openEnchantmentModal(); } },
-        buyPickaxe: function(pickaxeToBuy) { if (this.GameState.blokyCount >= pickaxeToBuy.Cost && !this.GameState.ownedPickaxeIds.has(pickaxeToBuy.IdName)) { this.GameState.blokyCount -= pickaxeToBuy.Cost; this.GameState.currentPickaxe = pickaxeToBuy; this.GameState.currentPickaxePower = this.calculateCurrentPickaxePower(); if(this.DOM.pickaxeImage) this.DOM.pickaxeImage.src = this.GameState.currentPickaxe.ImageSource; this.GameState.ownedPickaxeIds.add(pickaxeToBuy.IdName); this.updateBlokyLabel(); this.updateShopSections(); this.updateStatsDisplay(); } },
-        buyPet: function(petToBuy) { if (this.GameState.blokyCount >= petToBuy.Cost && this.GameState.ownedPets.filter(p=>p.IdName === petToBuy.IdName).length < 10) { this.GameState.blokyCount -= petToBuy.Cost; this.GameState.ownedPets.push(petToBuy); this.GameState.bps += petToBuy.Bps; this.updateBlokyLabel(); this.updateBpsLabel(); this.updateShopSections(); this.updatePetDisplay(); } },
-        updatePetDisplay: function() { if(!this.DOM.petDisplayArea) return; this.DOM.petDisplayArea.innerHTML = ''; const displayedPets = {}; this.GameState.ownedPets.forEach(pet => { if (!displayedPets[pet.IdName]) { displayedPets[pet.IdName] = 0; } if (displayedPets[pet.IdName] < 3) { const petDiv = document.createElement('div'); petDiv.classList.add('activePet'); petDiv.style.backgroundImage = `url('${pet.ImageSource}')`; petDiv.style.animationDelay = `${Math.random() * -2}s`; this.DOM.petDisplayArea.appendChild(petDiv); displayedPets[pet.IdName]++; } }); },
+        loadPickaxes: function() { 
+            this.equipPickaxe(this.Assets.PICKAXE_TYPES[0]); 
+            this.GameState.ownedPickaxeIds.add(this.Assets.PICKAXE_TYPES[0].IdName); 
+            this.populateShopSection(this.DOM.pickaxesShopSection, this.Assets.PICKAXE_TYPES, (item) => this.GameState.ownedPickaxeIds.has(item.IdName) ? this.equipPickaxe(item) : this.buyPickaxe(item), (item) => this.GameState.equippedPickaxeId === item.IdName, "Vybaveno", (item) => this.GameState.ownedPickaxeIds.has(item.IdName) ? "Vybavit" : "Koupit"); 
+        },
+        loadPets: function() { this.populateShopSection(this.DOM.petsShopSection, this.Assets.PET_TYPES, this.buyPet.bind(this), (item) => this.GameState.ownedPets.filter(p=>p.IdName === item.IdName).length >= 10, "Max (10)", () => "Koupit"); },
+        
+        loadEnchantments: function() {
+            if (this.DOM.enchantLapisButton) {
+                this.DOM.enchantLapisButton.style.backgroundImage = `url('${this.Assets.IMAGE_FILES.LAPIS_IMG}')`;
+                this.DOM.enchantLapisButton.onclick = () => this.upgradeEnchantTable();
+            }
+            if (this.DOM.enchantTableActionButton) {
+                this.DOM.enchantTableActionButton.style.backgroundImage = `url('${this.Assets.IMAGE_FILES.ENCHANT_TABLE_IMG}')`;
+                this.DOM.enchantTableActionButton.onclick = () => this.attemptEnchantEquippedPickaxe();
+            }
+            if (this.DOM.enchantGrinderButton) {
+                this.DOM.enchantGrinderButton.style.backgroundImage = `url('${this.Assets.IMAGE_FILES.GRINDER_IMG}')`;
+                this.DOM.enchantGrinderButton.onclick = () => this.grindEquippedPickaxeEnchantments();
+            }
+            if (this.DOM.enchantTableMaxLevelDisplay) {
+                 this.DOM.enchantTableMaxLevelDisplay.textContent = this.Config.ENCHANT_TABLE_MAX_LEVEL;
+            }
+            this.updateEnchantmentUI();
+        },
+
+        updateEnchantmentUI: function() {
+            if (!this.DOM.enchantTableLevelDisplay || !this.DOM.currentPickaxeEnchantInfo ) return;
+
+            this.DOM.enchantTableLevelDisplay.textContent = this.GameState.enchantTableLevel;
+            const equippedPickaxe = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
+            const enchants = this.GameState.pickaxeEnchantments[this.GameState.equippedPickaxeId] || { efficiency: 0, fortune: 0 };
+            let enchantText = `${equippedPickaxe ? equippedPickaxe.CzechName : 'Nástroj'}: `;
+            if (enchants.efficiency > 0) enchantText += `${this.Assets.ENCHANTMENT_DEFINITIONS.efficiency.name} ${this.romanize(enchants.efficiency)} `;
+            if (enchants.fortune > 0) enchantText += `${this.Assets.ENCHANTMENT_DEFINITIONS.fortune.name} ${this.romanize(enchants.fortune)}`;
+            if (enchants.efficiency === 0 && enchants.fortune === 0) enchantText += "Žádné očarování";
+            this.DOM.currentPickaxeEnchantInfo.textContent = enchantText;
+
+            const upgradeCost = this.Config.ENCHANT_TABLE_UPGRADE_COSTS[this.GameState.enchantTableLevel];
+            if (this.DOM.enchantLapisButton) {
+                if (this.GameState.enchantTableLevel < this.Config.ENCHANT_TABLE_MAX_LEVEL) {
+                    this.DOM.enchantLapisButton.disabled = this.GameState.blokyCount < upgradeCost;
+                    this.DOM.enchantLapisButton.title = `Vylepšit Stůl (${upgradeCost} bloků)`;
+                } else {
+                    this.DOM.enchantLapisButton.disabled = true;
+                    this.DOM.enchantLapisButton.title = "Stůl na max úrovni";
+                }
+            }
+            
+            const enchantCost = this.calculateEnchantCost();
+            const hasExistingEnchants = enchants.efficiency > 0 || enchants.fortune > 0;
+            const pickaxeIsEnchantable = equippedPickaxe && !equippedPickaxe.NotEnchantable;
+
+             if (this.DOM.enchantTableActionButton) {
+                if(!pickaxeIsEnchantable) {
+                    this.DOM.enchantTableActionButton.disabled = true;
+                    this.DOM.enchantTableActionButton.title = "Tento nástroj nelze očarovat!";
+                } else if(hasExistingEnchants){
+                    this.DOM.enchantTableActionButton.disabled = true;
+                    this.DOM.enchantTableActionButton.title = "Odstraňte očarování bruskou!";
+                } else {
+                    this.DOM.enchantTableActionButton.disabled = this.GameState.blokyCount < enchantCost;
+                    this.DOM.enchantTableActionButton.title = `Očarovat (${enchantCost} bloků)`;
+                }
+            }
+
+            const grinderCost = this.calculateGrinderCost();
+            if (this.DOM.enchantGrinderButton) {
+                if(!pickaxeIsEnchantable){
+                    this.DOM.enchantGrinderButton.disabled = true;
+                    this.DOM.enchantGrinderButton.title = "Tento nástroj nelze očarovat!";
+                } else {
+                    this.DOM.enchantGrinderButton.disabled = this.GameState.blokyCount < grinderCost || !hasExistingEnchants;
+                    this.DOM.enchantGrinderButton.title = hasExistingEnchants ? `Odstranit (${grinderCost} bloků)` : "Není co odstranit";
+                }
+            }
+        },
+
+        getEquippedPickaxeTier: function() {
+            const pickaxe = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
+            return pickaxe ? pickaxe.Tier : 0;
+        },
+
+        calculateEnchantCost: function() {
+            const tier = this.getEquippedPickaxeTier();
+             if(tier < 0) return Infinity; 
+            return Math.floor(this.Config.ENCHANT_COST_BASE * Math.pow(this.Config.ENCHANT_COST_TIER_MULTIPLIER, tier) * (this.GameState.enchantTableLevel +1) * 0.8 );
+        },
+
+        calculateGrinderCost: function() {
+            const enchants = this.GameState.pickaxeEnchantments[this.GameState.equippedPickaxeId] || { efficiency: 0, fortune: 0 };
+            const totalEnchantLevels = (enchants.efficiency || 0) + (enchants.fortune || 0);
+            const tier = this.getEquippedPickaxeTier();
+            if(tier < 0) return Infinity;
+            return Math.floor(this.Config.GRINDER_COST_BASE + (totalEnchantLevels * this.Config.GRINDER_COST_ENCHANT_LEVEL_MULTIPLIER) * (tier + 1) * 0.5);
+        },
+
+        upgradeEnchantTable: function() {
+            if (this.GameState.enchantTableLevel < this.Config.ENCHANT_TABLE_MAX_LEVEL) {
+                const cost = this.Config.ENCHANT_TABLE_UPGRADE_COSTS[this.GameState.enchantTableLevel];
+                if (this.GameState.blokyCount >= cost) {
+                    this.GameState.blokyCount -= cost;
+                    this.GameState.enchantTableLevel++;
+                    this.updateBlokyLabel();
+                    this.updateEnchantmentUI();
+                    this.updateShopSections(); 
+                    this.showFloatingText(`Stůl vylepšen na úr. ${this.GameState.enchantTableLevel}!`, this.DOM.miningAreaGrid, 'cyan');
+                } else {
+                    this.showFloatingText("Nedostatek bloků!", this.DOM.miningAreaGrid, 'orange');
+                }
+            }
+        },
+
+        attemptEnchantEquippedPickaxe: function() {
+            const equippedPickaxeData = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
+            if(equippedPickaxeData && equippedPickaxeData.NotEnchantable){
+                this.showFloatingText("Tento nástroj nelze očarovat!", this.DOM.miningAreaGrid, 'grey');
+                return;
+            }
+
+            const enchants = this.GameState.pickaxeEnchantments[this.GameState.equippedPickaxeId] || { efficiency: 0, fortune: 0 };
+            if(enchants.efficiency > 0 || enchants.fortune > 0){
+                this.showFloatingText("Nejprve odstraň očarování!", this.DOM.miningAreaGrid, 'orange');
+                return;
+            }
+
+            const cost = this.calculateEnchantCost();
+            if (this.GameState.blokyCount >= cost) {
+                this.GameState.blokyCount -= cost;
+                const results = this.performEnchantOnPickaxe(this.GameState.equippedPickaxeId);
+                this.GameState.currentPickaxePower = this.calculateCurrentPickaxePower();
+                this.updateBlokyLabel();
+                this.updateEnchantmentUI();
+                this.updateShopSections();
+                this.updateStatsDisplay();
+                let resultText = "Očarováno! ";
+                if (results.eff > 0) resultText += `Eff ${this.romanize(results.eff)} `;
+                if (results.fort > 0) resultText += `Fort ${this.romanize(results.fort)}`;
+                 if (results.eff === 0 && results.fort === 0 && equippedPickaxeData && !equippedPickaxeData.NotEnchantable) {
+                     resultText = "Očarování selhalo...";
+                } else if (equippedPickaxeData && equippedPickaxeData.NotEnchantable) {
+                    resultText = "Tento nástroj nelze očarovat!"; 
+                }
+                this.showFloatingText(resultText, this.DOM.miningAreaGrid, results.eff > 0 || results.fort > 0 ? 'gold' : 'grey');
+            } else {
+                this.showFloatingText("Nedostatek bloků!", this.DOM.miningAreaGrid, 'orange');
+            }
+        },
+
+        performEnchantOnPickaxe: function(pickaxeId) {
+            const enchants = this.GameState.pickaxeEnchantments[pickaxeId];
+            enchants.efficiency = 0;
+            enchants.fortune = 0;
+
+            const tableLvl = this.GameState.enchantTableLevel;
+            const effDef = this.Assets.ENCHANTMENT_DEFINITIONS.efficiency;
+            const fortDef = this.Assets.ENCHANTMENT_DEFINITIONS.fortune;
+
+            let roll1 = Math.random();
+            let roll2 = Math.random();
+
+            if (roll1 < (0.3 + tableLvl * 0.18)) { 
+                let potentialEff = 0;
+                for(let i=0; i < tableLvl + 2; i++){ 
+                    if(Math.random() < (0.20 + tableLvl * 0.12)) potentialEff++;
+                }
+                if(potentialEff === 0 && tableLvl > 0 && Math.random() < 0.5) potentialEff = 1;
+                enchants.efficiency = Math.min(effDef.maxLevel, potentialEff);
+                if(enchants.efficiency > effDef.maxLevel) enchants.efficiency = effDef.maxLevel;
+                 if(enchants.efficiency === 0 && tableLvl > 0 && Math.random() < (0.15 * (tableLvl+1))) enchants.efficiency = 1;
+            }
+            
+            if (roll2 < (0.2 + tableLvl * 0.15)) {
+                let potentialFort = 0;
+                 for(let i=0; i < tableLvl + 1; i++){ 
+                    if(Math.random() < (0.18 + tableLvl * 0.10)) potentialFort++;
+                }
+                if(potentialFort === 0 && tableLvl > 1 && Math.random() < 0.4) potentialFort = 1;
+                enchants.fortune = Math.min(fortDef.maxLevel, potentialFort);
+                if(enchants.fortune > fortDef.maxLevel) enchants.fortune = fortDef.maxLevel;
+                if(enchants.fortune === 0 && tableLvl > 0 && Math.random() < (0.1 * (tableLvl+1)) && enchants.efficiency === 0) enchants.fortune = 1;
+            }
+            
+            if (tableLvl === this.Config.ENCHANT_TABLE_MAX_LEVEL && enchants.efficiency === 0 && enchants.fortune === 0) {
+                 if(Math.random() < 0.7) enchants.efficiency = Math.floor(Math.random() * 2) + 1;
+                 else if (fortDef.maxLevel > 0) enchants.fortune = 1;
+            } else if (tableLvl >= 1 && enchants.efficiency === 0 && enchants.fortune === 0) {
+                if(Math.random() < 0.35 + (0.12 * tableLvl) ) {
+                    if(Math.random() < 0.65) enchants.efficiency = 1;
+                    else if (fortDef.maxLevel > 0) enchants.fortune = 1;
+                }
+            }
+            return { eff: enchants.efficiency, fort: enchants.fortune };
+        },
+
+        grindEquippedPickaxeEnchantments: function() {
+             const equippedPickaxeData = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
+            if(equippedPickaxeData && equippedPickaxeData.NotEnchantable){
+                this.showFloatingText("Tento nástroj nelze očarovat!", this.DOM.miningAreaGrid, 'grey');
+                return;
+            }
+            const enchants = this.GameState.pickaxeEnchantments[this.GameState.equippedPickaxeId];
+            if (!enchants || (enchants.efficiency === 0 && enchants.fortune === 0)) {
+                this.showFloatingText("Není co odstranit!", this.DOM.miningAreaGrid, 'grey');
+                return;
+            }
+            const cost = this.calculateGrinderCost();
+            if (this.GameState.blokyCount >= cost) {
+                this.GameState.blokyCount -= cost;
+                enchants.efficiency = 0;
+                enchants.fortune = 0;
+                this.GameState.currentPickaxePower = this.calculateCurrentPickaxePower();
+                this.updateBlokyLabel();
+                this.updateEnchantmentUI();
+                this.updateShopSections();
+                this.updateStatsDisplay();
+                this.showFloatingText("Očarování odstraněno!", this.DOM.miningAreaGrid, 'lightblue');
+            } else {
+                this.showFloatingText("Nedostatek bloků!", this.DOM.miningAreaGrid, 'orange');
+            }
+        },
+        calculateCurrentPickaxePower: function() { 
+            let pickaxeBasePower = 1;
+            const pickaxeData = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
+            if (pickaxeData) pickaxeBasePower = pickaxeData.Power;
+            
+            const enchantments = this.GameState.pickaxeEnchantments[this.GameState.equippedPickaxeId] || { efficiency: 0, fortune: 0 };
+            let efficiencyBonusPercentage = (enchantments.efficiency || 0) * this.Config.EFFICIENCY_POWER_BONUS_PER_LEVEL;
+            let totalPower = pickaxeBasePower + (pickaxeBasePower * efficiencyBonusPercentage); 
+            return Math.max(1, Math.round(totalPower)); 
+        },
+        
+        populateShopSection: function(sectionElement, items, buyCallback, isSpecialStateCallback, specialStateText, baseActionTextCallback) {
+            if (!sectionElement) return;
+            sectionElement.innerHTML = '';
+            items.forEach(item => {
+                const button = document.createElement('button');
+                button.classList.add('shopButton');
+                const itemImg = document.createElement('img');
+                itemImg.src = item.ImageSource;
+                itemImg.alt = item.CzechName || item.Name;
+                button.appendChild(itemImg);
+                
+                const nameLabel = document.createElement('span');
+                nameLabel.textContent = item.CzechName || item.Name;
+                
+                const costLabel = document.createElement('span');
+                if(item.Cost > 0) { 
+                    costLabel.textContent = `(${item.Cost} Bloků)`;
+                } else {
+                    costLabel.style.display = 'none';
+                }
+                if (item.Bps) costLabel.textContent += ` / ${item.Bps} BPS`;
+
+                const canAfford = this.GameState.blokyCount >= item.Cost;
+
+                if (isSpecialStateCallback(item)) {
+                    button.disabled = true;
+                    nameLabel.textContent = `${item.CzechName || item.Name} (${specialStateText})`;
+                    costLabel.style.display = 'none'; 
+                } else {
+                     button.disabled = !canAfford && !this.GameState.ownedPickaxeIds.has(item.IdName) && item.Cost > 0; 
+                    nameLabel.textContent = baseActionTextCallback(item) + ` ${item.CzechName || item.Name}`;
+                    if (this.GameState.ownedPickaxeIds.has(item.IdName) && sectionElement.id === "pickaxesShop") {
+                         if(item.Cost > 0) costLabel.style.display = 'none'; 
+                         button.disabled = false;
+                    } else {
+                        if(canAfford && !button.disabled) button.classList.add('can-afford');
+                        else button.classList.remove('can-afford');
+                    }
+                }
+                button.appendChild(nameLabel);
+                button.appendChild(costLabel);
+                button.onclick = () => buyCallback(item);
+                sectionElement.appendChild(button);
+            });
+        },
+        updateShopSections: function() { 
+            this.populateShopSection(this.DOM.pickaxesShopSection, this.Assets.PICKAXE_TYPES, (item) => this.GameState.ownedPickaxeIds.has(item.IdName) ? this.equipPickaxe(item) : this.buyPickaxe(item), (item) => this.GameState.equippedPickaxeId === item.IdName, "Vybaveno", (item) => this.GameState.ownedPickaxeIds.has(item.IdName) ? "Vybavit" : "Koupit");
+            this.populateShopSection(this.DOM.petsShopSection, this.Assets.PET_TYPES, this.buyPet.bind(this), (item) => this.GameState.ownedPets.filter(p=>p.IdName === item.IdName).length >= 10, "Max (10)", () => "Koupit"); 
+            this.updateEnchantmentUI();
+        },
+
+        buyPickaxe: function(pickaxeToBuy) { 
+            if (this.GameState.blokyCount >= pickaxeToBuy.Cost && !this.GameState.ownedPickaxeIds.has(pickaxeToBuy.IdName)) { 
+                this.GameState.blokyCount -= pickaxeToBuy.Cost; 
+                this.GameState.ownedPickaxeIds.add(pickaxeToBuy.IdName); 
+                this.equipPickaxe(pickaxeToBuy);
+                this.updateBlokyLabel(); 
+                this.updateShopSections(); 
+                this.updateStatsDisplay(); 
+            } 
+        },
+        equipPickaxe: function(pickaxeToEquip) {
+            this.GameState.equippedPickaxeId = pickaxeToEquip.IdName;
+            this.GameState.currentPickaxe = pickaxeToEquip; 
+            if(this.DOM.pickaxeImage) {
+                 this.DOM.pickaxeImage.src = pickaxeToEquip.ImageSource;
+                 if(pickaxeToEquip.IdName === "Hand"){
+                    this.GameState.currentToolTransformValues = {...this.GameState.handBaseTransformValues};
+                    this.DOM.pickaxeImage.style.transformOrigin = '50% 90%';
+                 } else {
+                    this.GameState.currentToolTransformValues = {...this.GameState.pickaxeBaseTransformValues};
+                    this.DOM.pickaxeImage.style.transformOrigin = '80% 80%';
+                 }
+                 this.DOM.pickaxeImage.style.transform = `translateX(${this.GameState.currentToolTransformValues.x}px) translateY(${this.GameState.currentToolTransformValues.y}px) rotate(${this.GameState.currentToolTransformValues.r}deg) scale(${this.GameState.currentToolTransformValues.s})`;
+            }
+            this.GameState.currentPickaxePower = this.calculateCurrentPickaxePower();
+            this.updateShopSections(); 
+            this.updateStatsDisplay();
+            this.updateEnchantmentUI();
+        },
+        buyPet: function(petToBuy) { 
+            if (this.GameState.blokyCount >= petToBuy.Cost && this.GameState.ownedPets.filter(p=>p.IdName === petToBuy.IdName).length < 10) { 
+                this.GameState.blokyCount -= petToBuy.Cost; 
+                const newPetInstance = { ...petToBuy, instanceId: `pet-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`};
+                this.GameState.ownedPets.push(newPetInstance); 
+                this.GameState.bps += petToBuy.Bps; 
+                this.updateBlokyLabel(); this.updateBpsLabel(); this.updateShopSections(); this.updatePetDisplay(); 
+            } 
+        },
+        updatePetDisplay: function() {
+            if (!this.DOM.petDisplayArea || !this.DOM.miningAreaGrid || !this.DOM.miningAreaContainer) return;
+        
+            const existingPetElements = Array.from(this.DOM.petDisplayArea.querySelectorAll('.activePet'));
+            const ownedPetInstanceIds = this.GameState.ownedPets.map(p => p.instanceId);
+        
+            existingPetElements.forEach(existingPetEl => {
+                if (!ownedPetInstanceIds.includes(existingPetEl.dataset.instanceId)) {
+                    existingPetEl.remove();
+                }
+            });
+        
+            const gridRect = this.DOM.miningAreaGrid.getBoundingClientRect();
+            const containerRect = this.DOM.miningAreaContainer.getBoundingClientRect();
+            const gridCenterX = (gridRect.left - containerRect.left) + (gridRect.width / 2);
+            const gridCenterY = (gridRect.top - containerRect.top) + (gridRect.height / 2);
+            const petWidth = 65; 
+            const petHeight = 65;
+            const baseRadius = Math.max(gridRect.width, gridRect.height) * 0.5; 
+        
+            let displayedPetCount = 0;
+            const occupiedPositions = []; 
+        
+            this.GameState.ownedPets.forEach((pet, petIndex) => {
+                
+                let petDiv = this.DOM.petDisplayArea.querySelector(`.activePet[data-instance-id="${pet.instanceId}"]`);
+
+                if (!petDiv && displayedPetCount < this.Config.MAX_PETS_DISPLAYED) {
+                    petDiv = document.createElement('div');
+                    petDiv.classList.add('activePet');
+                    petDiv.dataset.instanceId = pet.instanceId;
+                    petDiv.style.backgroundImage = `url('${pet.ImageSource}')`;
+                    
+                    let petX, petY, positionValid;
+                    let attempts = 0;
+                    do {
+                        positionValid = true;
+                        const angleSlices = Math.max(1, Math.min(this.GameState.ownedPets.length, this.Config.MAX_PETS_DISPLAYED));
+                        const angleForThisPet = (Math.PI * 2 / angleSlices) * displayedPetCount; 
+                        const randomAngleOffset = (Math.random() * 0.6 - 0.3) * (Math.PI * 2 / angleSlices); 
+                        const angle = angleForThisPet + randomAngleOffset;
+        
+                        const minRadius = baseRadius + petWidth * this.Config.PET_SPAWN_MIN_RADIUS_FACTOR;
+                        const maxRadius = baseRadius + petWidth * this.Config.PET_SPAWN_MAX_RADIUS_FACTOR + (petWidth * 0.7); 
+                        const radius = minRadius + Math.random() * (maxRadius - minRadius);
+                        
+                        petX = gridCenterX + Math.cos(angle) * radius - petWidth / 2;
+                        petY = gridCenterY + Math.sin(angle) * radius - petHeight / 2;
+                        
+                        for(const pos of occupiedPositions){
+                            const dist = Math.sqrt(Math.pow(petX - pos.x, 2) + Math.pow(petY - pos.y, 2));
+                            if(dist < petWidth * 0.75){ 
+                                positionValid = false;
+                                break;
+                            }
+                        }
+                        attempts++;
+                    } while(!positionValid && attempts < 30); 
+        
+                    occupiedPositions.push({x: petX, y: petY});
+        
+                    petDiv.style.left = `${petX}px`;
+                    petDiv.style.top = `${petY}px`;
+                    petDiv.style.animationDelay = `${Math.random() * -2.5}s`; 
+                    this.DOM.petDisplayArea.appendChild(petDiv);
+                    displayedPetCount++;
+                } else if (petDiv && displayedPetCount >= this.Config.MAX_PETS_DISPLAYED && !ownedPetInstanceIds.includes(petDiv.dataset.instanceId)) {
+                    
+                     petDiv.remove(); 
+                } else if (petDiv) {
+                   
+                    displayedPetCount++; 
+                }
+            });
+             existingPetElements.forEach(existingPetEl => {
+                if (!ownedPetInstanceIds.includes(existingPetEl.dataset.instanceId)) {
+                    existingPetEl.remove();
+                }
+            });
+        },
         createParticlePool: function() { for (let i = 0; i < this.Config.PARTICLE_POOL_SIZE; i++) { const particle = document.createElement('img'); particle.classList.add('particle'); if (this.DOM.particleCanvas) this.DOM.particleCanvas.appendChild(particle); this.Assets.PARTICLE_POOL.push(particle); } },
         setupNextBlock: function(currentIdx, nextIdxToLoad) { 
             this.GameState.isBreakingBlock = false; this.GameState.isCreeperRewardActive = false; 
             const currentBiomeKey = this.Assets.BIOMES[this.GameState.currentBiomeIndex].BlockPoolKey;
             this.GameState.currentBlockData = this.getWeightedRandomBlock(currentBiomeKey);
             this.GameState.nextBlockData = this.getWeightedRandomBlock(currentBiomeKey); 
-            if (!this.GameState.currentBlockData || !this.GameState.currentBlockData.ImageSource) { console.error("KRITICKÁ CHYBA: Aktuální blok nebo jeho obrázek není definován!", this.GameState.currentBlockData, "Biome:", currentBiomeKey); this.GameState.currentBlockData = this.Assets.BLOCK_TYPES_POOL.plains[0]; }
-            if (!this.GameState.nextBlockData || !this.GameState.nextBlockData.ImageSource) { console.error("KRITICKÁ CHYBA: Příští blok nebo jeho obrázek není definován!", this.GameState.nextBlockData, "Biome:", currentBiomeKey); this.GameState.nextBlockData = this.Assets.BLOCK_TYPES_POOL.plains[0]; }
-            if (this.GameState.activeBlockDisplayImage) { this.GameState.activeBlockDisplayImage.src = this.GameState.currentBlockData.ImageSource; this.GameState.activeBlockDisplayImage.style.opacity = '1'; this.GameState.activeBlockDisplayImage.style.transform = 'translate(0,0) scale(1) rotate(0deg)'; } 
-            else { console.error("activeBlockDisplayImage je null v setupNextBlock"); }
-            if (this.GameState.standbyBlockDisplayImage) { this.GameState.standbyBlockDisplayImage.src = this.GameState.nextBlockData.ImageSource; this.GameState.standbyBlockDisplayImage.style.opacity = '0'; } 
-            else { console.error("standbyBlockDisplayImage je null v setupNextBlock"); }
-            this.GameState.currentBlockMaxHp = this.GameState.currentBlockData.BaseHp || 10; this.GameState.currentBlockHp = this.GameState.currentBlockMaxHp;
+            if (!this.GameState.currentBlockData || !this.GameState.currentBlockData.ImageSource) { this.GameState.currentBlockData = this.Assets.BLOCK_TYPES_POOL.plains[0]; }
+            if (!this.GameState.nextBlockData || !this.GameState.nextBlockData.ImageSource) { this.GameState.nextBlockData = this.Assets.BLOCK_TYPES_POOL.plains[0]; }
+            
+            if (this.GameState.activeBlockDisplayImage) { 
+                this.GameState.activeBlockDisplayImage.src = this.GameState.currentBlockData.ImageSource; 
+                this.GameState.activeBlockDisplayImage.style.opacity = '1'; 
+                this.GameState.activeBlockDisplayImage.style.transform = 'translate(0,0) scale(1) rotate(0deg)'; 
+                this.GameState.activeBlockDisplayImage.style.boxShadow = this.GameState.currentBlockData.IsTransparent ? 'none' : '0 8px 25px rgba(0,0,0,0.35)';
+            } 
+            if (this.GameState.standbyBlockDisplayImage) { 
+                this.GameState.standbyBlockDisplayImage.src = this.GameState.nextBlockData.ImageSource; 
+                this.GameState.standbyBlockDisplayImage.style.opacity = '0'; 
+                this.GameState.standbyBlockDisplayImage.style.boxShadow = this.GameState.nextBlockData.IsTransparent ? 'none' : '0 8px 25px rgba(0,0,0,0.35)';
+            } 
+
+            this.GameState.currentBlockMaxHp = this.GameState.currentBlockData.IsOneHit ? 1 : (this.GameState.currentBlockData.BaseHp || 10); 
+            this.GameState.currentBlockHp = this.GameState.currentBlockMaxHp;
             if (this.DOM.miningHitEffectImage) { this.DOM.miningHitEffectImage.style.display = 'none'; this.DOM.miningHitEffectImage.src = ''; }
         },
         switchToNextBlock: function() { 
@@ -335,10 +917,104 @@
         setupEventListeners: function() { if(this.DOM.miningAreaGrid) { this.DOM.miningAreaGrid.addEventListener('click', (event) => this.onMineTapped(event, null)); this.DOM.miningAreaGrid.addEventListener('touchstart', (event) => { event.preventDefault(); this.onMineTapped(event, null); }, { passive: false }); } },
         startAccelerometer: function() { if ('DeviceMotionEvent' in window) { try { if (typeof DeviceMotionEvent.requestPermission === 'function') { DeviceMotionEvent.requestPermission().then(state => { if (state === 'granted') { window.addEventListener('devicemotion', this.accelerometerReadingChanged.bind(this)); this.GameState.isAccelerometerSupported = true;} }); } else { window.addEventListener('devicemotion', this.accelerometerReadingChanged.bind(this)); this.GameState.isAccelerometerSupported = true; } this.GameState.isFirstAccelReading = true; } catch (ex) { console.error("Accel Error:", ex); } } },
         accelerometerReadingChanged: function(event) { if (this.GameState.isShakeCooldownActive) return; const acc = event.accelerationIncludingGravity; if (!acc || acc.x === null) return; const currentAcceleration = { x: acc.x || 0, y: acc.y || 0, z: acc.z || 0 }; if (this.GameState.isFirstAccelReading) { this.GameState.lastAcceleration = currentAcceleration; this.GameState.isFirstAccelReading = false; return; } const deltaX = currentAcceleration.x - this.GameState.lastAcceleration.x, deltaY = currentAcceleration.y - this.GameState.lastAcceleration.y, deltaZ = currentAcceleration.z - this.GameState.lastAcceleration.z; const shakeMagnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ); if (shakeMagnitude > this.Config.SHAKE_THRESHOLD) { this.onMineTapped(null, { type: 'shake' }); this.GameState.isShakeCooldownActive = true; setTimeout(() => { this.GameState.isShakeCooldownActive = false; }, this.Config.SHAKE_COOLDOWN_MS); } this.GameState.lastAcceleration = currentAcceleration; },
-        onMineTapped: function(event, sourceInfo) { if (this.GameState.isBreakingBlock || !this.GameState.currentBlockData ||this.GameState.currentBlockHp <= 0 || this.GameState.isCreeperRewardActive) return; this.GameState.totalClicks++; let damageDealt = this.GameState.currentPickaxePower; if (this.GameState.isPowerSurgeActive) { damageDealt *= this.Config.POWER_SURGE_POWER_MULTIPLIER; } this.GameState.currentBlockHp -= damageDealt; this.showCrackAnimation(); this.animatePickaxe(); this.screenShake(this.GameState.isPowerSurgeActive, this.GameState.isPowerSurgeActive ? 6 : 3); this.showHitParticles(this.GameState.isPowerSurgeActive); if (this.GameState.currentBlockHp <= 0) { this.GameState.isBreakingBlock = true; let blocksEarned = 1; const currentBlockDef = this.GameState.currentBlockData; if (currentBlockDef.IsSpecial) { if (currentBlockDef.NoBloky) { blocksEarned = 0; } else { blocksEarned = Math.floor(Math.random() * (currentBlockDef.SpecialValueMax - currentBlockDef.SpecialValueMin + 1)) + currentBlockDef.SpecialValueMin; this.showFloatingText(`+${blocksEarned} BLOKY!`, this.DOM.miningAreaGrid, 'gold'); } if (currentBlockDef.ParticleType === 'splash' || currentBlockDef.ParticleType === 'lava_splash') { this.spawnProgrammaticExplosion( this.DOM.miningAreaGrid.offsetLeft + this.DOM.miningAreaGrid.offsetWidth / 2, this.DOM.miningAreaGrid.offsetTop + this.DOM.miningAreaGrid.offsetHeight / 2, 80, 30, currentBlockDef.ParticleType === 'splash' ? 'rgba(100,150,255,0.6)' : 'rgba(255,100,0,0.7)' ); } } else { const fortuneRoll = Math.random(); const fortuneChance = (this.GameState.pickaxeEnchantments.fortune || 0) * this.Config.FORTUNE_BONUS_CHANCE_PER_LEVEL; if (fortuneRoll < fortuneChance) { blocksEarned *= this.Config.FORTUNE_BONUS_MULTIPLIER; this.showFloatingText(`Štěstí! +${blocksEarned-1}`, this.DOM.miningAreaGrid, 'cyan'); } if (currentBlockDef.BlokyMultiplier) { blocksEarned = Math.max(1, Math.floor(blocksEarned * currentBlockDef.BlokyMultiplier)); } } this.GameState.blokyCount += blocksEarned; if (!currentBlockDef.NoBloky) {this.GameState.totalBlokyMined += blocksEarned > 0 ? blocksEarned : 1; this.checkForBiomeTransition();} this.updateBlokyLabel(); this.updateShopSections(); this.updateStatsDisplay(); if (!this.GameState.isPowerSurgeActive && this.GameState.powerSurgeCooldownTimer === null) { if (Math.random() < this.Config.POWER_SURGE_CHANCE_ON_BREAK) { this.activatePowerSurge(); } } if (this.GameState.activeBlockDisplayImage) this.GameState.activeBlockDisplayImage.style.opacity = '0'; if (this.DOM.miningHitEffectImage) this.DOM.miningHitEffectImage.style.display = 'none'; this.animateBlockBreakVisuals().then(() => { this.switchToNextBlock(); }).catch(error => { console.error("Error in onMineTapped after block break:", error); this.switchToNextBlock(); }); } },
+        onMineTapped: function(event, sourceInfo) { 
+            if (this.GameState.isBreakingBlock || !this.GameState.currentBlockData ||this.GameState.currentBlockHp <= 0 || this.GameState.isCreeperRewardActive) return; 
+            this.GameState.totalClicks++; 
+            let damageDealt = this.GameState.currentPickaxePower; 
+            if (this.GameState.isPowerSurgeActive) { damageDealt *= this.Config.POWER_SURGE_POWER_MULTIPLIER; } 
+            
+            if (this.GameState.currentBlockData.IsOneHit) {
+                 this.GameState.currentBlockHp = 0;
+            } else {
+                this.GameState.currentBlockHp -= damageDealt; 
+            }
+
+            this.showCrackAnimation(); 
+            this.animateTool(); 
+            this.screenShake(this.GameState.isPowerSurgeActive, this.GameState.isPowerSurgeActive ? 6 : 3); 
+            this.showHitParticles(this.GameState.isPowerSurgeActive); 
+            
+            if (this.GameState.currentBlockHp <= 0) { 
+                this.GameState.isBreakingBlock = true; 
+                let baseBlocksEarned = 1; 
+                const currentBlockDef = this.GameState.currentBlockData; 
+                
+                if (currentBlockDef.IsSpecial) {
+                    if (currentBlockDef.NoBloky) { 
+                        baseBlocksEarned = 0; 
+                    } else { 
+                        baseBlocksEarned = Math.floor(Math.random() * (currentBlockDef.SpecialValueMax - currentBlockDef.SpecialValueMin + 1)) + currentBlockDef.SpecialValueMin; 
+                        this.showFloatingText(`+${baseBlocksEarned} BLOKY!`, this.DOM.miningAreaGrid, 'gold'); 
+                    }
+                    if (currentBlockDef.ParticleType === 'splash' || currentBlockDef.ParticleType === 'lava_splash') { 
+                        this.spawnProgrammaticExplosion( this.DOM.miningAreaGrid.offsetLeft + this.DOM.miningAreaGrid.offsetWidth / 2, this.DOM.miningAreaGrid.offsetTop + this.DOM.miningAreaGrid.offsetHeight / 2, 80, 30, currentBlockDef.ParticleType === 'splash' ? 'rgba(100,150,255,0.6)' : 'rgba(255,100,0,0.7)' ); 
+                    }
+                } else {
+                    if (currentBlockDef.BlokyMultiplier) {
+                        baseBlocksEarned = Math.max(1, Math.floor(currentBlockDef.BlokyMultiplier));
+                    }
+                }
+
+                let finalBlocksEarned = baseBlocksEarned;
+                const enchantments = this.GameState.pickaxeEnchantments[this.GameState.equippedPickaxeId] || { efficiency: 0, fortune: 0 };
+                const fortuneLevel = enchantments.fortune || 0;
+
+                if (fortuneLevel > 0 && !currentBlockDef.IsSpecial && baseBlocksEarned > 0) {
+                    let bonusBlocks = 0;
+                    if (fortuneLevel === 1 && Math.random() < 0.50) { 
+                        bonusBlocks = baseBlocksEarned * 1; 
+                    } else if (fortuneLevel === 2 && Math.random() < 0.45) { 
+                        bonusBlocks = baseBlocksEarned * (Math.random() < 0.5 ? 2 : 3); 
+                    } else if (fortuneLevel >= 3 && Math.random() < 0.40) { 
+                        bonusBlocks = baseBlocksEarned * (Math.random() < 0.5 ? 3 : 5); 
+                    }
+
+                    if (bonusBlocks > 0) {
+                        finalBlocksEarned += bonusBlocks;
+                        this.showFloatingText(`Štěstí ${this.romanize(fortuneLevel)}! +${bonusBlocks}`, this.DOM.miningAreaGrid, 'cyan');
+                    }
+                }
+                
+                this.GameState.blokyCount += finalBlocksEarned; 
+                if (!currentBlockDef.NoBloky) {
+                    this.GameState.totalBlokyMined += baseBlocksEarned > 0 ? baseBlocksEarned : 1; 
+                    this.checkForBiomeTransition();
+                } 
+                this.updateBlokyLabel(); 
+                this.updateShopSections(); 
+                this.updateStatsDisplay(); 
+                if (!this.GameState.isPowerSurgeActive && this.GameState.powerSurgeCooldownTimer === null) { 
+                    if (Math.random() < this.Config.POWER_SURGE_CHANCE_ON_BREAK) { this.activatePowerSurge(); } 
+                } 
+                if (this.GameState.activeBlockDisplayImage) this.GameState.activeBlockDisplayImage.style.opacity = '0'; 
+                if (this.DOM.miningHitEffectImage) this.DOM.miningHitEffectImage.style.display = 'none'; 
+                this.animateBlockBreakVisuals().then(() => { this.switchToNextBlock(); }).catch(error => { console.error("Error in onMineTapped after block break:", error); this.switchToNextBlock(); }); 
+            } 
+        },
         animateBlockBreakVisuals: async function() { this.showBreakParticles(this.GameState.isPowerSurgeActive); await this.screenShake(true, 12); await new Promise(resolve => setTimeout(resolve, 50)); },
         showCrackAnimation: function() { if (!this.DOM.miningHitEffectImage || this.Assets.TANI_FRAMES.length === 0) {return;} if (this.GameState.currentBlockHp <= 0 || this.GameState.currentBlockHp >= this.GameState.currentBlockMaxHp) { if(this.DOM.miningHitEffectImage)this.DOM.miningHitEffectImage.style.display = 'none'; return; } const damagePercent = 1.0 - (this.GameState.currentBlockHp / this.GameState.currentBlockMaxHp); let frameIndex = Math.floor(damagePercent * (this.Assets.TANI_FRAMES.length -1)); frameIndex = Math.max(0, Math.min(frameIndex, this.Assets.TANI_FRAMES.length - 1)); this.DOM.miningHitEffectImage.src = this.Assets.TANI_FRAMES[frameIndex]; this.DOM.miningHitEffectImage.style.display = 'block';},
-        animatePickaxe: async function() { if (!this.DOM.pickaxeImage) return; const animTime = this.GameState.isPowerSurgeActive ? 25 : 50; const {x, y} = this.GameState.pickaxeBaseTransformValues; this.DOM.pickaxeImage.style.transition = `transform ${animTime / 1000}s linear`; this.DOM.pickaxeImage.style.transform = `translateX(${x}px) translateY(${y}px) rotate(-90deg)`; await new Promise(resolve => setTimeout(resolve, animTime)); this.DOM.pickaxeImage.style.transition = `transform ${(animTime * 1.5) / 1000}s ease-out`; this.DOM.pickaxeImage.style.transform = `translateX(${x}px) translateY(${y}px) rotate(-10deg)`; await new Promise(resolve => setTimeout(resolve, animTime * 1.5 + 20)); this.DOM.pickaxeImage.style.transition = `transform 0.05s linear`; },
+        animateTool: async function() {
+            if (!this.DOM.pickaxeImage) return;
+            const toolData = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
+            const animTime = this.GameState.isPowerSurgeActive ? 25 : 50;
+            const { x, y, r, s } = this.GameState.currentToolTransformValues;
+        
+            this.DOM.pickaxeImage.style.transition = `transform ${animTime / 1000}s linear`;
+        
+            if (toolData && toolData.IdName === "Hand") {
+                this.DOM.pickaxeImage.style.transform = `translateX(${x + 15}px) translateY(${y + 15}px) rotate(${r + 15}deg) scale(${s * 0.85})`;
+                await new Promise(resolve => setTimeout(resolve, animTime));
+                this.DOM.pickaxeImage.style.transition = `transform ${(animTime * 1.5) / 1000}s ease-out`;
+                this.DOM.pickaxeImage.style.transform = `translateX(${x}px) translateY(${y}px) rotate(${r}deg) scale(${s})`;
+            } else {
+                this.DOM.pickaxeImage.style.transform = `translateX(${x}px) translateY(${y}px) rotate(-90deg) scale(${s})`;
+                await new Promise(resolve => setTimeout(resolve, animTime));
+                this.DOM.pickaxeImage.style.transition = `transform ${(animTime * 1.5) / 1000}s ease-out`;
+                this.DOM.pickaxeImage.style.transform = `translateX(${x}px) translateY(${y}px) rotate(${r}deg) scale(${s})`;
+            }
+            await new Promise(resolve => setTimeout(resolve, animTime * 1.5 + 20));
+            this.DOM.pickaxeImage.style.transition = `transform 0.05s linear`;
+        },
         screenShake: async function(isBigShake, customAmount = 0) { if (!this.DOM.mainLayoutGrid) return; const intensity = this.GameState.isPowerSurgeActive ? 1.5 : 1; const duration = isBigShake ? 60 * intensity : 20 * intensity; const amount = customAmount > 0 ? customAmount : (isBigShake ? 10.0 * intensity : 3.0 * intensity); const shakeCount = isBigShake ? 4 : 2; const originalTransform = this.DOM.mainLayoutGrid.style.transform; for (let i = 0; i < shakeCount; i++) { const randomX = (Math.random() - 0.5) * 2.0 * amount; const randomY = (Math.random() - 0.5) * 2.0 * amount; const partDuration = Math.max(1, duration / (shakeCount * 2)); this.DOM.mainLayoutGrid.style.transition = `transform ${partDuration / 1000}s cubic-bezier(0.25, 0.1, 0.25, 1)`; this.DOM.mainLayoutGrid.style.transform = `translate(${randomX}px, ${randomY}px)`; await new Promise(resolve => setTimeout(resolve, partDuration)); this.DOM.mainLayoutGrid.style.transform = `translate(0px, 0px)`; await new Promise(resolve => setTimeout(resolve, partDuration)); } this.DOM.mainLayoutGrid.style.transform = originalTransform || 'translate(0px, 0px)'; },
         showHitParticles: function(isPowerSurge) { const count = isPowerSurge ? Math.floor(this.Config.MAX_HIT_PARTICLES_PER_HIT * 1.5) : this.Config.MAX_HIT_PARTICLES_PER_HIT; if (!this.GameState.currentBlockData) return; this.spawnParticles(count, this.GameState.currentBlockData.ImageSource, false, isPowerSurge, this.GameState.currentBlockData.ParticleColor, this.GameState.currentBlockData.ParticleMultiplier); },
         showBreakParticles: function(isPowerSurge) { const count = isPowerSurge ? Math.floor(this.Config.MAX_BREAK_CHUNK_PARTICLES * 1.5) : this.Config.MAX_BREAK_CHUNK_PARTICLES; if (!this.GameState.currentBlockData) return; this.spawnParticles(count, this.GameState.currentBlockData.ImageSource, true, isPowerSurge, this.GameState.currentBlockData.ParticleColor, this.GameState.currentBlockData.ParticleMultiplier); },
@@ -354,8 +1030,8 @@
         damageCreeper: function(creeperData) { if (creeperData.isExploding || !creeperData || creeperData.hp <= 0) return; creeperData.hp--; this.showFloatingText("-1", creeperData.element, 'red'); creeperData.hpElement.style.width = `${(creeperData.hp / creeperData.maxHp) * 100}%`; this.spawnProgrammaticExplosion(creeperData.element.offsetLeft + creeperData.element.offsetWidth/2, creeperData.element.offsetTop + creeperData.element.offsetHeight/2, 40, 7, 'rgba(150,150,150,0.8)'); if (creeperData.element) creeperData.element.classList.add('hit'); setTimeout(()=> { if(creeperData.element) creeperData.element.classList.remove('hit')}, 150); if (creeperData.hp <= 0) { this.creeperExplodes(creeperData, true); } },
         creeperExplodes: async function(creeperData, playerWon) { if (creeperData.isExploding || !creeperData.element) return; creeperData.isExploding = true; clearInterval(creeperData.moveInterval); creeperData.moveInterval = null; const explosionX = creeperData.element.offsetLeft + creeperData.element.offsetWidth / 2; const explosionY = creeperData.element.offsetTop + creeperData.element.offsetHeight / 2; if(creeperData.element && creeperData.element.parentNode) { creeperData.element.remove(); } creeperData.element = null; const creeperIndex = this.GameState.activeCreepers.findIndex(c => c.id === creeperData.id); if (creeperIndex > -1) { this.GameState.activeCreepers.splice(creeperIndex, 1); } if (playerWon) { this.showFloatingText("BUM! +++Bloky", this.DOM.miningAreaGrid, 'lime'); this.spawnProgrammaticExplosion(explosionX, explosionY, this.Config.CREEPER_REWARD_EXPLOSION_RADIUS + 50, this.Config.CREEPER_REWARD_PARTICLE_COUNT + 10, 'rgba(50,255,50,0.7)'); this.spawnParticles(this.Config.CREEPER_REWARD_PARTICLE_COUNT, this.Assets.IMAGE_FILES.CREEPER, true, true); await this.screenShake(true, 20); this.GameState.isCreeperRewardActive = true; let blocksAwardedByCreeperActualHits = 0; for (let i = 0; i < this.Config.CREEPER_REWARD_BLOCK_BREAKS; i++) { if (this.GameState.isBreakingBlock && !this.GameState.isCreeperRewardActive) { await new Promise(resolve => setTimeout(resolve, 20)); i--; continue; } if (this.GameState.currentBlockHp <= 0) { if (!this.GameState.isBreakingBlock) { this.GameState.isBreakingBlock = true; this.GameState.blokyCount++; this.GameState.totalBlokyMined++; blocksAwardedByCreeperActualHits++; this.updateBlokyLabel(); this.updateShopSections(); if (this.GameState.activeBlockDisplayImage) this.GameState.activeBlockDisplayImage.style.opacity = '0'; if (this.DOM.miningHitEffectImage) this.DOM.miningHitEffectImage.style.display = 'none'; await this.animateBlockBreakVisuals(); this.switchToNextBlock(); } else { await new Promise(resolve => setTimeout(resolve, 20)); i--; continue;} } if (this.GameState.currentBlockHp <= 0) break; this.GameState.currentBlockHp -= (this.GameState.currentPickaxePower * 2.5); this.showCrackAnimation(); if(this.GameState.currentBlockData) this.spawnParticles(12, this.GameState.currentBlockData.ImageSource, false, true); if (this.DOM.currentBlockImage) { this.DOM.currentBlockImage.style.transition = 'transform 0.05s ease-out'; this.DOM.currentBlockImage.style.transform = 'scale(1.05) rotate(1deg)'; await new Promise(resolve => setTimeout(() => { if (this.DOM.currentBlockImage) this.DOM.currentBlockImage.style.transform = 'scale(1) rotate(0deg)'; resolve(); }, 55)); } else { await new Promise(resolve => setTimeout(resolve, 55)); } } if (this.GameState.currentBlockHp <= 0 && !this.GameState.isBreakingBlock) { this.GameState.isBreakingBlock = true; this.GameState.blokyCount++; this.GameState.totalBlokyMined++; blocksAwardedByCreeperActualHits++; this.updateBlokyLabel(); this.updateShopSections(); if (this.GameState.activeBlockDisplayImage) this.GameState.activeBlockDisplayImage.style.opacity = '0'; if (this.DOM.miningHitEffectImage) this.DOM.miningHitEffectImage.style.display = 'none'; await this.animateBlockBreakVisuals(); this.switchToNextBlock(); } let conceptualBlocksToFly = this.Config.CREEPER_REWARD_BLOCK_BREAKS - blocksAwardedByCreeperActualHits; if(conceptualBlocksToFly > 0) { this.GameState.blokyCount += conceptualBlocksToFly; this.GameState.totalBlokyMined += conceptualBlocksToFly;} this.GameState.isCreeperRewardActive = false; this.updateBlokyLabel(); this.updateShopSections(); this.updateStatsDisplay(); const scoreHeaderRect = this.DOM.blokyCountLabel.getBoundingClientRect(); for (let i = 0; i < Math.min(this.Config.CREEPER_REWARD_BLOCK_BREAKS, 15) ; i++) { const flyingBlock = document.createElement('img'); const currentBiome = this.Assets.BIOMES[this.GameState.currentBiomeIndex]; const blockPoolForBiome = this.Assets.BLOCK_TYPES_POOL[currentBiome.BlockPoolKey]; const blockDataForFlying = blockPoolForBiome && blockPoolForBiome.length > 0 ? blockPoolForBiome[0] : this.Assets.BLOCK_TYPES_POOL.plains[0]; flyingBlock.src = blockDataForFlying.ImageSource; flyingBlock.classList.add('flying-block-particle'); const startX = explosionX + (Math.random() - 0.5) * 50; const startY = explosionY + (Math.random() - 0.5) * 50; const canvasRect = this.DOM.particleCanvas.getBoundingClientRect(); flyingBlock.style.left = `${startX - canvasRect.left}px`; flyingBlock.style.top = `${startY - canvasRect.top}px`; this.DOM.particleCanvas.appendChild(flyingBlock); setTimeout(() => { const targetX = scoreHeaderRect.left + scoreHeaderRect.width/2 - startX + (Math.random() * 40 - 20); const targetY = scoreHeaderRect.top + scoreHeaderRect.height/2 - startY + (Math.random() * 20 - 10); flyingBlock.style.transform = `translate(${targetX}px, ${targetY}px) scale(0.2) rotate(${(Math.random()-0.5)*720}deg)`; flyingBlock.style.opacity = '0'; setTimeout(() => flyingBlock.remove(), 700); }, i * 30); } } else { let blokyLost = Math.floor(this.GameState.blokyCount * this.Config.CREEPER_DAMAGE_TO_BLOKY_PERCENT); let message = `Sssss... -${blokyLost} Bloky`; this.GameState.blokyCount -= blokyLost; if (this.GameState.ownedPets.length > 0 && Math.random() < this.Config.CREEPER_STEALS_PET_CHANCE) { const stolenPetIndex = Math.floor(Math.random() * this.GameState.ownedPets.length); const stolenPet = this.GameState.ownedPets.splice(stolenPetIndex, 1)[0]; if (stolenPet) { this.GameState.bps -= stolenPet.Bps; this.updateBpsLabel(); this.updatePetDisplay(); message += ` & 1 ${stolenPet.Name}!`; this.showFloatingText(`Ukradl ti ${stolenPet.Name}!`, this.DOM.miningAreaGrid, 'magenta'); } } this.updateBlokyLabel(); this.showFloatingText(message, this.DOM.miningAreaGrid, 'tomato'); await this.screenShake(true, 15); this.spawnProgrammaticExplosion(explosionX, explosionY, 150, 25, 'rgba(255,50,50,0.7)'); } this.updateShopSections(); },
         spawnProgrammaticExplosion: function(x, y, maxRadius, numParticles, color) { if (!this.DOM.particleCanvas) return; for (let i = 0; i < numParticles; i++) { const particle = document.createElement('div'); particle.style.position = 'absolute'; const pSize = Math.random() * 18 + 10; particle.style.width = `${pSize}px`; particle.style.height = particle.style.width; particle.style.backgroundColor = color; particle.style.borderRadius = `${Math.random() > 0.3 ? '50%' : '0'}`; particle.style.opacity = '1'; particle.style.pointerEvents = 'none'; this.DOM.particleCanvas.appendChild(particle); const angle = Math.random() * Math.PI * 2; const radius = Math.random() * maxRadius; const targetX = Math.cos(angle) * radius * (0.5 + Math.random() * 0.8); const targetY = Math.sin(angle) * radius * (0.5 + Math.random() * 0.8); const duration = Math.random() * 700 + 500; const finalScale = Math.random() * 0.3; particle.style.left = `${x - pSize/2}px`; particle.style.top = `${y - pSize/2}px`; particle.animate([ { transform: 'translate(0, 0) scale(1) rotate(0deg)', opacity: 1 }, { opacity: 0.8, offset: 0.7 }, { transform: `translate(${targetX}px, ${targetY}px) scale(${finalScale}) rotate(${(Math.random()-0.5)*360}deg)`, opacity: 0 } ], { duration: duration, easing: 'cubic-bezier(0.1, 0.9, 0.2, 1)' }).onfinish = () => particle.remove(); } },
-        updateStatsDisplay: function() { if (this.DOM.statsDisplay) { this.DOM.statsDisplay.innerHTML = `Celkem Vytěženo: ${this.GameState.totalBlokyMined}<br>Celkem Kliknutí: ${this.GameState.totalClicks}<br>Síla Krumpáče: ${this.GameState.currentPickaxePower}`; } },
-        romanize: function(num) { if (isNaN(num)) return NaN; var digits = String(+num).split(""),key = ["","C","CC","CCC","CD","D","DC","DCC","DCCC","CM","","X","XX","XXX","XL","L","LX","LXX","LXXX","XC","","I","II","III","IV","V","VI","VII","VIII","IX"],roman = "", i = 3; while (i--) roman = (key[+digits.pop() + (i * 10)] || "") + roman; return Array(+digits.join("") + 1).join("M") + roman; },
+        updateStatsDisplay: function() { if (this.DOM.statsDisplay) { this.DOM.statsDisplay.innerHTML = `Celkem Vytěženo: ${this.GameState.totalBlokyMined}<br>Celkem Kliknutí: ${this.GameState.totalClicks}<br>Síla Nástroje: ${this.GameState.currentPickaxePower}`; } },
+        romanize: function(num) { if (isNaN(num) || num === 0) return ""; var digits = String(+num).split(""),key = ["","C","CC","CCC","CD","D","DC","DCC","DCCC","CM","","X","XX","XXX","XL","L","LX","LXX","LXXX","XC","","I","II","III","IV","V","VI","VII","VIII","IX"],roman = "", i = 3; while (i--) roman = (key[+digits.pop() + (i * 10)] || "") + roman; return Array(+digits.join("") + 1).join("M") + roman; },
         startGameLoop: function() { setInterval(() => { if (this.GameState.bps > 0) { this.GameState.blokyCount += this.GameState.bps / 10; this.updateBlokyLabel(); if (Math.random() < 0.1) { this.updateShopSections(); } } this.GameState.gameTime += 100; if(this.DOM.petDisplayArea && this.DOM.miningAreaGrid && this.DOM.particleCanvas) {this.DOM.petDisplayArea.querySelectorAll('.activePet').forEach((petEl, index) => { if (Math.random() < 0.03 / (this.GameState.ownedPets.length || 1) ) {  if(petEl && !petEl.classList.contains('mining-visual')) {petEl.classList.add('mining-visual'); setTimeout(()=> {if(petEl)petEl.classList.remove('mining-visual')}, 300);} const particle = document.createElement('div'); particle.classList.add('pet-mining-particle'); const miningGridRect = this.DOM.miningAreaGrid.getBoundingClientRect(); const canvasRect = this.DOM.particleCanvas.getBoundingClientRect(); const spawnEdge = Math.floor(Math.random() * 4); let particleSpawnX, particleSpawnY; let targetXRel = Math.random() * miningGridRect.width * 0.6 - miningGridRect.width * 0.3; let targetYRel = Math.random() * miningGridRect.height* 0.6 - miningGridRect.height * 0.3; if (spawnEdge === 0) { particleSpawnX = miningGridRect.left - canvasRect.left + miningGridRect.width/2 + targetXRel; particleSpawnY = miningGridRect.top - canvasRect.top - 10; } else if (spawnEdge === 1) { particleSpawnX = miningGridRect.right - canvasRect.left + 10; particleSpawnY = miningGridRect.top - canvasRect.top + miningGridRect.height/2 + targetYRel; } else if (spawnEdge === 2) { particleSpawnX = miningGridRect.left - canvasRect.left + miningGridRect.width/2 + targetXRel; particleSpawnY = miningGridRect.bottom - canvasRect.top + 10; } else { particleSpawnX = miningGridRect.left - canvasRect.left - 10; particleSpawnY = miningGridRect.top - canvasRect.top + miningGridRect.height/2 + targetYRel; } particle.style.left = `${particleSpawnX}px`; particle.style.top = `${particleSpawnY}px`; if(this.DOM.particleCanvas) this.DOM.particleCanvas.appendChild(particle); setTimeout(() => particle.remove(), 700); } });} }, 100); }
     };
     window.addEventListener('load', () => AppComponent.init());
