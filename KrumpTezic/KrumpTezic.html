@@ -335,7 +335,13 @@
                 { IdName: "Obsidian", CzechName: "Obsidiánový K.", ImageSource: this.Assets.IMAGE_FILES.OBSIDIAN_PICKAXE, Power: 40, Cost: 4000, Tier: 5 }, 
                 { IdName: "Netherite", CzechName: "Netheritový K.", ImageSource: this.Assets.IMAGE_FILES.NETHERITE_PICKAXE, Power: 100, Cost: 15000, Tier: 6 } 
             ]; 
-            this.Assets.PET_TYPES = [ { IdName: "Cat1", Name: "Kotě Těžař", ImageSource: this.Assets.IMAGE_FILES.CAT1, Bps: 1, Cost: 60 }, { IdName: "Cat2", Name: "Kočičí Horník", ImageSource: this.Assets.IMAGE_FILES.CAT2, Bps: 4, Cost: 250 }, { IdName: "Cat3", Name: "Panter Drtič", ImageSource: this.Assets.IMAGE_FILES.CAT3, Bps: 15, Cost: 900 }, { IdName: "Cat4", Name: "Lví Král Dolů", ImageSource: this.Assets.IMAGE_FILES.CAT4, Bps: 50, Cost: 3500 },  { IdName: "Cat5", Name: "Tygr Ničitel", ImageSource: this.Assets.IMAGE_FILES.CAT5, Bps: 120, Cost: 12000 } ]; 
+            this.Assets.PET_TYPES = [ 
+                { IdName: "Cat1", Name: "Kotě Těžař", ImageSource: this.Assets.IMAGE_FILES.CAT1, Bps: 0.5, Cost: 120 }, 
+                { IdName: "Cat2", Name: "Kočičí Horník", ImageSource: this.Assets.IMAGE_FILES.CAT2, Bps: 2, Cost: 600 }, 
+                { IdName: "Cat3", Name: "Panter Drtič", ImageSource: this.Assets.IMAGE_FILES.CAT3, Bps: 7, Cost: 2200 }, 
+                { IdName: "Cat4", Name: "Lví Král Dolů", ImageSource: this.Assets.IMAGE_FILES.CAT4, Bps: 20, Cost: 8500 },  
+                { IdName: "Cat5", Name: "Tygr Ničitel", ImageSource: this.Assets.IMAGE_FILES.CAT5, Bps: 50, Cost: 28000 } 
+            ]; 
             this.Assets.ENCHANTMENT_DEFINITIONS = { efficiency: { name: "Efektivita", maxLevel: 5, description: "Zvyšuje sílu krumpáče." }, fortune: { name: "Štěstí", maxLevel: 3, description: "Šance na více bloků." } };
             
             this.Assets.PICKAXE_TYPES.forEach(pt => {
@@ -396,8 +402,8 @@
                     { Name: "Zlatá Ruda", ImageSource: this.Assets.IMAGE_FILES.GOLD_ORE_BLOCK, BaseHp: 40, Rarity: 1.5, BlokyMultiplier: 3.0 },
                     { Name: "Lapis Lazuli Ruda", ImageSource: this.Assets.IMAGE_FILES.LAPIS_ORE_BLOCK, BaseHp: 38, Rarity: 1.2, BlokyMultiplier: 2.5 },
                     { Name: "Redstone Ruda", ImageSource: this.Assets.IMAGE_FILES.REDSTONE_ORE_BLOCK, BaseHp: 38, Rarity: 1.2, BlokyMultiplier: 2.5 },
-                    { Name: "Diamantová Ruda", ImageSource: this.Assets.IMAGE_FILES.DIAMOND_ORE_BLOCK, BaseHp: 50, Rarity: 0.5, BlokyMultiplier: 5.0 },
-                    { Name: "Smaragdová Ruda", ImageSource: this.Assets.IMAGE_FILES.EMERALD_ORE_BLOCK, BaseHp: 50, Rarity: 0.4, BlokyMultiplier: 6.0 },
+                    { Name: "Diamantová Ruda", ImageSource: this.Assets.IMAGE_FILES.DIAMOND_ORE_BLOCK, BaseHp: 50, Rarity: 0.5, BlokyMultiplier: 8.0 },
+                    { Name: "Smaragdová Ruda", ImageSource: this.Assets.IMAGE_FILES.EMERALD_ORE_BLOCK, BaseHp: 50, Rarity: 0.4, BlokyMultiplier: 10.0 },
                     { Name: "Voda", ImageSource: this.Assets.IMAGE_FILES.WATER, BaseHp: 1, Rarity: 1.8, IsSpecial: true, NoBloky: true, ParticleType: 'splash', IsTransparent: true, IsOneHit: true }, 
                     { Name: "Láva", ImageSource: this.Assets.IMAGE_FILES.LAVA, BaseHp: 1, Rarity: 1.0, IsSpecial: true, NoBloky: true, ParticleType: 'lava_splash', Hazard: true, IsTransparent: true, IsOneHit: true },
                     { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 35, Rarity: 0.6, IsSpecial: true, SpecialValueMin: 25, SpecialValueMax: 100 } 
@@ -412,7 +418,7 @@
                     { Name: "Křemenná Ruda", ImageSource: this.Assets.IMAGE_FILES.QUARTZ_ORE, BaseHp: 30, Rarity: 3, BlokyMultiplier: 3.0 }, 
                     { Name: "Světlit", ImageSource: this.Assets.IMAGE_FILES.GLOWSTONE, BaseHp: 1, Rarity: 2.5, BlokyMultiplier: 2.5, ParticleType: 'light_shards', IsTransparent: true, IsOneHit: true }, 
                     { Name: "Obsidián", ImageSource: this.Assets.IMAGE_FILES.OBSIDIAN, BaseHp: 100, Rarity: 1, BlokyMultiplier: 5.0 }, 
-                    { Name: "Prastaré Úlomky", ImageSource: this.Assets.IMAGE_FILES.ANCIENT_DEBRIS, BaseHp: 250, Rarity: 0.2, BlokyMultiplier: 10.0},
+                    { Name: "Prastaré Úlomky", ImageSource: this.Assets.IMAGE_FILES.ANCIENT_DEBRIS, BaseHp: 250, Rarity: 0.2, BlokyMultiplier: 20.0},
                     { Name: "Kostěný Blok", ImageSource: this.Assets.IMAGE_FILES.BONE_BLOCK, BaseHp: 25, Rarity: 0.5, BlokyMultiplier: 2.5 },
                     { Name: "Láva", ImageSource: this.Assets.IMAGE_FILES.LAVA, BaseHp: 1, Rarity: 2, IsSpecial: true, NoBloky: true, ParticleType: 'lava_splash', Hazard: true, IsTransparent: true, IsOneHit: true }, 
                     { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 40, Rarity: 0.7, IsSpecial: true, SpecialValueMin: 50, SpecialValueMax: 200 } 
@@ -822,15 +828,18 @@
             const petWidth = 65; 
             const petHeight = 65;
             const baseRadius = Math.max(gridRect.width, gridRect.height) * 0.5; 
+            const minRadius = baseRadius + petWidth * this.Config.PET_SPAWN_MIN_RADIUS_FACTOR;
+            const maxRadius = baseRadius + petWidth * this.Config.PET_SPAWN_MAX_RADIUS_FACTOR + (petWidth * 0.7);
         
             let displayedPetCount = 0;
             const occupiedPositions = []; 
         
-            this.GameState.ownedPets.forEach((pet, petIndex) => {
-                
+            this.GameState.ownedPets.forEach((pet) => {
+                if (displayedPetCount >= this.Config.MAX_PETS_DISPLAYED) return;
+        
                 let petDiv = this.DOM.petDisplayArea.querySelector(`.activePet[data-instance-id="${pet.instanceId}"]`);
-
-                if (!petDiv && displayedPetCount < this.Config.MAX_PETS_DISPLAYED) {
+        
+                if (!petDiv) {
                     petDiv = document.createElement('div');
                     petDiv.classList.add('activePet');
                     petDiv.dataset.instanceId = pet.instanceId;
@@ -838,48 +847,51 @@
                     
                     let petX, petY, positionValid;
                     let attempts = 0;
+                    const maxAttempts = 30; 
+        
                     do {
                         positionValid = true;
-                        const angleSlices = Math.max(1, Math.min(this.GameState.ownedPets.length, this.Config.MAX_PETS_DISPLAYED));
-                        const angleForThisPet = (Math.PI * 2 / angleSlices) * displayedPetCount; 
-                        const randomAngleOffset = (Math.random() * 0.6 - 0.3) * (Math.PI * 2 / angleSlices); 
-                        const angle = angleForThisPet + randomAngleOffset;
-        
-                        const minRadius = baseRadius + petWidth * this.Config.PET_SPAWN_MIN_RADIUS_FACTOR;
-                        const maxRadius = baseRadius + petWidth * this.Config.PET_SPAWN_MAX_RADIUS_FACTOR + (petWidth * 0.7); 
+                        const angle = Math.random() * Math.PI * 2; 
                         const radius = minRadius + Math.random() * (maxRadius - minRadius);
                         
                         petX = gridCenterX + Math.cos(angle) * radius - petWidth / 2;
                         petY = gridCenterY + Math.sin(angle) * radius - petHeight / 2;
                         
+                        const currentPetCenterX = petX + petWidth / 2;
+                        const currentPetCenterY = petY + petHeight / 2;
+
                         for(const pos of occupiedPositions){
-                            const dist = Math.sqrt(Math.pow(petX - pos.x, 2) + Math.pow(petY - pos.y, 2));
-                            if(dist < petWidth * 0.75){ 
+                            const dx = currentPetCenterX - pos.centerX;
+                            const dy = currentPetCenterY - pos.centerY;
+                            const distBetweenCenters = Math.sqrt(dx*dx + dy*dy);
+                            if(distBetweenCenters < petWidth * 0.9){ 
                                 positionValid = false;
                                 break;
                             }
                         }
                         attempts++;
-                    } while(!positionValid && attempts < 30); 
-        
-                    occupiedPositions.push({x: petX, y: petY});
-        
-                    petDiv.style.left = `${petX}px`;
-                    petDiv.style.top = `${petY}px`;
-                    petDiv.style.animationDelay = `${Math.random() * -2.5}s`; 
-                    this.DOM.petDisplayArea.appendChild(petDiv);
-                    displayedPetCount++;
-                } else if (petDiv && displayedPetCount >= this.Config.MAX_PETS_DISPLAYED && !ownedPetInstanceIds.includes(petDiv.dataset.instanceId)) {
+                    } while(!positionValid && attempts < maxAttempts); 
                     
-                     petDiv.remove(); 
-                } else if (petDiv) {
-                   
-                    displayedPetCount++; 
+                    if(positionValid) {
+                        occupiedPositions.push({centerX: petX + petWidth / 2, centerY: petY + petHeight / 2});
+                        petDiv.style.left = `${petX}px`;
+                        petDiv.style.top = `${petY}px`;
+                        petDiv.style.animationDelay = `${Math.random() * -2.5}s`; 
+                        this.DOM.petDisplayArea.appendChild(petDiv);
+                        displayedPetCount++;
+                    } else {
+                        petDiv = null; 
+                    }
+                } else {
+                     displayedPetCount++;
                 }
             });
-             existingPetElements.forEach(existingPetEl => {
-                if (!ownedPetInstanceIds.includes(existingPetEl.dataset.instanceId)) {
-                    existingPetEl.remove();
+        
+            Array.from(this.DOM.petDisplayArea.querySelectorAll('.activePet')).forEach(petElementInDom => {
+                const instanceId = petElementInDom.dataset.instanceId;
+                const stillOwnedAndDisplayed = this.GameState.ownedPets.slice(0, displayedPetCount).some(p => p.instanceId === instanceId);
+                if (!stillOwnedAndDisplayed) {
+                    petElementInDom.remove();
                 }
             });
         },
