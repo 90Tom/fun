@@ -1046,7 +1046,12 @@
             const containerRect = this.DOM.miningAreaContainer.getBoundingClientRect();
             const gridCenterX = (gridRect.left - containerRect.left) + (gridRect.width / 2);
             const gridCenterY = (gridRect.top - containerRect.top) + (gridRect.height / 2);
-            
+            const petWidth = 65; 
+            const petHeight = 65;
+            const baseRadius = Math.max(gridRect.width, gridRect.height) * 0.5; 
+            const minRadius = baseRadius + petWidth * this.Config.PET_SPAWN_MIN_RADIUS_FACTOR;
+            const maxRadius = baseRadius + petWidth * this.Config.PET_SPAWN_MAX_RADIUS_FACTOR + (petWidth * 0.7);
+        
             let displayedPetCount = 0;
             const occupiedPositions = []; 
         
