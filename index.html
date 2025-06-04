@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- CSS -->
     <style>
         * {
             margin: 0;
@@ -168,10 +167,10 @@
             right: 20px;
             z-index: 1001;
             display: flex;
-            gap: 10px; /* Space between buttons */
+            gap: 10px;
             align-items: center;
         }
-        #language-switcher-btn, #login-btn {
+        #language-switcher-btn, #auth-action-btn, #welcome-user {
             background-color: rgba(250, 250, 250, 0.65);
             color: #333;
             border: 1px solid rgba(0, 0, 0, 0.15);
@@ -184,12 +183,12 @@
             transition: all 0.2s ease;
             outline: none;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            text-decoration: none; /* For a-tag specifically */
+            text-decoration: none;
             display: inline-flex;
             align-items: center;
             justify-content: center;
         }
-        #language-switcher-btn:hover, #login-btn:hover {
+        #language-switcher-btn:hover, #auth-action-btn:hover {
             background-color: rgba(255, 255, 255, 0.85);
             border-color: rgba(0, 0, 0, 0.25);
             color: #000;
@@ -205,12 +204,22 @@
         #language-switcher-btn .lang-target {
             opacity: 0.7;
         }
+         #welcome-user {
+            cursor: default;
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            color: #e83e8c;
+            font-weight: 600;
+            display: none; 
+        }
+
 
         @media (max-width: 768px) {
              header h1 { font-size: 2.8em; padding-right: 40px; }
              .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; }
             .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-            #language-switcher-btn, #login-btn { padding: 6px 12px; font-size: 0.85em; }
+            #language-switcher-btn, #auth-action-btn, #welcome-user { padding: 6px 12px; font-size: 0.85em; }
             #top-actions-container { top: 15px; right: 15px; gap: 8px;}
         }
         @media (max-width: 480px) {
@@ -222,7 +231,7 @@
             .game-card .content { padding: 10px; }
             .game-card h2 { font-size: 1.1em; }
             .game-card p { font-size: 0.8em; }
-            #language-switcher-btn, #login-btn { padding: 5px 10px; font-size: 0.8em; }
+            #language-switcher-btn, #auth-action-btn, #welcome-user { padding: 5px 10px; font-size: 0.8em; }
             #top-actions-container { top: 10px; right: 10px; gap: 6px;}
         }
     </style>
@@ -232,7 +241,8 @@
         <button id="language-switcher-btn">
             <span class="lang-current">CS</span><span class="lang-separator">⇌</span><span class="lang-target">EN</span>
         </button>
-        <a href="login.php" id="login-btn" data-translate-key="loginButtonText">Login</a>
+        <span id="welcome-user" data-translate-key="welcomeUser"></span>
+        <a href="login.php" id="auth-action-btn" data-translate-key="loginButtonText">Přihlásit se</a>
     </div>
 
     <header>
@@ -241,7 +251,6 @@
     </header>
 
     <main class="game-grid">
-        <!-- BLONKYTM -->
         <a href="bloonstdaitst.html" class="game-card">
             <img src="IndexImages/blonkytm.png" alt="BlónkyTM Game Preview">
             <div class="content">
@@ -249,7 +258,6 @@
                 <p data-translate-key="blonkyDesc">Předělání známé hry Bloons TD.</p>
             </div>
         </a>
-        <!-- KRUMPTEZIC -->
         <a href="KrumpTezic/KrumpTezic.html" class="game-card">
             <img src="IndexImages/krumptezic.png" alt="KrumpTezic Game Preview">
             <div class="content">
@@ -257,7 +265,6 @@
                 <p data-translate-key="krumptezicDesc">Zábavné těžení bloků z Minecraftu inspirováno hrou PickCrafter.</p>
             </div>
         </a>
-        <!-- PTAK 2 -->
         <a href="PTAK 2/PTAK 2.html" class="game-card">
             <img src="IndexImages/ptak2.png" alt="PTAK 2 Game Preview">
             <div class="content">
@@ -272,7 +279,6 @@
         <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
     </footer>
 
-    <!-- JS -->
     <script type="text/javascript">
         const translations = {
             cs: {
@@ -285,7 +291,9 @@
                 ptak2DescLine1: "Druhé vydání z ságy PTAK pro p. Kořínka,",
                 ptak2DescLine2: "dobrodružství ptáka, kočky a psa.",
                 footerText: "Vytvořil s ❤️ 90Tom",
-                loginButtonText: "Přihlásit se"
+                loginButtonText: "Přihlásit se",
+                logoutButtonText: "Odhlásit se",
+                welcomeUser: "Vítej, {username}!"
             },
             en: {
                 welcomeMessage: "Welcome! Choose a game below and enjoy!",
@@ -297,9 +305,13 @@
                 ptak2DescLine1: "Second edition of the PTAK saga for Mr. Kořínek,",
                 ptak2DescLine2: "Adventures of a bird, a cat, and a dog.",
                 footerText: "Made with ❤️ by 90Tom",
-                loginButtonText: "Login"
+                loginButtonText: "Login",
+                logoutButtonText: "Logout",
+                welcomeUser: "Welcome, {username}!"
             }
         };
+
+        let currentLoggedInUser = null;
 
         function setLanguage(lang) {
             document.documentElement.lang = lang;
@@ -307,9 +319,23 @@
 
             document.querySelectorAll('[data-translate-key]').forEach(element => {
                 const key = element.getAttribute('data-translate-key');
+                let translationText = "";
                 if (translations[lang] && translations[lang][key]) {
-                    element.textContent = translations[lang][key];
+                    translationText = translations[lang][key];
                 }
+
+                if (key === 'welcomeUser' && currentLoggedInUser && translationText) {
+                     element.textContent = translationText.replace('{username}', currentLoggedInUser);
+                } else if (translationText && element.id !== 'auth-action-btn' && element.id !== 'welcome-user') {
+                    // Only update general translations if not the auth button or welcome message
+                    // as those are handled by updateAuthUI based on current language
+                    element.textContent = translationText;
+                } else if (key === 'loginButtonText' && !currentLoggedInUser && element.id === 'auth-action-btn') {
+                    element.textContent = translationText;
+                } else if (key === 'logoutButtonText' && currentLoggedInUser && element.id === 'auth-action-btn') {
+                    element.textContent = translationText;
+                }
+
             });
 
             const langSwitcherBtn = document.getElementById('language-switcher-btn');
@@ -324,6 +350,47 @@
                     targetLangSpan.textContent = 'EN';
                 }
             }
+             // After setting language, ensure auth UI texts are also updated for the new language
+            const authActionButton = document.getElementById('auth-action-btn');
+            const welcomeUserSpan = document.getElementById('welcome-user');
+            if (currentLoggedInUser) {
+                if (authActionButton) authActionButton.textContent = translations[lang]?.logoutButtonText || "Logout";
+                if (welcomeUserSpan) {
+                    const welcomeText = translations[lang]?.welcomeUser || "Welcome, {username}!";
+                    welcomeUserSpan.textContent = welcomeText.replace('{username}', currentLoggedInUser);
+                }
+            } else {
+                if (authActionButton) authActionButton.textContent = translations[lang]?.loginButtonText || "Login";
+            }
+        }
+
+        function updateAuthUI(isLoggedIn, username) {
+            const authActionButton = document.getElementById('auth-action-btn');
+            const welcomeUserSpan = document.getElementById('welcome-user');
+            const currentLang = document.documentElement.lang || 'cs';
+
+            currentLoggedInUser = username; 
+
+            if (isLoggedIn) {
+                authActionButton.href = 'logout.php';
+                authActionButton.textContent = translations[currentLang]?.logoutButtonText || "Logout";
+                // authActionButton.setAttribute('data-translate-key', 'logoutButtonText'); // Key is already set
+
+                if (welcomeUserSpan) {
+                    const welcomeText = translations[currentLang]?.welcomeUser || "Welcome, {username}!";
+                    welcomeUserSpan.textContent = welcomeText.replace('{username}', username);
+                    welcomeUserSpan.style.display = 'inline-flex';
+                }
+            } else {
+                authActionButton.href = 'login.php';
+                authActionButton.textContent = translations[currentLang]?.loginButtonText || "Login";
+                // authActionButton.setAttribute('data-translate-key', 'loginButtonText'); // Key is already set
+
+                if (welcomeUserSpan) {
+                    welcomeUserSpan.style.display = 'none';
+                    welcomeUserSpan.textContent = '';
+                }
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -336,13 +403,25 @@
                 }, 50);
             });
 
-            const langSwitcherBtn = document.getElementById('language-switcher-btn');
-            let currentLang = localStorage.getItem('selectedLanguage') || 'cs';
-            setLanguage(currentLang);
+            fetch('check_login.php')
+                .then(response => response.json())
+                .then(data => {
+                    updateAuthUI(data.loggedIn, data.username);
+                    let currentLang = localStorage.getItem('selectedLanguage') || 'cs';
+                    setLanguage(currentLang);
+                })
+                .catch(error => {
+                    console.error('Error checking login status:', error);
+                    updateAuthUI(false, null);
+                    let currentLang = localStorage.getItem('selectedLanguage') || 'cs';
+                    setLanguage(currentLang);
+                });
 
+
+            const langSwitcherBtn = document.getElementById('language-switcher-btn');
             if (langSwitcherBtn) {
                 langSwitcherBtn.addEventListener('click', () => {
-                    currentLang = (document.documentElement.lang === 'cs') ? 'en' : 'cs';
+                    let currentLang = (document.documentElement.lang === 'cs') ? 'en' : 'cs';
                     setLanguage(currentLang);
                 });
             }
