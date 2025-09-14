@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -302,7 +303,8 @@
         async function deleteLeaderboardEntry(gameId, userToDelete) {
             if (typeof db === 'undefined') { alert("Spojení s databází selhalo."); return; }
             const gameData = {
-                milan: { key: "milan_leaderboard" },
+                // *** FIX: Changed collection name to milan_leaderboard2 ***
+                milan: { key: "milan_leaderboard2" },
                 krumptezic: { key: "krumptezic_leaderboard" },
                 ptak2: { key: "ptak2_leaderboard" },
             };
@@ -337,7 +339,8 @@
             let query, fields;
 
             if (gameId === 'milan') {
-                query = db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc');
+                // *** FIX: Changed collection name to milan_leaderboard2 ***
+                query = db.collection("milan_leaderboard2").orderBy('orders', 'desc').orderBy('time', 'desc');
                 fields = ['Objednávky', 'Čas Přežití'];
                 titleEl.textContent = `Žebříček: Milanovy Klobásy`;
             } else if (gameId === 'ptak2') {
@@ -402,7 +405,7 @@
                 }
             } catch (error) {
                  console.error("Error fetching leaderboard:", error);
-                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku.</td></tr>`;
+                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku. V konzoli (F12) je odkaz pro vytvoření potřebného indexu.</td></tr>`;
             }
         }
 

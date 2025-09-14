@@ -301,7 +301,6 @@
         let lastTime = 0;
         let animationFrameId;
         let riverLanes = { left: false, center: false, right: false };
-        let currentUser = null;
 
         let currentLanguage = 'cs';
         const translations = {
@@ -568,6 +567,7 @@
 
         function gameLoop(timestamp){
             if (!gameRunning) {
+                cancelAnimationFrame(animationFrameId);
                 return;
             };
             animationFrameId = requestAnimationFrame(gameLoop);
@@ -934,6 +934,39 @@
 
         function scheduleNextCustomer() { const nextSpawn = () => { if (gameRunning) { createCustomer(); setTimeout(nextSpawn, customerSpawnInterval); } }; nextSpawn(); }
         
+        async function saveScoreToFirestore() {
+            const userDisplayName = sessionStorage.getItem('loggedInUser');
+            if (!userDisplayName) {
+                return;
+            }
+
+            // *** FIX: Changed collection name to milan_leaderboard2 ***
+            const userDocRef = db.collection('milan_leaderboard2').doc(userDisplayName);
+            const newScore = {
+                user: userDisplayName,
+                orders: ordersCompleted,
+                time: Math.floor(survivalTime)
+            };
+
+            try {
+                const doc = await userDocRef.get();
+
+                if (!doc.exists) {
+                    await userDocRef.set(newScore);
+                } else {
+                    const existingScore = doc.data();
+                    const isNewHighScore = newScore.orders > existingScore.orders ||
+                                           (newScore.orders === existingScore.orders && newScore.time > existingScore.time);
+
+                    if (isNewHighScore) {
+                        await userDocRef.set(newScore);
+                    }
+                }
+            } catch (error) {
+                console.error("Error saving score to Firestore:", error);
+            }
+        }
+
         function startGame(){
             startScreen.style.display = 'none';
             gameRunning = true;
@@ -994,7 +1027,7 @@
 
         function endGame(reason) {
             if (!gameRunning) return;
-            gameRunning = false;
+            gameRunning=false;
             cancelAnimationFrame(animationFrameId);
             
             saveScoreToFirestore();
@@ -1007,9 +1040,6 @@
         }
 
         window.onload = () => {
-            auth.onAuthStateChanged(user => {
-                currentUser = user;
-            });
             document.getElementById('start-btn').addEventListener('click', startGame);
             document.getElementById('lang-switch-btn').addEventListener('click', () => { currentLanguage = currentLanguage === 'cs' ? 'en' : 'cs'; updateAllText(); });
             document.getElementById('play-again-btn').addEventListener('click', () => window.location.reload());

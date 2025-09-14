@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plants vs Zombies - Upgraded Edition!</title>
+    <title>Plants vs Zombies - Deluxe Edition!</title>
     <style>
         :root {
             --lane-height: 100px;
@@ -187,7 +187,7 @@
         }
 
         /* --- PLANT VISUALS --- */
-        .peashooter, .sunflower, .wallnut, .chomper { animation: plant-bob 2s infinite ease-in-out; }
+        .peashooter, .sunflower, .wallnut, .chomper, .icepeashooter { animation: plant-bob 2s infinite ease-in-out; }
 
         .peashooter .plant-body {
             position: absolute; width: 22px; height: 60px;
@@ -210,6 +210,11 @@
             position: absolute; top: 15px; left: 15px;
             font-weight: bold;
         }
+        /* Ice Peashooter Styles */
+        .icepeashooter .plant-body { background: linear-gradient(90deg, #54a0ff, #2e86de); border-color: #1e3799; }
+        .icepeashooter .plant-head { background: radial-gradient(circle at 20px 20px, #82ccdd, #4a69bd); border-color: #1e3799; }
+        .icepeashooter .plant-mouth { background: #4a69bd; border-color: #1e3799; }
+
 
         .sunflower .plant-body {
             position: absolute; width: 20px; height: 50px;
@@ -231,10 +236,11 @@
             position: absolute; top: 10px; left: -1px; width: 100%; text-align: center;
             font-weight: bold;
         }
+        /* --- SMALLER PETALS --- */
         .sunflower .petal {
-            position: absolute; width: 30px; height: 50px;
+            position: absolute; width: 25px; height: 40px; /* Made smaller */
             background: radial-gradient(ellipse, #fff2a8, #FFD700);
-            border-radius: 50%; top: 15px; left: 25px;
+            border-radius: 50%; top: 20px; left: 27.5px; /* Repositioned */
             transform-origin: center bottom;
         }
         .petal:nth-child(2){transform:rotate(45deg)} .petal:nth-child(3){transform:rotate(90deg)}
@@ -325,7 +331,8 @@
         }
 
         /* --- ZOMBIE VISUALS --- */
-        .zombie { z-index: 20; width: 90px; height: 110px; bottom: 0; animation: zombie-lurch 1.5s infinite linear; }
+        .zombie { z-index: 20; width: 90px; height: 110px; bottom: 0; animation: zombie-lurch 1.5s infinite linear; transition: filter 0.2s; }
+        .zombie.slowed { filter: brightness(0.8) saturate(1.5) hue-rotate(180deg); }
         .zombie-head {
             position: absolute; width: 55px; height: 60px;
             background: #a1c8a1; border-radius: 45% 45% 35% 35%;
@@ -365,12 +372,24 @@
         .newspaper.enraged .zombie-body::before { display: none; }
         .newspaper.enraged .zombie-head::before { background: #e74c3c; } /* Red eye */
 
+        .screendoor .zombie-body::before { /* Screen Door */
+            content: ''; position: absolute;
+            width: 70px; height: 100px; background: rgba(178, 222, 227, 0.7);
+            border: 5px solid #bdc3c7; top: -40px; left: -35px;
+            z-index: 3;
+        }
+        .screendoor.door-broken .zombie-body::before { display: none; }
+
         /* --- OTHER VISUALS & ANIMATIONS --- */
         .projectile {
             width: 25px; height: 25px;
             background: radial-gradient(circle at 8px 8px, #adff2f, #32cd32);
             border-radius: 50%; border: 2px solid #006400;
             z-index: 30; box-shadow: 0 0 8px #7CFC00;
+        }
+        .projectile.ice {
+             background: radial-gradient(circle at 8px 8px, #c7ecee, #00d2d3);
+             border-color: #01a3a4; box-shadow: 0 0 8px #00d2d3;
         }
         
         .sun {
@@ -420,6 +439,7 @@
             <div class="plant-card" data-plant-type="cherrybomb"><div class="plant-card-icon"></div><div class="plant-card-cost">150</div><div class="cooldown-overlay"></div></div>
             <div class="plant-card" data-plant-type="chomper" style="display: none;"><div class="plant-card-icon"></div><div class="plant-card-cost">150</div><div class="cooldown-overlay"></div></div>
             <div class="plant-card" data-plant-type="squash" style="display: none;"><div class="plant-card-icon"></div><div class="plant-card-cost">50</div><div class="cooldown-overlay"></div></div>
+            <div class="plant-card" data-plant-type="icepeashooter" style="display: none;"><div class="plant-card-icon"></div><div class="plant-card-cost">175</div><div class="cooldown-overlay"></div></div>
         </div>
         <div id="game-container">
             <div id="game-area"></div>
@@ -455,6 +475,7 @@
                 cherrybomb: { cost: 150, health: 100, recharge: 40 * FPS },
                 chomper: { cost: 150, health: 300, recharge: 7 * FPS },
                 squash: { cost: 50, health: 100, recharge: 25 * FPS },
+                icepeashooter: { cost: 175, health: 300, recharge: 7 * FPS },
             };
             let plantCooldowns = {};
 
@@ -474,11 +495,12 @@
                 },
                 3: { 
                     zombiesToWin: 40, 
-                    availablePlants: ['peashooter', 'sunflower', 'wallnut', 'cherrybomb', 'chomper', 'squash'], 
+                    availablePlants: ['peashooter', 'sunflower', 'wallnut', 'cherrybomb', 'chomper', 'squash', 'icepeashooter'], 
                     zombieTypes: ['normal', 'conehead', 'speedy'],
                     specialZombies: [
                         { type: 'buckethead', count: 4, spawnAfter: 12 },
-                        { type: 'newspaper', count: 5, spawnAfter: 5 }
+                        { type: 'newspaper', count: 5, spawnAfter: 5 },
+                        { type: 'screendoor', count: 5, spawnAfter: 8 },
                     ]
                 }
             };
@@ -557,12 +579,12 @@
             }
 
             function onGameAreaClick(event) {
-                // Check if the click target is something other than the playable area.
+                if (!selectedPlantType || gameOver) return;
+                
                 if (event.target.closest('.plant, .zombie, .sun, .lawnmower')) {
-                    return; // Abort if we clicked on an object.
+                    return;
                 }
 
-                if (!selectedPlantType || gameOver) return;
                 const rect = gameArea.getBoundingClientRect();
                 const clickX = event.clientX - rect.left;
                 if (clickX < 80) return;
@@ -581,7 +603,7 @@
             function getPlantHTML(type) {
                 switch(type) {
                     case 'cherrybomb': return `<div class="cherry cherry1"></div><div class="cherry cherry2"></div><div class="stem"></div>`;
-                    case 'peashooter': return `<div class="plant-body"></div><div class="plant-head"></div><div class="plant-mouth"></div>`;
+                    case 'peashooter': case 'icepeashooter': return `<div class="plant-body"></div><div class="plant-head"></div><div class="plant-mouth"></div>`;
                     case 'sunflower': return `<div class="plant-body"></div><div class="plant-head"><div class="plant-center"></div>` + '<div class="petal"></div>'.repeat(8) + `</div>`;
                     case 'wallnut': return `<div class="wallnut-body"></div>`;
                     case 'chomper': return `<div class="plant-body"></div><div class="plant-head"><div class="teeth"></div></div>`;
@@ -626,18 +648,22 @@
                 }
                 
                 let health = 100, speed = (0.4 + (zombiesKilled / 60)), type = zombieType;
-                
+                let specificHealth = {};
+
                 switch(zombieType) {
                     case 'conehead': health = 250; break;
                     case 'buckethead': health = 800; break;
                     case 'speedy': health = 80; speed *= 2.5; break;
-                    case 'newspaper': health = 200; speed = 0.3; break;
+                    case 'newspaper': specificHealth = { newspaper: 100, body: 100 }; break;
+                    case 'screendoor': specificHealth = { door: 400, body: 100 }; break;
                 }
 
                 const zombie = {
                     id: `z-${Date.now()}`, x: 900, lane: laneIndex, y: laneIndex * 100,
-                    health, type, speed, originalSpeed: speed, isEating: false,
-                    newspaperHealth: type === 'newspaper' ? 100 : 0,
+                    health: specificHealth.body || health, type, speed, originalSpeed: speed, isEating: false,
+                    newspaperHealth: specificHealth.newspaper || 0,
+                    doorHealth: specificHealth.door || 0,
+                    slowedTimer: 0
                 };
                 zombies.push(zombie);
 
@@ -709,8 +735,14 @@
                     switch(plant.type) {
                         case 'peashooter':
                             if (plant.cooldown <= 0 && zombies.some(z => z.lane === plant.lane && z.x > plant.x)) {
-                                createProjectile(plant.x + 50, plant.y + 10, plant.lane);
+                                createProjectile(plant.x + 50, plant.y + 10, plant.lane, 'normal');
                                 plant.cooldown = 1.33 * FPS;
+                            }
+                            break;
+                        case 'icepeashooter':
+                            if (plant.cooldown <= 0 && zombies.some(z => z.lane === plant.lane && z.x > plant.x)) {
+                                createProjectile(plant.x + 50, plant.y + 10, plant.lane, 'ice');
+                                plant.cooldown = 1.5 * FPS; // Slightly slower fire rate
                             }
                             break;
                         case 'sunflower':
@@ -774,6 +806,16 @@
                 zombies.slice().forEach(z => {
                     const el = document.getElementById(z.id);
                     if (!el) return;
+                    
+                    if (z.slowedTimer > 0) {
+                        z.slowedTimer -= timeScale;
+                        el.classList.add('slowed');
+                    } else {
+                        el.classList.remove('slowed');
+                    }
+
+                    const currentSpeed = (z.slowedTimer > 0) ? z.speed * 0.5 : z.speed;
+
                     const blockingPlant = plants.find(p => p.lane === z.lane && z.x > p.x && z.x < p.x + 60 && p.type !== 'cherrybomb' && p.type !== 'squash');
                     z.isEating = !!blockingPlant;
 
@@ -781,7 +823,7 @@
                         blockingPlant.health -= (1 * timeScale);
                         if (blockingPlant.health <= 0) removeEntity(blockingPlant, plants);
                     } else {
-                        z.x -= z.speed * timeScale;
+                        z.x -= currentSpeed * timeScale;
                         el.style.left = `${z.x}px`;
                     }
                     if (z.x < -40) {
@@ -795,11 +837,12 @@
                 })
             }
             
-            function createProjectile(x,y,lane){
-                const p = {id:`proj-${Date.now()}`, x, y, lane, speed: 6};
+            function createProjectile(x,y,lane, type = 'normal'){
+                const p = {id:`proj-${Date.now()}`, x, y, lane, speed: 6, type};
                 projectiles.push(p);
                 const el = document.createElement("div");
-                el.className="projectile"; el.id = p.id;
+                el.className = `projectile ${type}`;
+                el.id = p.id;
                 el.style.left=`${x}px`; el.style.top=`${y}px`;
                 gameArea.appendChild(el);
             }
@@ -824,7 +867,7 @@
                 sun.el.className = "sun"; sun.el.id = sun.id;
                 sun.el.style.left=`${x}px`; sun.el.style.top=`${y}px`;
                 sun.el.addEventListener("click", (event) => {
-                    event.stopPropagation(); // Prevents clicks from reaching the game area
+                    event.stopPropagation();
                     if(gameOver) return;
                     sunAmount+=25;
                     createParticleExplosion(sun.x+35, sun.y+35,"#FFEB3B",30,8);
@@ -851,15 +894,24 @@
                     const z = zombies.find(zombie => p.lane === zombie.lane && p.x > zombie.x && p.x < zombie.x + 80);
                     if (z) {
                         let damage = 25;
-                        if(z.type === 'newspaper' && z.newspaperHealth > 0) {
+                        if(z.type === 'screendoor' && z.doorHealth > 0) {
+                            z.doorHealth -= damage;
+                             if(z.doorHealth <= 0) document.getElementById(z.id)?.classList.add('door-broken');
+                        } else if(z.type === 'newspaper' && z.newspaperHealth > 0) {
                             z.newspaperHealth -= damage;
                             if (z.newspaperHealth <= 0) {
                                 z.speed *= 4;
                                 document.getElementById(z.id)?.classList.add('enraged');
                             }
-                        } else z.health -= damage;
+                        } else {
+                            z.health -= damage;
+                        }
                         
-                        createParticleExplosion(p.x, p.y + 10, "#32CD32", 10, 4);
+                        if (p.type === 'ice') {
+                            z.slowedTimer = 3 * FPS; // Slow for 3 seconds
+                        }
+
+                        createParticleExplosion(p.x, p.y + 10, p.type === 'ice' ? '#00d2d3' : "#32CD32", 10, 4);
                         removeEntity(p, projectiles);
                         if (z.health <= 0) removeZombie(z, true);
                     }
