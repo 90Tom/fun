@@ -8,9 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
+    <!-- Our Secret Kingdom's Connection (Firebase) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
     <script>
       const firebaseConfig = {
         apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
@@ -31,6 +31,7 @@
         alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
       }
     </script>
+    <!-- End of Our Secret Connection -->
 
     <!-- CSS -->
     <style>
@@ -300,12 +301,8 @@
             const collectionName = gameData[gameId].key;
 
             try {
-                const querySnapshot = await db.collection(collectionName).where('user', '==', userToDelete).get();
-                const batch = db.batch();
-                querySnapshot.docs.forEach(doc => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
+                const userDocRef = db.collection(collectionName).doc(userToDelete);
+                await userDocRef.delete();
                 console.log(`Successfully deleted entry for ${userToDelete} from ${collectionName}`);
                 showLeaderboard(gameId); 
             } catch (error) {
@@ -327,7 +324,7 @@
 
             const gameData = {
                 milan: { title: "Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
-                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
+                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Hry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
                 ptak2: { title: "PTAK 2", fields: ['Úroveň', 'Čas'], query: db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
             };
 
@@ -371,7 +368,7 @@
                 }
             } catch (error) {
                  console.error("Error fetching leaderboard:", error);
-                 bodyEl.innerHTML = '<tr><td colspan="4">Chyba při načítání žebříčku. Zkontrolujte, zda jsou v databázi nastaveny správné indexy.</td></tr>';
+                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku. Zkontrolujte, zda jsou v databázi nastaveny správné indexy pro kolekci: ${key}.</td></tr>`;
             }
         }
 
