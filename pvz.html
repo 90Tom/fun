@@ -132,7 +132,11 @@
             overflow: hidden;
         }
 
-        .game-lane { position: relative; height: var(--lane-height); box-sizing: border-box; }
+        .game-lane { 
+            position: relative; 
+            height: var(--lane-height); 
+            box-sizing: border-box; 
+        }
         
         #house-overlay {
             position: absolute; left: 0; top: 0;
@@ -504,6 +508,10 @@
                 levelConfig.specialZombies?.forEach(sz => { levelState.specialZombiesRemaining[sz.type] = sz.count; });
 
                 for (let i = 0; i < 5; i++) {
+                    const laneEl = document.createElement('div');
+                    laneEl.className = 'game-lane';
+                    gameArea.appendChild(laneEl);
+
                     const lawnmowerEl = document.createElement('div');
                     lawnmowerEl.className = 'lawnmower';
                     lawnmowerEl.innerHTML = `<div class="body"></div><div class="motor"></div><div class="wheels wheel-left"></div><div class="wheels wheel-right"></div>`;
@@ -549,10 +557,10 @@
             }
 
             function onGameAreaClick(event) {
-                // --- CRITICAL BUG FIX HERE ---
-                // This new check ensures we only plant if the user clicked the lawn itself,
-                // and not another element on top of it (like a sun collectible).
-                if (event.target !== gameArea) return;
+                // Check if the click target is something other than the playable area.
+                if (event.target.closest('.plant, .zombie, .sun, .lawnmower')) {
+                    return; // Abort if we clicked on an object.
+                }
 
                 if (!selectedPlantType || gameOver) return;
                 const rect = gameArea.getBoundingClientRect();
@@ -815,7 +823,8 @@
                 };
                 sun.el.className = "sun"; sun.el.id = sun.id;
                 sun.el.style.left=`${x}px`; sun.el.style.top=`${y}px`;
-                sun.el.addEventListener("click", () => {
+                sun.el.addEventListener("click", (event) => {
+                    event.stopPropagation(); // Prevents clicks from reaching the game area
                     if(gameOver) return;
                     sunAmount+=25;
                     createParticleExplosion(sun.x+35, sun.y+35,"#FFEB3B",30,8);

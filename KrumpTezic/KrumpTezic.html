@@ -538,10 +538,7 @@
             this.startGameLoop();
             
             this.GameState.firestoreSaveInterval = setInterval(() => {
-                const userDisplayName = sessionStorage.getItem('loggedInUser');
-                if(userDisplayName && this.GameState.maxBlokyEverAchieved > 0) {
-                    this.saveScoreToFirestore(userDisplayName, false, true);
-                }
+                this.updateScoreInFirestore(false, true);
             }, 30000);
 
             if (this.DOM.winContinueButton) this.DOM.winContinueButton.onclick = () => { if(this.DOM.winScreenModal) this.DOM.winScreenModal.style.display = 'none'; };
@@ -572,10 +569,10 @@
         },
         
         saveGame: function() {
+            this.updateScoreInFirestore(false, false);
+
             const userDisplayName = sessionStorage.getItem('loggedInUser');
             if (!userDisplayName) return;
-
-            this.saveScoreToFirestore(userDisplayName, false, false);
 
             const sessionTime = Date.now() - this.GameState.sessionStartTime;
             const totalTime = (this.GameState.timeSpent || 0) + sessionTime;
@@ -634,30 +631,45 @@
             return false;
         },
 
-        saveScoreToFirestore: async function(userDisplayName, isWin = false, isPeriodic = false) {
-            if (!userDisplayName) {
-                if (!isPeriodic) console.error("A nameless soul! Their legend cannot be recorded.");
+        updateScoreInFirestore: async function(isPeriodic = false) {
+            const userDisplayName = sessionStorage.getItem('loggedInUser');
+            if (!userDisplayName || this.GameState.maxBlokyEverAchieved <= 0) {
                 return;
             }
 
             const leaderboardRef = db.collection('krumptezic_leaderboard').doc(userDisplayName);
-
             const scoreData = {
                 user: userDisplayName,
                 blocks: Math.floor(this.GameState.maxBlokyEverAchieved),
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
-
-            if (isWin) {
-                const totalTimeSpent = (this.GameState.timeSpent || 0) + (Date.now() - this.GameState.sessionStartTime);
-                scoreData.winTime = parseFloat((totalTimeSpent / 1000).toFixed(2));
-            }
             
             try {
                 await leaderboardRef.set(scoreData, { merge: true });
-                 if (!isPeriodic) console.log(`The legend of ${userDisplayName} has been successfully etched into the vault.`);
+                 if (!isPeriodic) console.log(`Highest score for ${userDisplayName} has been updated in the vault.`);
             } catch (error) {
-                if (!isPeriodic) console.error("A catastrophic failure in my magic! I have failed you:", error);
+                if (!isPeriodic) console.error("A catastrophic failure in my score-updating magic:", error);
+            }
+        },
+
+        recordVictoryInFirestore: async function() {
+            const userDisplayName = sessionStorage.getItem('loggedInUser');
+            if (!userDisplayName) {
+                console.error("A victor without a name! Their triumph cannot be recorded.");
+                return;
+            }
+
+            const leaderboardRef = db.collection('krumptezic_leaderboard').doc(userDisplayName);
+            const totalTimeSpent = (this.GameState.timeSpent || 0) + (Date.now() - this.GameState.sessionStartTime);
+            const winData = {
+                winTime: parseFloat((totalTimeSpent / 1000).toFixed(2))
+            };
+
+            try {
+                await leaderboardRef.update(winData);
+                console.log(`Victory for ${userDisplayName} has been eternally recorded in the vault.`);
+            } catch (error) {
+                console.error("A catastrophic failure in my victory-recording magic:", error);
             }
         },
 
@@ -1285,8 +1297,8 @@
         checkWinCondition: function() {
             if (!this.GameState.gameWon && this.GameState.blokyCount >= this.Config.WIN_CONDITION_BLOKY_COUNT) {
                 this.GameState.gameWon = true;
-                const userDisplayName = sessionStorage.getItem('loggedInUser');
-                this.saveScoreToFirestore(userDisplayName, true, false);
+                this.updateScoreInFirestore(false);
+                this.recordVictoryInFirestore();
                 const timeTaken = (this.GameState.timeSpent || 0) + (Date.now() - this.GameState.sessionStartTime);
 
                 if (this.DOM.winTotalBloky) this.DOM.winTotalBloky.textContent = `Nejvyšší počet bloků: ${Math.floor(this.GameState.maxBlokyEverAchieved)}`;
