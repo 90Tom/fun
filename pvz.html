@@ -549,6 +549,11 @@
             }
 
             function onGameAreaClick(event) {
+                // --- CRITICAL BUG FIX HERE ---
+                // This new check ensures we only plant if the user clicked the lawn itself,
+                // and not another element on top of it (like a sun collectible).
+                if (event.target !== gameArea) return;
+
                 if (!selectedPlantType || gameOver) return;
                 const rect = gameArea.getBoundingClientRect();
                 const clickX = event.clientX - rect.left;
@@ -810,10 +815,7 @@
                 };
                 sun.el.className = "sun"; sun.el.id = sun.id;
                 sun.el.style.left=`${x}px`; sun.el.style.top=`${y}px`;
-                sun.el.addEventListener("click", (event) => {
-                    // --- CRITICAL BUG FIX HERE ---
-                    // This stops the click from "leaking" through to the game area behind the sun.
-                    event.stopPropagation();
+                sun.el.addEventListener("click", () => {
                     if(gameOver) return;
                     sunAmount+=25;
                     createParticleExplosion(sun.x+35, sun.y+35,"#FFEB3B",30,8);
