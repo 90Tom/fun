@@ -438,6 +438,7 @@
             pickaxeParticleInterval: null,
             activePetTooltipTimeout: null,
             floatingTextYOffsetCounter: 0,
+            firestoreSaveInterval: null
         },
         Config: {
             SHAKE_THRESHOLD: 3.8, SHAKE_COOLDOWN_MS: 250,
@@ -535,6 +536,14 @@
             this.startAccelerometer();
             this.startCreeperSpawner();
             this.startGameLoop();
+            
+            this.GameState.firestoreSaveInterval = setInterval(() => {
+                const userDisplayName = sessionStorage.getItem('loggedInUser');
+                if(userDisplayName && this.GameState.maxBlokyEverAchieved > 0) {
+                    this.saveScoreToFirestore(userDisplayName, false, true);
+                }
+            }, 30000);
+
             if (this.DOM.winContinueButton) this.DOM.winContinueButton.onclick = () => { if(this.DOM.winScreenModal) this.DOM.winScreenModal.style.display = 'none'; };
 
             setTimeout(() => {
@@ -566,7 +575,7 @@
             const userDisplayName = sessionStorage.getItem('loggedInUser');
             if (!userDisplayName) return;
 
-            this.saveScoreToFirestore(userDisplayName);
+            this.saveScoreToFirestore(userDisplayName, false, false);
 
             const sessionTime = Date.now() - this.GameState.sessionStartTime;
             const totalTime = (this.GameState.timeSpent || 0) + sessionTime;
@@ -614,7 +623,6 @@
                     
                     this.GameState.bps = this.GameState.ownedPets.reduce((total, pet) => total + (pet.Bps || 0), 0);
                     
-                    console.log("Hra načtena pro uživatele:", user);
                     return true;
                 } else {
                     localStorage.removeItem(`krumptezic_save_${user}`);
@@ -626,18 +634,17 @@
             return false;
         },
 
-        saveScoreToFirestore: async function(userDisplayName, isWin = false) {
+        saveScoreToFirestore: async function(userDisplayName, isWin = false, isPeriodic = false) {
             if (!userDisplayName) {
-                console.log("Cannot save score to the throne room. A nameless soul cannot be recorded.");
+                if (!isPeriodic) console.error("A nameless soul! Their legend cannot be recorded.");
                 return;
             }
 
-            console.log(`Casting the grand saving spell for ${userDisplayName}...`);
             const leaderboardRef = db.collection('krumptezic_leaderboard').doc(userDisplayName);
 
             const scoreData = {
                 user: userDisplayName,
-                nejvyssi_pocet_bloku: Math.floor(this.GameState.maxBlokyEverAchieved),
+                blocks: Math.floor(this.GameState.maxBlokyEverAchieved),
             };
 
             if (isWin) {
@@ -647,9 +654,9 @@
             
             try {
                 await leaderboardRef.set(scoreData, { merge: true });
-                console.log(`The legend of ${userDisplayName} has been successfully etched into the vault.`);
+                 if (!isPeriodic) console.log(`The legend of ${userDisplayName} has been successfully etched into the vault.`);
             } catch (error) {
-                console.error("A catastrophic failure in my magic! I have failed you:", error);
+                if (!isPeriodic) console.error("A catastrophic failure in my magic! I have failed you:", error);
             }
         },
 
@@ -772,7 +779,7 @@
                     { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 40, Rarity: 0.7, IsSpecial: true, SpecialValueMin: 50, SpecialValueMax: 200 }
                 ],
             };
-            this.Assets.BIOMES = [ { Name: "Planiny", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_PLAINS}')`, BlockPoolKey: "plains" }, { Name: "Les", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_FOREST}')`, BlockPoolKey: "forest" }, { Name: "Poušť", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_DESERT}')`, BlockPoolKey: "desert" }, { Name: "Jeskyně", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_CAVE}')`, BlockPoolKey: "cave" }, { Name: "Nether", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_NETHER}')`, BlockPoolKey: "nether" } ];
+            this.Assets.BIOMES = [ { Name: "Planiny", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_PLAINS}')`, BlockPoolKey: "plains" }, { Name: "Les", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_FOREST}')`, BlockPoolKey: "forest" }, { Name: "Poušť", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_DESERT}')`, BlockPoolKey: "desert" }, { Name: "Jeskyně", ImageSource: this.Assets.IMAGE_FILES.BG_CAVE, BlockPoolKey: "cave" }, { Name: "Nether", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_NETHER}')`, BlockPoolKey: "nether" } ];
         },
 
         getWeightedRandomBlock: function(biomeKey) {
@@ -1278,7 +1285,7 @@
             if (!this.GameState.gameWon && this.GameState.blokyCount >= this.Config.WIN_CONDITION_BLOKY_COUNT) {
                 this.GameState.gameWon = true;
                 const userDisplayName = sessionStorage.getItem('loggedInUser');
-                this.saveScoreToFirestore(userDisplayName, true);
+                this.saveScoreToFirestore(userDisplayName, true, false);
                 const timeTaken = (this.GameState.timeSpent || 0) + (Date.now() - this.GameState.sessionStartTime);
 
                 if (this.DOM.winTotalBloky) this.DOM.winTotalBloky.textContent = `Nejvyšší počet bloků: ${Math.floor(this.GameState.maxBlokyEverAchieved)}`;

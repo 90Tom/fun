@@ -147,7 +147,6 @@
             bottom: 5px; user-select: none;
         }
         
-        /* --- NEW LAWNMOWER VISUALS --- */
         .lawnmower {
             position: absolute;
             width: 75px; height: 65px;
@@ -370,7 +369,6 @@
             z-index: 30; box-shadow: 0 0 8px #7CFC00;
         }
         
-        /* --- NEW SUN VISUALS --- */
         .sun {
             width: 75px; height: 75px;
             background: radial-gradient(circle, #fff8b3, #ffeb3b 50%, #f9a825 100%);
@@ -451,8 +449,8 @@
                 sunflower: { cost: 50, health: 300, recharge: 7 * FPS },
                 wallnut: { cost: 50, health: 4000, recharge: 25 * FPS },
                 cherrybomb: { cost: 150, health: 100, recharge: 40 * FPS },
-                chomper: { cost: 150, health: 300, recharge: 7 * FPS }, // Can eat a zombie, but is vulnerable while chewing for 40 seconds
-                squash: { cost: 50, health: 100, recharge: 25 * FPS }, // Smashes a zombie that gets close
+                chomper: { cost: 150, health: 300, recharge: 7 * FPS },
+                squash: { cost: 50, health: 100, recharge: 25 * FPS },
             };
             let plantCooldowns = {};
 
@@ -465,9 +463,9 @@
                 2: { 
                     zombiesToWin: 25, 
                     availablePlants: ['peashooter', 'sunflower', 'wallnut', 'cherrybomb', 'chomper'], 
-                    zombieTypes: ['normal', 'conehead', 'speedy'], // Red zombie is fast!
+                    zombieTypes: ['normal', 'conehead', 'speedy'],
                     specialZombies: [
-                        { type: 'buckethead', count: 2, spawnAfter: 10 } // Reduced Buckethead count
+                        { type: 'buckethead', count: 2, spawnAfter: 10 }
                     ]
                 },
                 3: { 
@@ -509,10 +507,10 @@
                     const lawnmowerEl = document.createElement('div');
                     lawnmowerEl.className = 'lawnmower';
                     lawnmowerEl.innerHTML = `<div class="body"></div><div class="motor"></div><div class="wheels wheel-left"></div><div class="wheels wheel-right"></div>`;
-                    gameArea.appendChild(lawnmowerEl);
                     const lawnmower = { id: `lm-${i}`, lane: i, x: 5, used: false, el: lawnmowerEl };
                     lawnmower.el.style.top = `${i * 100 + 18}px`;
                     lawnmower.el.style.left = `${lawnmower.x}px`;
+                    gameArea.appendChild(lawnmowerEl);
                     lawnmowers.push(lawnmower);
                 }
 
@@ -604,7 +602,7 @@
                     zombiesKilled >= sz.spawnAfter && levelState.specialZombiesRemaining[sz.type] > 0
                 ) || [];
 
-                if (possibleSpecials.length > 0 && Math.random() < 0.4) { // 40% chance to spawn special if available
+                if (possibleSpecials.length > 0 && Math.random() < 0.4) {
                     const specialToSpawn = possibleSpecials[Math.floor(Math.random() * possibleSpecials.length)];
                     zombieType = specialToSpawn.type;
                     levelState.specialZombiesRemaining[zombieType]--;
@@ -691,6 +689,7 @@
 
             function updatePlants(timeScale) {
                 plants.slice().forEach(plant => {
+                    if (!plant) return;
                     plant.cooldown -= timeScale;
                     const el = document.getElementById(plant.id);
 
@@ -714,11 +713,12 @@
                             break;
                         case 'chomper':
                             if (plant.state === 'idle') {
+                                // --- CHOMPER BUG FIX ---
                                 const target = zombies.find(z => z.lane === plant.lane && z.x > plant.x && z.x < plant.x + 80);
-                                if(target) {
+                                if (target) {
                                     target.health = 0;
                                     plant.state = 'chewing';
-                                    plant.cooldown = 40 * FPS;
+                                    plant.cooldown = 40 * FPS; // Chew time
                                     el?.classList.add('chewing');
                                     removeZombie(target, true);
                                 }
@@ -760,7 +760,8 @@
             
             function updateZombies(timeScale){
                 zombies.slice().forEach(z => {
-                    if (!document.getElementById(z.id)) return; // Zombie already removed
+                    const el = document.getElementById(z.id);
+                    if (!el) return;
                     const blockingPlant = plants.find(p => p.lane === z.lane && z.x > p.x && z.x < p.x + 60 && p.type !== 'cherrybomb' && p.type !== 'squash');
                     z.isEating = !!blockingPlant;
 
@@ -769,7 +770,7 @@
                         if (blockingPlant.health <= 0) removeEntity(blockingPlant, plants);
                     } else {
                         z.x -= z.speed * timeScale;
-                        document.getElementById(z.id).style.left = `${z.x}px`;
+                        el.style.left = `${z.x}px`;
                     }
                     if (z.x < -40) {
                         const mower = lawnmowers.find(m => m.lane === z.lane);
@@ -840,7 +841,7 @@
                         if(z.type === 'newspaper' && z.newspaperHealth > 0) {
                             z.newspaperHealth -= damage;
                             if (z.newspaperHealth <= 0) {
-                                z.speed *= 4; // Enrage
+                                z.speed *= 4;
                                 document.getElementById(z.id)?.classList.add('enraged');
                             }
                         } else z.health -= damage;
@@ -859,9 +860,8 @@
                     mower.el.classList.remove('starting');
                     mower.el.classList.add('active');
                     let interval = setInterval(() => {
-                        mower.x += 20; // Faster speed
+                        mower.x += 20;
                         mower.el.style.left = `${mower.x}px`;
-                        // Create grass clippings
                         createParticleExplosion(mower.x, mower.y + 40, '#2ecc71', 2, 8);
                         zombies.slice().forEach(z => {
                             if (z.lane === mower.lane && mower.x > z.x - 40 && mower.x < z.x + 40) removeZombie(z, false);
@@ -894,6 +894,7 @@
                 nextLevelButton.style.display = (isWin && currentLevel < 3) ? 'inline-block' : 'none';
                 playAgainButton.style.display = 'inline-block';
                 if(isWin && currentLevel === 3) playAgainButton.innerText = "Play Again From Start";
+                else playAgainButton.innerText = "Play Again";
                 msgBox.style.display = "block";
             }
 
