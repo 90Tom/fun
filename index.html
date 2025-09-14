@@ -10,6 +10,7 @@
     
     <!-- Our Secret Kingdom's Connection (Firebase) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script>
       const firebaseConfig = {
@@ -22,10 +23,11 @@
         measurementId: "G-6MHP8FHQ87"
       };
 
-      let db;
+      let db, auth;
       try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
+        auth = firebase.auth();
       } catch (e) {
         console.error("Firebase initialization failed:", e);
         alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
@@ -153,8 +155,8 @@
                 <h1 data-translate-key="modalLoginTitle">Přihlásit se</h1>
                 <form id="login-form">
                     <div class="input-group">
-                        <label for="login-username" data-translate-key="modalUsernameLabel">Uživatelské jméno</label>
-                        <input type="text" id="login-username" required>
+                        <label for="login-username" data-translate-key="modalUsernameLabel">Uživatelské jméno (Email)</label>
+                        <input type="email" id="login-username" required>
                     </div>
                     <div class="input-group">
                         <label for="login-password" data-translate-key="modalPasswordLabel">Heslo</label>
@@ -171,9 +173,13 @@
             <div id="register-view">
                 <h1 data-translate-key="modalRegisterTitle">Registrace</h1>
                 <form id="register-form">
+                     <div class="input-group">
+                        <label for="register-displayname">Zobrazované jméno</label>
+                        <input type="text" id="register-displayname" required>
+                    </div>
                     <div class="input-group">
-                        <label for="register-username" data-translate-key="modalUsernameLabel">Uživatelské jméno</label>
-                        <input type="text" id="register-username" required>
+                        <label for="register-email" data-translate-key="modalUsernameLabel">Email</label>
+                        <input type="email" id="register-email" required>
                     </div>
                     <div class="input-group">
                         <label for="register-password" data-translate-key="modalPasswordLabel">Heslo</label>
@@ -228,7 +234,7 @@
                 logoutButtonText: "Odhlásit se",
                 modalLoginTitle: "Přihlásit se",
                 modalRegisterTitle: "Registrace",
-                modalUsernameLabel: "Uživatelské jméno",
+                modalUsernameLabel: "Uživatelské jméno (Email)",
                 modalPasswordLabel: "Heslo",
                 modalConfirmPasswordLabel: "Potvrďte heslo",
                 modalLoginButton: "Přihlásit se",
@@ -254,7 +260,7 @@
                 logoutButtonText: "Logout",
                 modalLoginTitle: "Login",
                 modalRegisterTitle: "Register",
-                modalUsernameLabel: "Username",
+                modalUsernameLabel: "Username (Email)",
                 modalPasswordLabel: "Password",
                 modalConfirmPasswordLabel: "Confirm Password",
                 modalLoginButton: "Login",
@@ -301,6 +307,7 @@
             const collectionName = gameData[gameId].key;
 
             try {
+                // In Firestore, the document ID is the user's display name for these leaderboards.
                 const userDocRef = db.collection(collectionName).doc(userToDelete);
                 await userDocRef.delete();
                 console.log(`Successfully deleted entry for ${userToDelete} from ${collectionName}`);
@@ -310,7 +317,7 @@
             }
         }
         
-        async function showLeaderboard(gameId) {
+       async function showLeaderboard(gameId) {
             if (typeof db === 'undefined') {
                 alert("Nelze se připojit k žebříčku. Zkontrolujte připojení nebo zkuste to znovu později.");
                 return;
@@ -320,11 +327,12 @@
             const titleEl = document.getElementById('leaderboard-title');
             const headEl = document.getElementById('leaderboard-head');
             const bodyEl = document.getElementById('leaderboard-body');
-            const isAdmin = sessionStorage.getItem('loggedInUser') === '90Tom';
+            const currentUser = auth.currentUser;
+            const isAdmin = currentUser && currentUser.displayName === '90Tom';
 
             const gameData = {
                 milan: { title: "Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
-                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Hry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
+                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
                 ptak2: { title: "PTAK 2", fields: ['Úroveň', 'Čas'], query: db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
             };
 
@@ -368,7 +376,7 @@
                 }
             } catch (error) {
                  console.error("Error fetching leaderboard:", error);
-                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku. Zkontrolujte, zda jsou v databázi nastaveny správné indexy pro kolekci: ${key}.</td></tr>`;
+                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku. Zkontrolujte, zda jsou v databázi nastaveny správné indexy pro kolekci: ${gameData[gameId].key}.</td></tr>`;
             }
         }
 
@@ -398,7 +406,6 @@
             const loginModal = document.getElementById('login-modal');
             const leaderboardModal = document.getElementById('leaderboard-modal');
             const allModals = document.querySelectorAll('.modal');
-            const loggedInUser = sessionStorage.getItem('loggedInUser');
             
             const loginView = document.getElementById('login-view');
             const registerView = document.getElementById('register-view');
@@ -407,6 +414,27 @@
             
             const loginForm = document.getElementById('login-form');
             const registerForm = document.getElementById('register-form');
+            
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    sessionStorage.setItem('loggedInUser', user.displayName || user.email);
+                    loginBtn.textContent = `Odhlásit se (${user.displayName || user.email})`;
+                    loginBtn.onclick = (e) => {
+                        e.preventDefault();
+                        auth.signOut();
+                    };
+                } else {
+                    sessionStorage.removeItem('loggedInUser');
+                    loginBtn.textContent = "Přihlásit se";
+                    loginBtn.onclick = (e) => {
+                        e.preventDefault();
+                        loginView.style.display = 'block';
+                        registerView.style.display = 'none';
+                        loginModal.style.display = 'flex';
+                    };
+                }
+            });
+
             
             showRegisterLink.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -420,26 +448,6 @@
                 loginView.style.display = 'block';
             });
 
-            if (loggedInUser) {
-                loginBtn.setAttribute('data-translate-key', 'logoutButtonText');
-                setLanguage(currentLang); 
-                loginBtn.href = "#"; 
-                loginBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    sessionStorage.removeItem('loggedInUser');
-                    window.location.reload();
-                });
-            } else {
-                loginBtn.setAttribute('data-translate-key', 'loginButtonText');
-                setLanguage(currentLang);
-                loginBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    loginView.style.display = 'block';
-                    registerView.style.display = 'none';
-                    loginModal.style.display = 'flex';
-                });
-            }
-            
             document.querySelectorAll('.leaderboard-btn').forEach(button => {
                 button.addEventListener('click', (e) => {
                     e.stopPropagation(); 
@@ -475,22 +483,23 @@
             
             loginForm.addEventListener('submit', function(event) {
                 event.preventDefault();
-                const username = document.getElementById('login-username').value;
+                const email = document.getElementById('login-username').value;
                 const password = document.getElementById('login-password').value;
                 const errorMessage = document.getElementById('login-error-message');
-                const users = JSON.parse(localStorage.getItem('users')) || {};
-
-                if (users[username] && users[username] === password) {
-                    sessionStorage.setItem('loggedInUser', username);
-                    window.location.reload();
-                } else {
-                    errorMessage.textContent = 'Nesprávné jméno nebo heslo.';
-                }
+                
+                auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        window.location.reload();
+                    })
+                    .catch((error) => {
+                        errorMessage.textContent = error.message;
+                    });
             });
             
             registerForm.addEventListener('submit', function(event) {
                 event.preventDefault();
-                const username = document.getElementById('register-username').value;
+                const displayName = document.getElementById('register-displayname').value;
+                const email = document.getElementById('register-email').value;
                 const password = document.getElementById('register-password').value;
                 const confirmPassword = document.getElementById('confirm-password').value;
                 const errorMessage = document.getElementById('register-error-message');
@@ -499,22 +508,22 @@
                     errorMessage.textContent = 'Hesla se neshodují.';
                     return;
                 }
-                
-                if (username.length < 3) {
-                    errorMessage.textContent = 'Uživatelské jméno musí mít alespoň 3 znaky.';
+                if (displayName.length < 3) {
+                    errorMessage.textContent = 'Zobrazované jméno musí mít alespoň 3 znaky.';
                     return;
                 }
 
-                const users = JSON.parse(localStorage.getItem('users')) || {};
-
-                if (users[username]) {
-                    errorMessage.textContent = 'Uživatelské jméno je již obsazené.';
-                } else {
-                    users[username] = password;
-                    localStorage.setItem('users', JSON.stringify(users));
-                    sessionStorage.setItem('loggedInUser', username);
-                    window.location.reload();
-                }
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        return userCredential.user.updateProfile({
+                            displayName: displayName
+                        }).then(() => {
+                             window.location.reload();
+                        });
+                    })
+                    .catch((error) => {
+                        errorMessage.textContent = error.message;
+                    });
             });
         });
     </script>
