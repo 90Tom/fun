@@ -1,893 +1,530 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plants vs Zombies - Multi-Level Edition!</title>
+    <title>90Tom fun!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Our Secret Kingdom's Connection (Firebase) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
+        authDomain: "tom-fun.firebaseapp.com",
+        projectId: "tom-fun",
+        storageBucket: "tom-fun.appspot.com",
+        messagingSenderId: "710857129785",
+        appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
+        measurementId: "G-6MHP8FHQ87"
+      };
+
+      let db, auth;
+      try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+      } catch (e) {
+        console.error("Firebase initialization failed:", e);
+        alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
+      }
+    </script>
+    <!-- End of Our Secret Connection -->
+
+    <!-- CSS -->
     <style>
-        :root {
-            --lane-height: 100px;
-            --num-lanes: 5;
-            --game-width: 900px;
-            --game-height: calc(var(--lane-height) * var(--num-lanes));
-            --ui-width: 120px;
-        }
-
-        body {
-            background-color: #2c1e17;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-        }
-
-        #game-wrapper {
-            position: relative;
-            width: calc(var(--game-width) + var(--ui-width));
-            height: var(--game-height);
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            border: 8px solid #4a2b13;
-            border-radius: 10px;
-            background: #000;
-            display: flex;
-        }
-
-        #side-panel-ui {
-            width: var(--ui-width);
-            height: 100%;
-            background: #4a3827;
-            border-right: 4px solid #3e2d1c;
-            box-sizing: border-box;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        #sun-counter {
-            width: 100%;
-            background: rgba(0,0,0,0.7);
-            padding: 10px 5px;
-            border-radius: 15px;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 10px;
-            color: #ffeb3b;
-        }
-        
-        .plant-card {
-            width: 90px;
-            height: 100px;
-            background-color: rgba(100,100,100,0.5);
-            border: 3px solid #ccc;
-            border-radius: 10px;
-            cursor: pointer;
-            text-align: center;
-            margin-bottom: 10px;
-            padding-top: 5px;
-            transition: background-color 0.2s, border-color 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        .plant-card:hover { background-color: rgba(120,120,120,0.7); }
-        .plant-card.selected {
-            border-color: #FFEB3B;
-            background-color: rgba(255, 235, 59, 0.3);
-            box-shadow: 0 0 15px #FFEB3B;
-        }
-        .plant-card.disabled {
-            cursor: not-allowed;
-            filter: grayscale(80%);
-        }
-        .plant-card-icon {
-            width: 60px; height: 60px;
-            margin: 0 auto;
-            position: relative;
-        }
-        /* --- ICON SIZE FIX & IMPROVEMENT --- */
-        .plant-card-icon > .plant {
-            transform: scale(0.32) !important; /* Bigger than before, but smaller than original */
-            transform-origin: center;
-            position: absolute !important;
-            top: -20px !important;
-            left: -10px !important;
-            bottom: auto !important;
-        }
-
-        .plant-card-cost { font-weight: bold; margin-top: 5px; }
-
-        .cooldown-overlay {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            transform: translateY(100%);
-            transition: transform 0.1s linear;
-        }
-
-        #game-container {
-            position: relative;
-            width: var(--game-width);
-            height: var(--game-height);
-            background: 
-                repeating-linear-gradient( to bottom,
-                    #008c00, #008c00 48px,
-                    #00a000 48px, #00a000 50px,
-                    #008c00 50px, #008c00 98px,
-                    #007800 98px, #007800 100px
-                ),
-                linear-gradient(to bottom, #87ceeb 60%, #3a7e28 60%);
-            overflow: hidden;
-        }
-
-        .game-lane { position: relative; height: var(--lane-height); box-sizing: border-box; }
-        
-        #house-overlay {
-            position: absolute; left: 0; top: 0;
-            width: 80px; height: 100%;
-            background: linear-gradient(to right, rgba(0,0,0,0.4), rgba(0,0,0,0));
-            pointer-events: none; z-index: 500;
-        }
-
-        .plant, .zombie, .projectile, .sun, .lawnmower {
-            position: absolute;
-            width: 80px; height: 90px;
-            bottom: 5px; user-select: none;
-        }
-        
-        .lawnmower {
-            width: 70px; height: 60px;
-            left: 5px; bottom: 20px;
-            transition: left 1s linear; z-index: 50;
-        }
-        .lawnmower::before {
-            content: ''; position: absolute; width: 100%; height: 80%; top: 10%;
-            background: #c03b2b; border: 5px solid #7b241c; border-radius: 10px;
-        }
-
-        /* --- PLANT VISUALS --- */
-        .peashooter, .sunflower, .wallnut, .chomper { animation: plant-bob 2s infinite ease-in-out; }
-
-        .peashooter .plant-body {
-            position: absolute; width: 22px; height: 60px;
-            background: linear-gradient(90deg, #579845, #3c6b30);
-            bottom: 0; left: 29px; border-radius: 12px 12px 0 0;
-            border: 3px solid #2a4b21;
-        }
-        .peashooter .plant-head {
-            position: absolute; left: 10px; top: -20px; width: 60px; height: 60px;
-            background: radial-gradient(circle at 20px 20px, #5de08e, #3CB371);
-            border-radius: 50%; border: 4px solid #2E8B57;
-        }
-        .peashooter .plant-mouth {
-            position: absolute; right: -15px; top: 12px;
-            width: 40px; height: 35px; background: #3CB371;
-            border: 4px solid #2E8B57; border-radius: 50%;
-        }
-        .peashooter .plant-head::before { /* CUTE EYES */
-            content: '• •'; font-size: 20px; color: #000;
-            position: absolute; top: 15px; left: 15px;
-            font-weight: bold;
-        }
-
-        .sunflower .plant-body {
-            position: absolute; width: 20px; height: 50px;
-            background: linear-gradient(90deg, #579845, #3c6b30);
-            bottom: 0; left: 30px; border-radius: 10px 10px 0 0;
-            border: 3px solid #2a4b21;
-        }
-        .sunflower .plant-head {
-            position: absolute; width: 80px; height: 80px; left: 0; top: -15px; 
-            animation: sunflower-pulse 3s infinite;
-        }
-        .sunflower .plant-center {
-            position: absolute; width: 40px; height: 40px;
-            background: radial-gradient(circle, #b06a28, #8B4513);
-            border-radius: 50%; top: 28px; left: 20px; z-index: 2;
-        }
-        .sunflower .plant-center::before { /* CUTE EYES */
-            content: '^_^'; font-size: 18px; color: #000;
-            position: absolute; top: 10px; left: -1px; width: 100%; text-align: center;
-            font-weight: bold;
-        }
-        .sunflower .petal {
-            position: absolute; width: 30px; height: 50px;
-            background: radial-gradient(ellipse, #fff2a8, #FFD700);
-            border-radius: 50%; top: 15px; left: 25px;
-            transform-origin: center bottom;
-        }
-        .petal:nth-child(2){transform:rotate(45deg)} .petal:nth-child(3){transform:rotate(90deg)}
-        .petal:nth-child(4){transform:rotate(135deg)} .petal:nth-child(5){transform:rotate(180deg)}
-        .petal:nth-child(6){transform:rotate(225deg)} .petal:nth-child(7){transform:rotate(270deg)}
-        .petal:nth-child(8){transform:rotate(315deg)}
-
-        .wallnut { width: 70px; height: 80px; }
-        .wallnut-body {
-            width: 100%; height: 100%;
-            background: radial-gradient(circle at 30% 30%, #c3845a, #a0522d);
-            border: 5px solid #8b4513;
-            border-radius: 40% 40% 35% 35% / 50% 50% 45% 45%;
-            box-sizing: border-box; position: relative;
-        }
-        .wallnut-body::before { /* CUTE EYES */
-            content: '(• •)'; font-size: 20px; font-weight: bold;
-            position: absolute; top: 15px; width: 100%; text-align: center;
-            transform: rotate(-10deg); color: #000;
-        }
-        
-        .cherrybomb { animation: plant-bob 1s infinite ease-in-out; }
-        .cherrybomb.arming { animation: cherry-arming 0.2s 5 linear; }
-        .cherrybomb .cherry {
-            position: absolute; width: 50px; height: 50px;
-            background: radial-gradient(circle at 15px 15px, #ff4141, #c0392b);
-            border-radius: 50%; border: 3px solid #7b241c;
-        }
-        .cherrybomb .cherry1 { top: 0; left: 0; }
-        .cherrybomb .cherry2 { top: 0; left: 35px; }
-        .cherrybomb .cherry1::before, .cherrybomb .cherry2::before { /* CUTE EYES */
-            content: '`'; font-size: 24px; font-weight: bold; color: #000;
-            position: absolute; top: 5px;
-        }
-        .cherrybomb .cherry1::before { left: 25px; transform: rotate(20deg); }
-        .cherrybomb .cherry2::before { left: 10px; transform: rotate(-20deg) scaleX(-1); }
-        .cherrybomb .stem {
-            position: absolute; width: 15px; height: 20px;
-            background: #2a4b21; top: -10px; left: 32px;
-            border-radius: 10px 10px 0 0;
-        }
-
-        .chomper .plant-body {
-            width: 50px; height: 50px; background: #8e44ad;
-            border: 4px solid #4a235a; border-radius: 50% 50% 20% 20%;
-            position: absolute; bottom: 0; left: 15px;
-        }
-        .chomper .plant-head {
-            width: 70px; height: 65px; background: #9b59b6;
-            border: 4px solid #4a235a; border-radius: 50%;
-            position: absolute; top: -25px; left: 5px;
-        }
-        .chomper .plant-head::before { /* Eyes */
-            content: 'V V'; font-size: 20px; color: #000;
-            position: absolute; top: 10px; left: 20px;
-            font-weight: bold; letter-spacing: 5px;
-        }
-        .chomper .teeth {
-            position: absolute; top: 45px; left: 10px;
-            width: 50px; height: 20px;
-            overflow: hidden;
-        }
-        .chomper .teeth::before {
-            content: '▲▲▲▲▲'; color: #fff; font-size: 15px;
-            position: absolute; top: -10px;
-        }
-        .chomper.chewing { animation: plant-chew 0.5s linear infinite; }
-        @keyframes plant-chew { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.9) translateY(5px); } }
-
-        .squash { animation: plant-bob 3s infinite ease-in-out; }
-        .squash-body {
-            width: 60px; height: 85px;
-            background: #27ae60; border: 4px solid #145a32;
-            border-radius: 40% 40% 50% 50% / 30% 30% 60% 60%;
-            position: absolute; bottom: 0; left: 10px;
-        }
-        .squash-body::before { /* Eyes */
-            content: 'Ò_Ó'; font-size: 18px; color: #000;
-            font-weight: bold; position: absolute;
-            top: 20px; width: 100%; text-align: center;
-        }
-        .squash.squashing { animation: squash-jump 0.5s ease-in-out; }
-        @keyframes squash-jump {
-            0% { transform: translateY(0) scale(1,1); }
-            40% { transform: translateY(-80px) scale(0.8, 1.2); }
-            60% { transform: translateY(-80px) scale(0.8, 1.2); }
-            100% { transform: translateY(0) scale(1.5, 0.5); }
-        }
-
-        /* --- ZOMBIE VISUALS --- */
-        .zombie { z-index: 20; width: 90px; height: 110px; bottom: 0; animation: zombie-lurch 1.5s infinite linear; }
-        .zombie-head {
-            position: absolute; width: 55px; height: 60px;
-            background: #a1c8a1; border-radius: 45% 45% 35% 35%;
-            top: 0; left: 15px; border: 2px solid #556B2F;
-        }
-        .zombie-head::before { /* Eye */
-            content: ''; position: absolute; width: 15px; height: 15px;
-            background: #fff; border: 2px solid #000;
-            border-radius: 50%; top: 20px; right: 10px;
-        }
-        .zombie-body { /* Shirt */
-            position: absolute; width: 45px; height: 50px;
-            background: #d2b48c; border: 2px solid #5d4a36;
-            bottom: 10px; left: 20px;
-        }
-        .zombie.conehead .zombie-head::after { /* Cone */
-            content: ''; position: absolute;
-            top: -50px; left: 5px; width: 0; height: 0;
-            border-left: 22px solid transparent; border-right: 22px solid transparent;
-            border-bottom: 60px solid #f39c12; z-index: 1;
-        }
-        .zombie.buckethead .zombie-head::after { /* Bucket */
-            content: ''; position: absolute;
-            width: 60px; height: 50px;
-            background: linear-gradient(#d3d3d3, #a9a9a9);
-            border: 3px solid #808080; border-bottom: none;
-            border-radius: 10px 10px 0 0;
-            top: -30px; left: -5px; z-index: 1;
-        }
-        .speedy-zombie .zombie-body { background: #e74c3c; } /* Red shirt */
-        .newspaper-zombie .zombie-body::before { /* Newspaper */
-            content: ''; position: absolute;
-            width: 70px; height: 50px; background: #ecf0f1;
-            border: 2px solid #95a5a6; top: -5px; left: -30px;
-            transform: rotate(-15deg); z-index: 2;
-        }
-        .newspaper-zombie.enraged .zombie-body::before { display: none; }
-        .newspaper-zombie.enraged .zombie-head::before { background: #e74c3c; } /* Red eye */
-
-        /* --- OTHER VISUALS & ANIMATIONS --- */
-        .projectile {
-            width: 25px; height: 25px;
-            background: radial-gradient(circle at 8px 8px, #adff2f, #32cd32);
-            border-radius: 50%; border: 2px solid #006400;
-            z-index: 30; box-shadow: 0 0 8px #7CFC00;
-        }
-        .sun {
-            width: 75px; height: 75px;
-            background: radial-gradient(circle, #fff8b3, #ffeb3b 50%, #f9a825 100%);
-            border-radius: 50%; cursor: pointer;
-            box-shadow: 0 0 25px #FFEB3B, inset 0 0 10px #fff;
-            animation: sun-pulse 1.5s infinite; z-index: 100;
-        }
-        .particle {
-            position: absolute; border-radius: 50%;
-            pointer-events: none; z-index: 1000;
-            transition: transform 0.5s ease-out, opacity 0.5s ease-out;
-        }
-        @keyframes sun-pulse {
-            0%, 100% { transform: scale(0.95); box-shadow: 0 0 25px #FFEB3B, inset 0 0 10px #fff; }
-            70% { transform: scale(1.05); box-shadow: 0 0 40px #fdd835, inset 0 0 15px #fff; }
-        }
-        @keyframes plant-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-        @keyframes sunflower-pulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.2); } }
-        @keyframes cherry-arming { 0%, 100% { filter: brightness(1.5); transform: scale(1.05); } 50% { filter: brightness(1); transform: scale(1); } }
-        @keyframes zombie-lurch { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-2px) rotate(-2deg); } 75% { transform: translateX(2px) rotate(2deg); } }
-        @keyframes game-shake { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(5px, 5px); } 50% { transform: translate(-5px, -5px); } 75% { transform: translate(5px, -5px); } }
-        
-        #message-box {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); background: rgba(0,0,0,0.8);
-            padding: 40px; border-radius: 20px; font-size: 48px;
-            text-align: center; z-index: 2000; display: none;
-        }
-        #message-box button { display: inline-block; margin: 20px 10px 0; padding: 10px 20px; font-size: 20px; cursor: pointer; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; color: #333; line-height: 1.6; background-image: url('IndexImages/backgroundindex.png'); background-size: cover; background-position: center center; background-attachment: fixed; display: flex; flex-direction: column; min-height: 100vh; align-items: center; padding: 20px; position: relative; z-index: 1; }
+        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.7); z-index: -1; }
+        header { text-align: center; margin-bottom: 40px; margin-top: 20px; max-width: 800px; width: 100%; background-color: rgba(255, 255, 255, 0.6); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); position: relative; }
+        header h1 { color: red; font-weight: 700; font-size: 3.5em; margin-bottom: 5px; position: relative; display: inline-block; padding-right: 60px; }
+        .splash-text { position: absolute; bottom: 0px; right: 30px; font-size: 0.4em; font-weight: 600; color: #FFD700; padding: 2px 8px; border-radius: 4px; transform: rotate(-15deg); animation: splash-pulse 2s infinite alternate ease-in-out; white-space: nowrap; pointer-events: none; }
+        @keyframes splash-pulse { from { transform: rotate(-22deg) scale(1.1); } to { transform: rotate(-16deg) scale(1.3); } }
+        header p { color: #444; font-size: 1.1em; }
+        .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; max-width: 1000px; width: 100%; flex-grow: 1; justify-content: center; }
+        .game-card { background-color: #ffffff; border-radius: 12px; color: #333; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, filter 0.3s ease; display: flex; flex-direction: column; text-align: center; overflow: hidden; border: 1px solid transparent; opacity: 0; transform: translateY(20px); aspect-ratio: 1 / 1; position: relative; }
+        .game-card .game-link { display: flex; flex-direction: column; flex-grow: 1; text-decoration: none; color: inherit; height: 100%; }
+        .game-card img { display: block; width: 100%; height: 65%; object-fit: cover; transition: transform 0.3s ease, filter 0.3s ease; }
+        .game-card .content { padding: 15px; width: 100%; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; overflow: hidden; }
+        .game-card:hover { transform: translateY(-10px) scale(1.05); box-shadow: 0 12px 35px rgba(232, 62, 140, 0.25); border-color: #e83e8c; }
+        .game-card:hover img { transform: scale(1.03); filter: brightness(1.05); }
+        .game-card h2 { margin-bottom: 5px; color: #0056b3; font-size: 1.2em; font-weight: 600; }
+        .game-card p { color: #666; font-size: 0.85em; line-height: 1.3; }
+        .leaderboard-btn { position: absolute; top: 10px; right: 10px; background-color: rgba(240, 240, 240, 0.8); border: 1px solid rgba(221, 221, 221, 0.8); border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; line-height: 28px; text-align: center; transition: all 0.2s ease; z-index: 5; backdrop-filter: blur(2px); }
+        .leaderboard-btn:hover { background-color: #e83e8c; color: white; transform: scale(1.1); }
+        footer { text-align: center; margin-top: 50px; padding: 15px; color: #555; font-size: 0.9em; width: 100%; max-width: 800px; background-color: rgba(255, 255, 255, 0.6); border-radius: 8px; }
+        footer p { color: #e83e8c; }
+        #top-actions-container { position: fixed; top: 15px; right: 20px; z-index: 1001; display: flex; gap: 10px; align-items: center; }
+        #language-switcher-btn, #login-btn { background-color: rgba(250, 250, 250, 0.65); color: #333; border: 1px solid rgba(0, 0, 0, 0.15); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        #login-btn { color: red; font-weight: 600; }
+        #language-switcher-btn:hover, #login-btn:hover { background-color: rgba(255, 255, 255, 0.85); border-color: rgba(0, 0, 0, 0.25); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #login-btn:hover { color: #c00; }
+        #language-switcher-btn .lang-current { font-weight: 600; }
+        #language-switcher-btn .lang-separator { margin: 0 5px; opacity: 0.6; }
+        #language-switcher-btn .lang-target { opacity: 0.7; }
+        #login-modal, #leaderboard-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .modal-content { position: relative; background-color: #fefefe; padding: 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 500px; text-align: center; }
+        .modal-content h1 { color: red; margin-bottom: 25px; font-weight: 600; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #d90429; }
+        .input-group input { width: 100%; padding: 12px 15px; border-radius: 6px; border: 1px solid #ddd; font-family: 'Poppins', sans-serif; font-size: 1em; transition: border-color 0.3s ease; }
+        .input-group input:focus { outline: none; border-color: red; }
+        .action-button { width: 100%; padding: 12px; border: none; background-color: red; color: white; font-size: 1.1em; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background-color 0.3s ease; }
+        .action-button:hover { background-color: #c00; }
+        .error-message { color: red; margin-top: 15px; height: 20px; font-weight: 500; font-size: 0.9em; }
+        .close-btn { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
+        .form-switch-text { margin-top: 20px; font-size: 0.9em; color: #d90429; }
+        .form-switch-text a { color: red; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .form-switch-text a:hover { text-decoration: underline; }
+        #register-view { display: none; }
+        #leaderboard-table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        #leaderboard-table th, #leaderboard-table td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        #leaderboard-table th { background-color: #f2f2f2; }
+        #leaderboard-table tr:hover { background-color: #f9f9f9; }
+        .delete-score-btn { background: #ff5c5c; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; line-height: 25px; font-size: 14px; }
+        .delete-score-btn:hover { background: #ff1c1c; }
+        @media (max-width: 768px) { header h1 { font-size: 2.8em; padding-right: 40px; } .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; } .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; } #language-switcher-btn, #login-btn { padding: 6px 12px; font-size: 0.85em; } #top-actions-container { top: 15px; right: 15px; gap: 8px;} }
+        @media (max-width: 480px) { body { padding: 10px; } header h1 { font-size: 2.2em; padding-right: 35px; } .splash-text { font-size: 0.3em; padding: 1px 5px; right: 2px; bottom: 3px; } header p { font-size: 1em; } .game-grid { grid-template-columns: 1fr; gap: 20px; max-width: 300px; } .game-card .content { padding: 10px; } .game-card h2 { font-size: 1.1em; } .game-card p { font-size: 0.8em; } #language-switcher-btn, #login-btn { padding: 5px 10px; font-size: 0.8em; } #top-actions-container { top: 10px; right: 10px; gap: 6px;} }
     </style>
 </head>
 <body>
-    <div id="game-wrapper">
-        <div id="side-panel-ui">
-            <div id="sun-counter">☀️ 150</div>
-            <div class="plant-card" data-plant-type="peashooter"><div class="plant-card-icon"></div><div class="plant-card-cost">100</div><div class="cooldown-overlay"></div></div>
-            <div class="plant-card" data-plant-type="sunflower"><div class="plant-card-icon"></div><div class="plant-card-cost">50</div><div class="cooldown-overlay"></div></div>
-            <div class="plant-card" data-plant-type="wallnut"><div class="plant-card-icon"></div><div class="plant-card-cost">50</div><div class="cooldown-overlay"></div></div>
-            <div class="plant-card" data-plant-type="cherrybomb"><div class="plant-card-icon"></div><div class="plant-card-cost">150</div><div class="cooldown-overlay"></div></div>
-            <div class="plant-card" data-plant-type="chomper" style="display: none;"><div class="plant-card-icon"></div><div class="plant-card-cost">150</div><div class="cooldown-overlay"></div></div>
-            <div class="plant-card" data-plant-type="squash" style="display: none;"><div class="plant-card-icon"></div><div class="plant-card-cost">50</div><div class="cooldown-overlay"></div></div>
+    <div id="top-actions-container">
+        <button id="language-switcher-btn">
+            <span class="lang-current">CS</span><span class="lang-separator">⇌</span><span class="lang-target">EN</span>
+        </button>
+        <a href="#" id="login-btn" data-translate-key="loginButtonText">Login</a>
+    </div>
+
+    <header>
+        <h1>90Tom<span class="splash-text">fun!</span></h1>
+        <p data-translate-key="welcomeMessage">Vítám Vás! Vyberte si nějakou hru níže a užijte si!</p>
+    </header>
+
+    <main class="game-grid">
+        <div class="game-card">
+            <a href="MILAN/MILAN.html" class="game-link">
+                <img src="MILAN/milanbg.png" alt="Milanovy klobásy Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="milanTitle">Milanovy klobásy</h2>
+                    <p data-translate-key="milanDesc">Připravujte výtečná jídla v očích prémiového kuchaře Milana.</p>
+                </div>
+            </a>
+            <button class="leaderboard-btn" data-game="milan" title="Leaderboard">🏆</button>
         </div>
-        <div id="game-container">
-            <div id="game-area"></div>
-            <div id="house-overlay"></div>
-            <div id="message-box">
-                <p id="message-text"></p>
-                <button id="next-level-button">Next Level</button>
-                <button id="play-again-button">Play Again</button>
+        <div class="game-card">
+            <a href="bloonstdaitst.html" class="game-link">
+                <img src="IndexImages/blonkytm.png" alt="BlónkyTM Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="blonkyTitle">Blónky TM</h2>
+                    <p data-translate-key="blonkyDesc">Předělání známé hry Bloons TD.</p>
+                </div>
+            </a>
+        </div>
+        <div class="game-card">
+            <a href="KrumpTezic/KrumpTezic.html" class="game-link">
+                <img src="IndexImages/krumptezic.png" alt="KrumpTezic Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="krumptezicTitle">KrumpTezic</h2>
+                    <p data-translate-key="krumptezicDesc">Zábavné těžení bloků z Minecraftu inspirováno hrou PickCrafter.</p>
+                </div>
+            </a>
+            <button class="leaderboard-btn" data-game="krumptezic" title="Leaderboard">🏆</button>
+        </div>
+        <div class="game-card">
+            <a href="PTAK 2/PTAK 2.html" class="game-link">
+                <img src="IndexImages/ptak2.png" alt="PTAK 2 Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="ptak2Title">PTAK 2</h2>
+                    <p data-translate-key="ptak2DescLine1">Druhé vydání z ságy PTAK pro p. Kořínka,</p>
+                    <p data-translate-key="ptak2DescLine2">dobrodružství ptáka, kočky a psa.</p>
+                </div>
+            </a>
+            <button class="leaderboard-btn" data-game="ptak2" title="Leaderboard">🏆</button>
+        </div>
+    </main>
+    
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div id="login-view">
+                <h1 data-translate-key="modalLoginTitle">Přihlásit se</h1>
+                <form id="login-form">
+                    <div class="input-group">
+                        <label for="login-username" data-translate-key="modalUsernameLabel">Uživatelské jméno (Email)</label>
+                        <input type="email" id="login-username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="login-password" data-translate-key="modalPasswordLabel">Heslo</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="action-button" data-translate-key="modalLoginButton">Přihlásit se</button>
+                    <div id="login-error-message" class="error-message"></div>
+                </form>
+                <p class="form-switch-text">
+                    <span data-translate-key="modalNoAccount">Nemáte účet?</span>
+                    <a id="show-register-link" data-translate-key="modalRegisterLink">Zaregistrujte se</a>
+                </p>
+            </div>
+            <div id="register-view">
+                <h1 data-translate-key="modalRegisterTitle">Registrace</h1>
+                <form id="register-form">
+                     <div class="input-group">
+                        <label for="register-displayname">Zobrazované jméno</label>
+                        <input type="text" id="register-displayname" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="register-email" data-translate-key="modalUsernameLabel">Email</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="register-password" data-translate-key="modalPasswordLabel">Heslo</label>
+                        <input type="password" id="register-password" required>
+                    </div>
+                     <div class="input-group">
+                        <label for="confirm-password" data-translate-key="modalConfirmPasswordLabel">Potvrďte heslo</label>
+                        <input type="password" id="confirm-password" required>
+                    </div>
+                    <button type="submit" class="action-button" data-translate-key="modalRegisterButton">Zaregistrovat</button>
+                    <div id="register-error-message" class="error-message"></div>
+                </form>
+                <p class="form-switch-text">
+                    <span data-translate-key="modalHaveAccount">Máte již účet?</span>
+                    <a id="show-login-link" data-translate-key="modalLoginLink">Přihlaste se</a>
+                </p>
             </div>
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const gameContainer = document.getElementById('game-container');
-            const gameArea = document.getElementById('game-area');
-            const sunCounterDisplay = document.getElementById('sun-counter');
-            const msgBox = document.getElementById('message-box');
-            const nextLevelButton = document.getElementById('next-level-button');
-            const playAgainButton = document.getElementById('play-again-button');
-            
-            const FPS = 60;
-            const MS_PER_FRAME = 1000 / FPS;
+    <div id="leaderboard-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1 id="leaderboard-title">Leaderboard</h1>
+            <table id="leaderboard-table">
+                <thead id="leaderboard-head"></thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+        </div>
+    </div>
 
-            let sunAmount, plants, zombies, projectiles, particles, lawnmowers, suns;
-            let selectedPlantType, zombieSpawnCounter, skySunSpawnCounter, zombiesKilled, gameOver;
-            let lastTime = 0, currentLevel = 1;
+    <footer>
+        <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
+    </footer>
 
-            const plantData = {
-                peashooter: { cost: 100, health: 300, recharge: 7 * FPS },
-                sunflower: { cost: 50, health: 300, recharge: 7 * FPS },
-                wallnut: { cost: 50, health: 4000, recharge: 25 * FPS },
-                cherrybomb: { cost: 150, health: 100, recharge: 40 * FPS },
-                chomper: { cost: 150, health: 300, recharge: 7 * FPS },
-                squash: { cost: 50, health: 100, recharge: 25 * FPS },
-            };
-            let plantCooldowns = {};
-
-            const levelData = {
-                1: { zombiesToWin: 15, availablePlants: ['peashooter', 'sunflower', 'wallnut', 'cherrybomb'], zombieTypes: ['normal', 'conehead'] },
-                2: { zombiesToWin: 25, availablePlants: ['peashooter', 'sunflower', 'wallnut', 'cherrybomb', 'chomper'], zombieTypes: ['normal', 'conehead', 'speedy', 'buckethead'] },
-                3: { zombiesToWin: 40, availablePlants: ['peashooter', 'sunflower', 'wallnut', 'cherrybomb', 'chomper', 'squash'], zombieTypes: ['normal', 'conehead', 'speedy', 'buckethead', 'newspaper'] }
-            };
-
-            function init() {
-                setupPlantCards();
-                nextLevelButton.addEventListener('click', () => {
-                    currentLevel++;
-                    startGame(currentLevel);
-                });
-                playAgainButton.addEventListener('click', () => {
-                    currentLevel = 1;
-                    startGame(currentLevel);
-                });
-                startGame(currentLevel);
+    <!-- JS -->
+    <script type="text/javascript">
+        const translations = {
+            cs: {
+                welcomeMessage: "Vítám Vás! Vyberte si nějakou hru níže a užijte si!",
+                blonkyTitle: "Blónky TM",
+                blonkyDesc: "Předělání známé hry Bloons TD.",
+                krumptezicTitle: "KrumpTezic",
+                krumptezicDesc: "Zábavné těžení bloků z Minecraftu inspirováno hrou PickCrafter.",
+                ptak2Title: "PTAK 2",
+                ptak2DescLine1: "Druhé vydání z ságy PTAK pro p. Kořínka,",
+                ptak2DescLine2: "dobrodružství ptáka, kočky a psa.",
+                milanTitle: "Milanovy klobásy",
+                milanDesc: "Připravujte výtečná jídla v očích prémiového kuchaře Milana.",
+                footerText: "Vytvořil s ❤️ 90Tom",
+                loginButtonText: "Přihlásit se",
+                logoutButtonText: "Odhlásit se",
+                modalLoginTitle: "Přihlásit se",
+                modalRegisterTitle: "Registrace",
+                modalUsernameLabel: "Uživatelské jméno (Email)",
+                modalPasswordLabel: "Heslo",
+                modalConfirmPasswordLabel: "Potvrďte heslo",
+                modalLoginButton: "Přihlásit se",
+                modalRegisterButton: "Zaregistrovat",
+                modalNoAccount: "Nemáte účet?",
+                modalRegisterLink: "Zaregistrujte se",
+                modalHaveAccount: "Máte již účet?",
+                modalLoginLink: "Přihlaste se",
+            },
+            en: {
+                welcomeMessage: "Welcome! Choose a game below and enjoy!",
+                blonkyTitle: "Blónky TM",
+                blonkyDesc: "A remake of the well-known game Bloons TD.",
+                krumptezicTitle: "KrumpTezic",
+                krumptezicDesc: "Fun mining of Minecraft blocks inspired by the game PickCrafter.",
+                ptak2Title: "PTAK 2",
+                ptak2DescLine1: "Second edition of the PTAK saga for Mr. Kořínek,",
+                ptak2DescLine2: "Adventures of a bird, a cat, and a dog.",
+                milanTitle: "Milan's Sausages",
+                milanDesc: "Prepare delicious meals in the eyes of the premium chef Milan.",
+                footerText: "Made with ❤️ by 90Tom",
+                loginButtonText: "Login",
+                logoutButtonText: "Logout",
+                modalLoginTitle: "Login",
+                modalRegisterTitle: "Register",
+                modalUsernameLabel: "Username (Email)",
+                modalPasswordLabel: "Password",
+                modalConfirmPasswordLabel: "Confirm Password",
+                modalLoginButton: "Login",
+                modalRegisterButton: "Register",
+                modalNoAccount: "Don't have an account?",
+                modalRegisterLink: "Register here",
+                modalHaveAccount: "Already have an account?",
+                modalLoginLink: "Login here",
             }
-            
-            function startGame(level) {
-                // Reset game state
-                gameArea.innerHTML = '';
-                msgBox.style.display = 'none';
-                sunAmount = 150;
-                plants = []; zombies = []; projectiles = []; particles = []; lawnmowers = []; suns = [];
-                selectedPlantType = null;
-                zombiesKilled = 0;
-                gameOver = false;
-                lastTime = 0;
-                zombieSpawnCounter = 15 * FPS;
-                skySunSpawnCounter = 8 * FPS;
-                Object.keys(plantData).forEach(type => { plantCooldowns[type] = 0; });
+        };
 
-                const levelConfig = levelData[level];
+        function setLanguage(lang) {
+            document.documentElement.lang = lang;
+            localStorage.setItem('selectedLanguage', lang);
 
-                // Setup lanes and lawnmowers
-                for (let i = 0; i < 5; i++) {
-                    const lane = document.createElement('div');
-                    lane.className = 'game-lane';
-                    lane.style.top = `${i * 100}px`;
-                    gameArea.appendChild(lane);
-                    const lawnmower = { id: `lm-${i}`, lane: i, x: 5, used: false, el: document.createElement('div') };
-                    lawnmower.el.className = 'lawnmower';
-                    lawnmower.el.style.top = `${i * 100 + 20}px`;
-                    lawnmower.el.style.left = `${lawnmower.x}px`;
-                    gameArea.appendChild(lawnmower.el);
-                    lawnmowers.push(lawnmower);
+            document.querySelectorAll('[data-translate-key]').forEach(element => {
+                const key = element.getAttribute('data-translate-key');
+                if (translations[lang] && translations[lang][key]) {
+                    element.textContent = translations[lang][key];
                 }
+            });
 
-                // Update plant visibility based on level
-                document.querySelectorAll('.plant-card').forEach(card => {
-                    const type = card.dataset.plantType;
-                    if (levelConfig.availablePlants.includes(type)) {
-                        card.style.display = 'block';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-                
-                gameArea.addEventListener('click', onGameAreaClick);
-                updateUI();
-                requestAnimationFrame(gameLoop);
+            const langSwitcherBtn = document.getElementById('language-switcher-btn');
+            if (langSwitcherBtn) {
+                const currentLangSpan = langSwitcherBtn.querySelector('.lang-current');
+                const targetLangSpan = langSwitcherBtn.querySelector('.lang-target');
+                if (lang === 'en') {
+                    currentLangSpan.textContent = 'EN';
+                    targetLangSpan.textContent = 'CS';
+                } else {
+                    currentLangSpan.textContent = 'CS';
+                    targetLangSpan.textContent = 'EN';
+                }
+            }
+        }
+        
+        async function deleteLeaderboardEntry(gameId, userToDelete) {
+            if (typeof db === 'undefined') { alert("Spojení s databází selhalo."); return; }
+            const gameData = {
+                milan: { key: "milan_leaderboard" },
+                krumptezic: { key: "krumptezic_leaderboard" },
+                ptak2: { key: "ptak2_leaderboard" },
+            };
+            const collectionName = gameData[gameId].key;
+
+            try {
+                // In Firestore, the document ID is the user's display name for these leaderboards.
+                const userDocRef = db.collection(collectionName).doc(userToDelete);
+                await userDocRef.delete();
+                console.log(`Successfully deleted entry for ${userToDelete} from ${collectionName}`);
+                showLeaderboard(gameId); 
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+            }
+        }
+        
+       async function showLeaderboard(gameId) {
+            if (typeof db === 'undefined') {
+                alert("Nelze se připojit k žebříčku. Zkontrolujte připojení nebo zkuste to znovu později.");
+                return;
             }
             
-            function setupPlantCards() {
-                 document.querySelectorAll('.plant-card').forEach(card => {
-                    const type = card.dataset.plantType;
-                    const iconContainer = card.querySelector('.plant-card-icon');
-                    const tempPlant = document.createElement('div');
-                    tempPlant.className = `plant ${type}`;
-                    tempPlant.innerHTML = getPlantHTML(type);
-                    iconContainer.appendChild(tempPlant);
+            const leaderboardModal = document.getElementById('leaderboard-modal');
+            const titleEl = document.getElementById('leaderboard-title');
+            const headEl = document.getElementById('leaderboard-head');
+            const bodyEl = document.getElementById('leaderboard-body');
+            const currentUser = auth.currentUser;
+            const isAdmin = currentUser && currentUser.displayName === '90Tom';
 
-                    card.addEventListener('click', () => {
-                        if (gameOver || card.classList.contains('disabled')) return;
-                        if (selectedPlantType === type) {
-                            selectedPlantType = null;
-                            card.classList.remove('selected');
-                        } else if (sunAmount >= plantData[type].cost) {
-                            selectedPlantType = type;
-                            document.querySelectorAll('.plant-card').forEach(c => c.classList.remove('selected'));
-                            card.classList.add('selected');
+            const gameData = {
+                milan: { title: "Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
+                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
+                ptak2: { title: "PTAK 2", fields: ['Úroveň', 'Čas'], query: db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
+            };
+
+            const { title, fields, query } = gameData[gameId];
+            titleEl.textContent = `Žebříček: ${title}`;
+            
+            bodyEl.innerHTML = '<tr><td colspan="5">Načítání...</td></tr>';
+            leaderboardModal.style.display = 'flex';
+
+            try {
+                const querySnapshot = await query.limit(10).get();
+                const scores = querySnapshot.docs.map(doc => doc.data());
+
+                headEl.innerHTML = '';
+                bodyEl.innerHTML = '';
+                
+                let headers = '<th>#</th><th>Hráč</th>';
+                fields.forEach(field => headers += `<th>${field}</th>`);
+                if (isAdmin) headers += '<th>Akce</th>';
+                headEl.innerHTML = `<tr>${headers}</tr>`;
+
+                if (scores.length === 0) {
+                    const colspan = isAdmin ? fields.length + 3 : fields.length + 2;
+                    bodyEl.innerHTML = `<tr><td colspan="${colspan}">Zatím žádné výsledky!</td></tr>`;
+                } else {
+                    scores.forEach((score, index) => {
+                        let row = `<td>${index + 1}</td><td>${score.user}</td>`;
+                        if (gameId === 'milan') {
+                            row += `<td>${score.orders}</td><td>${score.time}s</td>`;
+                        } else if (gameId === 'krumptezic') {
+                            row += `<td>${Math.floor(score.blocks)}</td><td>${score.winTime ? score.winTime + 's' : '-'}</td>`;
+                        } else if (gameId === 'ptak2') {
+                             const timeInSeconds = (score.time / 1000).toFixed(2);
+                            row += `<td>${score.level}</td><td>${timeInSeconds}s</td>`;
                         }
+                        if (isAdmin) {
+                            row += `<td><button class="delete-score-btn" data-game="${gameId}" data-user="${score.user}" title="Smazat">🗑️</button></td>`;
+                        }
+                        bodyEl.innerHTML += `<tr>${row}</tr>`;
                     });
+                }
+            } catch (error) {
+                 console.error("Error fetching leaderboard:", error);
+                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku. Zkontrolujte, zda jsou v databázi nastaveny správné indexy pro kolekci: ${gameData[gameId].key}.</td></tr>`;
+            }
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.game-card');
+            cards.forEach((card, index) => {
+                card.style.transition = `opacity 0.5s ease ${index * 0.1}s, transform 0.5s ease ${index * 0.1}s, filter 0.3s ease`;
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 50);
+            });
+            
+            const langSwitcherBtn = document.getElementById('language-switcher-btn');
+            let currentLang = localStorage.getItem('selectedLanguage') || 'cs';
+            setLanguage(currentLang); 
+
+            if (langSwitcherBtn) {
+                langSwitcherBtn.addEventListener('click', () => {
+                    currentLang = (document.documentElement.lang === 'cs') ? 'en' : 'cs';
+                    setLanguage(currentLang);
                 });
             }
-
-            function onGameAreaClick(event) {
-                if (!selectedPlantType || gameOver) return;
-                const rect = gameArea.getBoundingClientRect();
-                const clickX = event.clientX - rect.left;
-                if (clickX < 80) return;
-                const laneIndex = Math.floor((event.clientY - rect.top) / 100);
-                const isOccupied = plants.some(p => p.lane === laneIndex && Math.abs(p.x - (clickX - 40)) < 60);
-                if (isOccupied) return;
-
-                createPlant(selectedPlantType, clickX - 40, laneIndex);
-                sunAmount -= plantData[selectedPlantType].cost;
-                plantCooldowns[selectedPlantType] = plantData[selectedPlantType].recharge;
-                selectedPlantType = null;
-                document.querySelectorAll('.plant-card').forEach(c => c.classList.remove('selected'));
-                updateUI();
-            }
             
-            function getPlantHTML(type) {
-                switch(type) {
-                    case 'cherrybomb': return `<div class="cherry cherry1"></div><div class="cherry cherry2"></div><div class="stem"></div>`;
-                    case 'peashooter': return `<div class="plant-body"></div><div class="plant-head"></div><div class="plant-mouth"></div>`;
-                    case 'sunflower': return `<div class="plant-body"></div><div class="plant-head"><div class="plant-center"></div>` + '<div class="petal"></div>'.repeat(8) + `</div>`;
-                    case 'wallnut': return `<div class="wallnut-body"></div>`;
-                    case 'chomper': return `<div class="plant-body"></div><div class="plant-head"><div class="teeth"></div></div>`;
-                    case 'squash': return `<div class="squash-body"></div>`;
-                    default: return '';
-                }
-            }
-
-            function createPlant(type, x, laneIndex) {
-                const plant = {
-                    id: `plant-${Date.now()}`, type, x, lane: laneIndex,
-                    y: (laneIndex * 100), health: plantData[type].health,
-                    cooldown: 0,
-                    state: 'idle'
-                };
-                if (type === 'cherrybomb') plant.fuse = 1.3 * FPS;
-                if (type === 'chomper') plant.state = 'idle'; // states: idle, chewing
-                plants.push(plant);
-                
-                const plantEl = document.createElement('div');
-                plantEl.className = `plant ${type}`; plantEl.id = plant.id;
-                plantEl.style.left = `${x}px`; plantEl.style.top = `${plant.y}px`;
-                plantEl.innerHTML = getPlantHTML(type);
-                gameArea.appendChild(plantEl);
-            }
-
-            function createZombie() {
-                const laneIndex = Math.floor(Math.random() * 5);
-                const availableTypes = levelData[currentLevel].zombieTypes;
-                const zombieType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-                
-                let health = 100, speed = (0.4 + (zombiesKilled / 60)), type = zombieType;
-                
-                switch(zombieType) {
-                    case 'conehead': health = 250; break;
-                    case 'buckethead': health = 800; break;
-                    case 'speedy': health = 80; speed *= 2.5; break;
-                    case 'newspaper': health = 200; speed = 0.3; break; // Total health (zombie + newspaper)
-                }
-
-                const zombie = {
-                    id: `z-${Date.now()}`, x: 900, lane: laneIndex, y: laneIndex * 100,
-                    health, type, speed, originalSpeed: speed, isEating: false,
-                    newspaperHealth: type === 'newspaper' ? 100 : 0,
-                };
-                zombies.push(zombie);
-
-                const zombieEl = document.createElement('div');
-                zombieEl.className = `zombie ${type}`; zombieEl.id = zombie.id;
-                zombieEl.style.left = `${zombie.x}px`; zombieEl.style.top = `${zombie.y - 10}px`;
-                zombieEl.innerHTML = `<div class="zombie-head"></div><div class="zombie-body"></div>`;
-                gameArea.appendChild(zombieEl);
-            }
-
-            function removeEntity(entity, list) {
-                const el = document.getElementById(entity.id);
-                if(el) el.parentNode.removeChild(el);
-                const index = list.indexOf(entity);
-                if (index > -1) list.splice(index, 1);
-            }
+            const loginBtn = document.getElementById('login-btn');
+            const loginModal = document.getElementById('login-modal');
+            const leaderboardModal = document.getElementById('leaderboard-modal');
+            const allModals = document.querySelectorAll('.modal');
             
-            function removeZombie(zombie, countAsKill) {
-                createParticleExplosion(zombie.x + 40, zombie.y + 50, '#8FBC8F', 50, 6);
-                removeEntity(zombie, zombies);
-                if (countAsKill) {
-                    zombiesKilled++;
-                    if(zombiesKilled >= levelData[currentLevel].zombiesToWin) endGame(true);
-                }
-            }
+            const loginView = document.getElementById('login-view');
+            const registerView = document.getElementById('register-view');
+            const showRegisterLink = document.getElementById('show-register-link');
+            const showLoginLink = document.getElementById('show-login-link');
             
-            function gameLoop(currentTime) {
-                if (gameOver) return;
-                requestAnimationFrame(gameLoop);
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    sessionStorage.setItem('loggedInUser', user.displayName || user.email);
+                    loginBtn.textContent = `Odhlásit se (${user.displayName || user.email})`;
+                    loginBtn.onclick = (e) => {
+                        e.preventDefault();
+                        auth.signOut();
+                    };
+                } else {
+                    sessionStorage.removeItem('loggedInUser');
+                    loginBtn.textContent = "Přihlásit se";
+                    loginBtn.onclick = (e) => {
+                        e.preventDefault();
+                        loginView.style.display = 'block';
+                        registerView.style.display = 'none';
+                        loginModal.style.display = 'flex';
+                    };
+                }
+            });
+
+            
+            showRegisterLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginView.style.display = 'none';
+                registerView.style.display = 'block';
+            });
+
+            showLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                registerView.style.display = 'none';
+                loginView.style.display = 'block';
+            });
+
+            document.querySelectorAll('.leaderboard-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    const gameId = e.currentTarget.dataset.game;
+                    showLeaderboard(gameId);
+                });
+            });
+            
+            leaderboardModal.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-score-btn')) {
+                    const userToDelete = e.target.dataset.user;
+                    const gameId = e.target.dataset.game;
+                    if(confirm(`Opravdu chcete smazat výsledek hráče ${userToDelete}?`)){
+                        deleteLeaderboardEntry(gameId, userToDelete);
+                    }
+                }
+            });
+
+            allModals.forEach(modal => {
+                const closeBtn = modal.querySelector('.close-btn');
+                if (closeBtn) {
+                    closeBtn.onclick = () => {
+                        modal.style.display = 'none';
+                    };
+                }
+            });
+            
+            window.onclick = (event) => {
+                if (event.target.classList.contains('modal')) {
+                    event.target.style.display = "none";
+                }
+            };
+            
+            loginForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const email = document.getElementById('login-username').value;
+                const password = document.getElementById('login-password').value;
+                const errorMessage = document.getElementById('login-error-message');
                 
-                if (lastTime === 0) {
-                    lastTime = currentTime;
+                auth.signInWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        window.location.reload();
+                    })
+                    .catch((error) => {
+                        errorMessage.textContent = error.message;
+                    });
+            });
+            
+            registerForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const displayName = document.getElementById('register-displayname').value;
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+                const errorMessage = document.getElementById('register-error-message');
+
+                if (password !== confirmPassword) {
+                    errorMessage.textContent = 'Hesla se neshodují.';
+                    return;
+                }
+                if (displayName.length < 3) {
+                    errorMessage.textContent = 'Zobrazované jméno musí mít alespoň 3 znaky.';
                     return;
                 }
 
-                let deltaTime = currentTime - lastTime;
-                if (deltaTime > 100) deltaTime = MS_PER_FRAME; 
-                const timeScale = deltaTime / MS_PER_FRAME;
-                lastTime = currentTime;
-                
-                Object.keys(plantCooldowns).forEach(type => { if (plantCooldowns[type] > 0) plantCooldowns[type] -= timeScale; });
-                zombieSpawnCounter -= timeScale;
-                skySunSpawnCounter -= timeScale;
-
-                if (skySunSpawnCounter <= 0) {
-                    spawnSunFromSky();
-                    skySunSpawnCounter = (Math.random() * 5 + 7) * FPS;
-                }
-
-                if (zombieSpawnCounter <= 0 && (zombies.length + zombiesKilled) < levelData[currentLevel].zombiesToWin) {
-                    createZombie();
-                    const baseSpawn = 10 * FPS;
-                    const difficultyRamp = Math.max(2 * FPS, baseSpawn - (zombiesKilled * 40));
-                    zombieSpawnCounter = Math.random() * (difficultyRamp / 2) + (difficultyRamp / 2);
-                }
-
-                updatePlants(timeScale); 
-                updateZombies(timeScale); 
-                updateProjectiles(timeScale);
-                updateSuns(timeScale);
-                checkCollisions(); 
-                updateParticles(); 
-                updateUI();
-            }
-
-            function updatePlants(timeScale) {
-                plants.forEach(plant => {
-                    plant.cooldown -= timeScale;
-                    const el = document.getElementById(plant.id);
-
-                    switch(plant.type) {
-                        case 'peashooter':
-                            const zombieInLane = zombies.some(z => z.lane === plant.lane && z.x > plant.x);
-                            if (plant.cooldown <= 0 && zombieInLane) {
-                                createProjectile(plant.x + 50, plant.y + 10, plant.lane);
-                                plant.cooldown = 1.33 * FPS;
-                            }
-                            break;
-                        case 'sunflower':
-                            if (plant.cooldown <= 0) {
-                                spawnSunFromPlant(plant.x, plant.y);
-                                plant.cooldown = 20 * FPS;
-                            }
-                            break;
-                        case 'cherrybomb':
-                            if (plant.fuse !== null) {
-                                plant.fuse -= timeScale;
-                                if(plant.fuse <= 0.6 * FPS && !el?.classList.contains('arming')) {
-                                    el?.classList.add('arming');
-                                }
-                                if (plant.fuse <= 0) detonateCherryBomb(plant);
-                            }
-                            break;
-                        case 'chomper':
-                            if (plant.state === 'idle') {
-                                for(const z of zombies) {
-                                    if (z.lane === plant.lane && z.x > plant.x && z.x < plant.x + 80) {
-                                        z.health = 0; // Insta-kill
-                                        plant.state = 'chewing';
-                                        plant.cooldown = 40 * FPS; // Long chew time
-                                        el?.classList.add('chewing');
-                                        removeZombie(z, true);
-                                        break; // Eat one zombie at a time
-                                    }
-                                }
-                            } else if (plant.state === 'chewing' && plant.cooldown <= 0) {
-                                plant.state = 'idle';
-                                el?.classList.remove('chewing');
-                            }
-                            break;
-                        case 'squash':
-                             if (plant.state === 'idle') {
-                                for(const z of zombies) {
-                                    if (z.lane === plant.lane && z.x > plant.x - 40 && z.x < plant.x + 80) {
-                                        plant.state = 'squashing';
-                                        el?.classList.add('squashing');
-                                        setTimeout(() => {
-                                            zombies.forEach(zm => {
-                                                if(zm.lane === plant.lane && Math.abs(zm.x - z.x) < 40) {
-                                                    zm.health -= 1800;
-                                                }
-                                            });
-                                            zombies.slice().forEach(zm => { if (zm.health <= 0) removeZombie(zm, true); });
-                                            removeEntity(plant, plants);
-                                        }, 500);
-                                        break;
-                                    }
-                                }
-                            }
-                            break;
-                    }
-                });
-            }
-
-            function detonateCherryBomb(bomb) {
-                createParticleExplosion(bomb.x + 40, bomb.y + 25, '#c0392b', 150, 15);
-                gameContainer.style.animation = 'game-shake 0.3s linear';
-                setTimeout(() => gameContainer.style.animation = '', 300);
-
-                zombies.forEach(zombie => {
-                    const distance = Math.sqrt(Math.pow(zombie.x - bomb.x, 2) + Math.pow((zombie.y+50) - (bomb.y+50), 2));
-                    if (distance < 150) zombie.health -= 1800;
-                });
-                
-                zombies.slice().forEach(z => { if(z.health <= 0) removeZombie(z, true); });
-                removeEntity(bomb, plants);
-            }
-            
-            function updateZombies(timeScale){
-                zombies.forEach(z => {
-                    z.isEating = false;
-                    let blockingPlant = null;
-                    for (const plant of plants) {
-                        if (plant.lane === z.lane && z.x > plant.x && z.x < plant.x + 60) {
-                            if(plant.type !== 'cherrybomb' && plant.type !== 'squash') {
-                                z.isEating = true; blockingPlant = plant; break;
-                            }
-                        }
-                    }
-                    if (z.isEating && blockingPlant) {
-                        blockingPlant.health -= (1 * timeScale);
-                        if (blockingPlant.health <= 0) {
-                            removeEntity(blockingPlant, plants);
-                        }
-                    } else {
-                        z.x -= z.speed * timeScale;
-                        const el = document.getElementById(z.id);
-                        if(el) el.style.left = `${z.x}px`;
-                    }
-                    if (z.x < -40) {
-                        if (lawnmowers[z.lane].used) {
-                             endGame(false);
-                        } else {
-                            triggerLawnmower(lawnmowers[z.lane]);
-                            removeZombie(z, false);
-                        }
-                    }
-                })
-            }
-            
-            function createProjectile(x,y,lane){
-                const p = {id:`proj-${Date.now()}`, x, y, lane, speed: 6};
-                projectiles.push(p);
-                const el = document.createElement("div");
-                el.className="projectile"; el.id = p.id;
-                el.style.left=`${x}px`; el.style.top=`${y}px`;
-                gameArea.appendChild(el);
-            }
-            
-            function updateProjectiles(timeScale){
-                projectiles.forEach(p => {
-                    p.x += p.speed * timeScale;
-                    const el = document.getElementById(p.id);
-                    if (el) el.style.left = `${p.x}px`;
-                    if (p.x > 900) {
-                       removeEntity(p, projectiles);
-                    }
-                });
-            }
-            
-            function spawnSunFromSky(){
-                const x = 100 + Math.random() * 750;
-                const targetY = 100 + Math.random() * 300;
-                createSun(x, 0, targetY);
-            }
-            function spawnSunFromPlant(x,y){
-                createSun(x+Math.random()*20-10, y+Math.random()*20-10);
-            }
-
-            function createSun(x, y, targetY = null) {
-                const sun = {
-                    id: `sun-${Date.now()}`, x, y, el: document.createElement("div"),
-                    targetY: targetY, fallSpeed: 1.5, lifetime: 7 * FPS
-                };
-                sun.el.className = "sun"; sun.el.id = sun.id;
-                sun.el.style.left=`${x}px`; sun.el.style.top=`${y}px`;
-                sun.el.addEventListener("click", (event) => {
-                    event.stopPropagation();
-                    if(gameOver) return;
-                    sunAmount+=25;
-                    createParticleExplosion(sun.x+35, sun.y+35,"#FFEB3B",30,8);
-                    removeEntity(sun, suns);
-                    updateUI();
-                });
-                suns.push(sun);
-                gameArea.appendChild(sun.el);
-            }
-            
-            function updateSuns(timeScale) {
-                suns.forEach((sun) => {
-                    if (sun.targetY && sun.y < sun.targetY) {
-                        sun.y += sun.fallSpeed * timeScale;
-                        sun.el.style.top = `${sun.y}px`;
-                    }
-                    sun.lifetime -= timeScale;
-                    if (sun.lifetime <= 0) {
-                        removeEntity(sun, suns);
-                    }
-                });
-            }
-
-            function checkCollisions(){
-                for(let i = projectiles.length - 1; i >= 0; i--) {
-                    const p = projectiles[i];
-                    for(let j = zombies.length - 1; j >= 0; j--) {
-                        const z = zombies[j];
-                        if (p && z && p.lane === z.lane && p.x > z.x && p.x < z.x + 80) {
-                            let damage = 25;
-                            if(z.type === 'newspaper' && z.newspaperHealth > 0) {
-                                z.newspaperHealth -= damage;
-                                if (z.newspaperHealth <= 0) {
-                                    z.speed *= 4; // Enrage
-                                    document.getElementById(z.id)?.classList.add('enraged');
-                                }
-                            } else {
-                                z.health -= damage;
-                            }
-                            
-                            createParticleExplosion(p.x, p.y + 10, "#32CD32", 10, 4);
-                            removeEntity(p, projectiles);
-                            
-                            if (z.health <= 0) removeZombie(z, true);
-                            break; 
-                        }
-                    }
-                }
-            }
-            function triggerLawnmower(mower){
-                if(mower.used) return;
-                mower.used = true;
-                let interval = setInterval(() => {
-                    mower.x += 15;
-                    mower.el.style.left = `${mower.x}px`;
-                    zombies.forEach(z => {
-                        if (z.lane === mower.lane && mower.x > z.x && mower.x < z.x + 80) {
-                            removeZombie(z, false);
-                        }
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        return userCredential.user.updateProfile({
+                            displayName: displayName
+                        }).then(() => {
+                             window.location.reload();
+                        });
+                    })
+                    .catch((error) => {
+                        errorMessage.textContent = error.message;
                     });
-                    if (mower.x > 900) {
-                        clearInterval(interval);
-                        if(mower.el) gameArea.removeChild(mower.el);
-                    }
-                }, 16);
-            }
-            function updateUI(){
-                sunCounterDisplay.innerHTML=`☀️ ${sunAmount}`;
-                document.querySelectorAll(".plant-card").forEach(c=>{
-                    const type = c.dataset.plantType;
-                    const overlay = c.querySelector(".cooldown-overlay");
-                    if (sunAmount < plantData[type].cost || plantCooldowns[type] > 0) {
-                        c.classList.add("disabled");
-                    } else {
-                        c.classList.remove("disabled");
-                    }
-                    if (plantData[type]) {
-                        const cooldownHeight = 100 - Math.min(100, (plantCooldowns[type] / plantData[type].recharge) * 100);
-                        overlay.style.transform = `translateY(${cooldownHeight}%)`;
-                    }
-                })
-            }
-            function createParticleExplosion(x,y,color,count=20,size=5){for(let i=0;i<count;i++)particles.push(new Particle(x,y,color,size))}
-            class Particle{constructor(x,y,color,baseSize){this.x=x,this.y=y,this.el=document.createElement("div"),this.el.className="particle",this.el.style.backgroundColor=color;const size=Math.random()*baseSize+2;this.el.style.width=`${size}px`,this.el.style.height=`${size}px`,this.el.style.transform=`translate(${x}px, ${y}px)`,gameArea.appendChild(this.el);const angle=Math.random()*Math.PI*2,speed=Math.random()*5+2;this.vx=Math.cos(angle)*speed,this.vy=Math.sin(angle)*speed,this.life=100}update(){this.x+=this.vx,this.y+=this.vy,this.vy+=.1,this.life-=2,this.el.style.transform=`translate(${this.x}px, ${this.y}px) scale(${this.life/100})`,this.el.style.opacity=this.life/100,this.life<=0&&this.el.parentNode?.removeChild(this.el)}}
-            function updateParticles(){particles=particles.filter(p=>p.life>0),particles.forEach(p=>p.update())}
-            
-            function endGame(isWin){
-                if(gameOver) return;
-                gameOver = true;
-                msgBox.querySelector("#message-text").innerText = isWin ? `Level ${currentLevel} Complete!` : "The zombies ate your brains!";
-                
-                if (isWin && currentLevel < 3) {
-                    nextLevelButton.style.display = 'inline-block';
-                    playAgainButton.style.display = 'none';
-                } else {
-                    nextLevelButton.style.display = 'none';
-                    playAgainButton.style.display = 'inline-block';
-                }
-                msgBox.style.display = "block";
-            }
-
-            init();
+            });
         });
     </script>
 </body>
