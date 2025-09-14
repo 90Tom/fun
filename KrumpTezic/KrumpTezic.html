@@ -437,7 +437,7 @@
             unlockedShopItems: new Set(),
             pickaxeParticleInterval: null,
             activePetTooltipTimeout: null,
-            floatingTextYOffsetCounter: 0,
+            floatingTextYOffsetCounter: 0
         },
         Config: {
             SHAKE_THRESHOLD: 3.8, SHAKE_COOLDOWN_MS: 250,
@@ -506,13 +506,18 @@
                 "Akáciové schody", "Dlažební kostka", "Mořská okurka", "Kelpa", "Notový blok", "Pracovní stůl", "Fermentované pavoučí oko", "Kyblík tropické ryby"
             ]
         },
-        init: function() {
+        init: async function() {
             this.GameState.isMobile = window.innerWidth <= 480;
             
-            if (!this.loadGame()) {
-                this.GameState.gameStartTime = Date.now();
-                 this.GameState.timeSpent = 0;
+            const loadedFromCloud = await this.loadFullProgressFromFirestore();
+
+            if (!loadedFromCloud) {
+                if (!this.loadGame()) {
+                    this.GameState.gameStartTime = Date.now();
+                    this.GameState.timeSpent = 0;
+                }
             }
+            
             this.GameState.sessionStartTime = Date.now();
 
             this.GameState.activeBlockDisplayImage = this.DOM.currentBlockImage;
@@ -564,7 +569,7 @@
         },
         
         saveGame: function() {
-            this.updateScoreInFirestore(false);
+            this.saveFullProgressToFirestore(false);
 
             const userDisplayName = sessionStorage.getItem('loggedInUser');
             if (!userDisplayName) return;
@@ -585,7 +590,8 @@
                 currentBiomeIndex: this.GameState.currentBiomeIndex,
                 maxBlokyEverAchieved: this.GameState.maxBlokyEverAchieved,
                 unlockedShopItems: Array.from(this.GameState.unlockedShopItems),
-                gameWon: this.GameState.gameWon
+                gameWon: this.GameState.gameWon,
+                visitedBiomeCounts: this.GameState.visitedBiomeCounts,
             };
             localStorage.setItem(`krumptezic_save_${userDisplayName}`, JSON.stringify(saveData));
         },
@@ -596,7 +602,7 @@
 
             const savedDataJSON = localStorage.getItem(`krumptezic_save_${user}`);
             if (savedDataJSON) {
-                if (confirm("Nalezena uložená hra. Chcete pokračovat?")) {
+                if (confirm("Nalezena lokální uložená hra. Chcete pokračovat?")) {
                     const savedData = JSON.parse(savedDataJSON);
                     
                     this.GameState.blokyCount = savedData.blokyCount || 0;
@@ -612,7 +618,8 @@
                     this.GameState.maxBlokyEverAchieved = savedData.maxBlokyEverAchieved || 0;
                     this.GameState.unlockedShopItems = new Set(savedData.unlockedShopItems || []);
                     this.GameState.gameWon = savedData.gameWon || false;
-                    
+                    this.GameState.visitedBiomeCounts = savedData.visitedBiomeCounts || {};
+
                     this.GameState.bps = this.GameState.ownedPets.reduce((total, pet) => total + (pet.Bps || 0), 0);
                     
                     return true;
@@ -626,6 +633,81 @@
             return false;
         },
 
+        saveFullProgressToFirestore: async function(isPeriodic = false) {
+            const user = auth.currentUser;
+            if (!user) {
+                if (!isPeriodic) console.log("Cannot save progress to the vault. No worthy soul is present.");
+                return;
+            }
+
+            const sessionTime = Date.now() - this.GameState.sessionStartTime;
+            const totalTime = (this.GameState.timeSpent || 0) + sessionTime;
+
+            const saveData = {
+                blokyCount: this.GameState.blokyCount,
+                totalBlokyMined: this.GameState.totalBlokyMined,
+                totalClicks: this.GameState.totalClicks,
+                equippedPickaxeId: this.GameState.equippedPickaxeId,
+                ownedPickaxeIds: Array.from(this.GameState.ownedPickaxeIds),
+                pickaxeEnchantments: this.GameState.pickaxeEnchantments,
+                enchantTableLevel: this.GameState.enchantTableLevel,
+                ownedPets: this.GameState.ownedPets,
+                timeSpent: totalTime,
+                currentBiomeIndex: this.GameState.currentBiomeIndex,
+                maxBlokyEverAchieved: this.GameState.maxBlokyEverAchieved,
+                unlockedShopItems: Array.from(this.GameState.unlockedShopItems),
+                gameWon: this.GameState.gameWon,
+                visitedBiomeCounts: this.GameState.visitedBiomeCounts,
+                lastSaved: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                await db.collection('krumptezic_saves').doc(user.uid).set(saveData);
+                if (!isPeriodic) console.log(`The soul of ${user.displayName}'s progress has been bound to the vault.`);
+            } catch (error) {
+                if (!isPeriodic) console.error("A catastrophic failure in my soul-binding magic:", error);
+            }
+        },
+
+        loadFullProgressFromFirestore: async function() {
+            const user = auth.currentUser;
+            if (!user) return false;
+
+            try {
+                const docRef = db.collection('krumptezic_saves').doc(user.uid);
+                const doc = await docRef.get();
+
+                if (doc.exists) {
+                    if (confirm("Nalezena uložená hra v cloudu. Chcete ji načíst?")) {
+                        const cloudData = doc.data();
+                        
+                        this.GameState.blokyCount = cloudData.blokyCount || 0;
+                        this.GameState.totalBlokyMined = cloudData.totalBlokyMined || 0;
+                        this.GameState.totalClicks = cloudData.totalClicks || 0;
+                        this.GameState.equippedPickaxeId = cloudData.equippedPickaxeId || "Hand";
+                        this.GameState.ownedPickaxeIds = new Set(cloudData.ownedPickaxeIds || ["Hand"]);
+                        this.GameState.pickaxeEnchantments = cloudData.pickaxeEnchantments || {};
+                        this.GameState.enchantTableLevel = cloudData.enchantTableLevel || 0;
+                        this.GameState.ownedPets = cloudData.ownedPets || [];
+                        this.GameState.timeSpent = cloudData.timeSpent || 0;
+                        this.GameState.currentBiomeIndex = cloudData.currentBiomeIndex || 0;
+                        this.GameState.maxBlokyEverAchieved = cloudData.maxBlokyEverAchieved || 0;
+                        this.GameState.unlockedShopItems = new Set(cloudData.unlockedShopItems || []);
+                        this.GameState.gameWon = cloudData.gameWon || false;
+                        this.GameState.visitedBiomeCounts = cloudData.visitedBiomeCounts || {};
+                        
+                        this.GameState.bps = this.GameState.ownedPets.reduce((total, pet) => total + (pet.Bps || 0), 0);
+                        
+                        console.log(`The soul of ${user.displayName}'s progress has been restored from the vault.`);
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.error("A catastrophic failure in my soul-restoration magic:", error);
+            }
+            return false;
+        },
+        
         updateScoreInFirestore: async function() {
             const userDisplayName = sessionStorage.getItem('loggedInUser');
             if (!userDisplayName || this.GameState.maxBlokyEverAchieved <= 0) {
@@ -667,6 +749,114 @@
             }
         },
 
+        updateBlokyLabel: function() { 
+            if (this.DOM.blokyCountLabel) {
+                this.DOM.blokyCountLabel.textContent = `Bloky: ${Math.floor(this.GameState.blokyCount)}`;
+            }
+            const oldMax = this.GameState.maxBlokyEverAchieved;
+            this.GameState.maxBlokyEverAchieved = Math.max(this.GameState.maxBlokyEverAchieved, this.GameState.blokyCount);
+            if (this.GameState.maxBlokyEverAchieved > oldMax) {
+                this.updateScoreInFirestore();
+            }
+        },
+        
+        checkWinCondition: function() {
+            if (!this.GameState.gameWon && this.GameState.blokyCount >= this.Config.WIN_CONDITION_BLOKY_COUNT) {
+                this.GameState.gameWon = true;
+                this.updateScoreInFirestore();
+                this.recordVictoryInFirestore();
+                const timeTaken = (this.GameState.timeSpent || 0) + (Date.now() - this.GameState.sessionStartTime);
+
+                if (this.DOM.winTotalBloky) this.DOM.winTotalBloky.textContent = `Nejvyšší počet bloků: ${Math.floor(this.GameState.maxBlokyEverAchieved)}`;
+                if (this.DOM.winTotalClicks) this.DOM.winTotalClicks.textContent = `Celkem kliknutí: ${this.GameState.totalClicks}`;
+                if (this.DOM.winTimeTaken) this.DOM.winTimeTaken.textContent = `Čas dokončení: ${this.formatTime(timeTaken)}`;
+                if (this.DOM.winScreenModal) this.DOM.winScreenModal.style.display = 'flex';
+            }
+        },
+
+        startGameLoop: function() {
+            const PET_PLUS_INTERVAL_MS = 1000;
+            const GAME_TICK_INTERVAL_MS = 100;
+            const SAVE_INTERVAL_MS = 45000;
+
+            setInterval(() => this.saveFullProgressToFirestore(true), SAVE_INTERVAL_MS);
+
+            setInterval(() => {
+                let totalBlocsFromPetsThisTick = 0;
+                const currentTime = Date.now();
+
+                this.GameState.ownedPets.forEach(petInstance => {
+                    const petStillExists = this.DOM.petDisplayArea.querySelector(`.activePet[data-instance-id="${petInstance.instanceId}"]`);
+                    if (!petStillExists) {
+                        return;
+                    }
+
+                    if (petInstance.Bps > 0) {
+                        let blocsGeneratedThisTick = petInstance.Bps / (1000 / GAME_TICK_INTERVAL_MS);
+                        totalBlocsFromPetsThisTick += blocsGeneratedThisTick;
+
+                        if (currentTime - (petInstance.lastBlocShowTime || 0) >= PET_PLUS_INTERVAL_MS) {
+                            const petDiv = this.DOM.petDisplayArea.querySelector(`.activePet[data-instance-id="${petInstance.instanceId}"]`);
+                            if (petDiv) {
+                                const amountToShow = petInstance.Bps;
+                                if (amountToShow > 0) {
+                                    this.showFloatingText(`+${amountToShow.toFixed(1)}`, petDiv, '#FFFF99', 1000, true);
+                                    this.spawnSimpleParticles(petDiv, 3, 'buy-particle', 10, 0.5);
+                                }
+                                petInstance.lastBlocShowTime = currentTime;
+                            }
+                        }
+                    }
+                });
+
+                if (totalBlocsFromPetsThisTick > 0) {
+                    this.GameState.blokyCount += totalBlocsFromPetsThisTick;
+                    this.updateBlokyLabel();
+                    this.updateStatsDisplay();
+                    this.checkWinCondition();
+                }
+
+                if (Math.random() < 0.1 && totalBlocsFromPetsThisTick > 0) {
+                    this.updateShopSections();
+                }
+                
+                this.GameState.ownedPets.forEach(petInstance => {
+                    if (petInstance.IdName === "Cat5") {
+                        const petDefinition = this.Assets.PET_TYPES.find(p => p.IdName === petInstance.IdName);
+                        if (petDefinition && petDefinition.ScaresCreepers) {
+                            const petEl = this.DOM.petDisplayArea.querySelector(`.activePet[data-instance-id="${petInstance.instanceId}"]`);
+                            if (!petEl) return;
+                            const petRect = petEl.getBoundingClientRect();
+
+                            this.GameState.activeCreepers.forEach(creeper => {
+                                if (!creeper.element || creeper.isFleeing || creeper.isExploding) return;
+                                const creeperRect = creeper.element.getBoundingClientRect();
+                                const dx = (petRect.left + petRect.width/2) - (creeperRect.left + creeperRect.width/2);
+                                const dy = (petRect.top + petRect.height/2) - (creeperRect.top + creeperRect.height/2);
+                                const distance = Math.sqrt(dx*dx + dy*dy);
+
+                                if (distance < this.Config.CREEPER_FLEE_DISTANCE) {
+                                    creeper.isFleeing = true;
+                                    creeper.element.classList.add('fleeing');
+                                    if(creeper.explosionTimer) {
+                                        clearTimeout(creeper.explosionTimer);
+                                        creeper.explosionTimer = null;
+                                         if(creeper.moveInterval && this.GameState.isMobile) {
+                                            clearInterval(creeper.moveInterval);
+                                            this.moveCreeper(creeper);
+                                         }
+                                    }
+                                    if(creeper.element) creeper.element.classList.remove('exploding-mobile-warning');
+                                    creeper.startsLeft = !creeper.startsLeft;
+                                    creeper.element.style.transform = creeper.startsLeft ? 'scaleX(1)' : 'scaleX(-1)';
+                                }
+                            });
+                        }
+                    }
+                });
+            }, GAME_TICK_INTERVAL_MS);
+        },
+        
         setInitialToolTransform: function() {
             const toolData = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
             if (toolData && toolData.IdName === "Hand") {
