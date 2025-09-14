@@ -89,6 +89,16 @@
             margin: 0 auto;
             position: relative;
         }
+
+        /* --- THIS IS THE FIX --- */
+        /* This new rule forcefully scales the plant icon inside the shop card */
+        .plant-card-icon > .plant {
+            transform: scale(0.19) !important;
+            top: -22px !important;
+            left: -12px !important;
+            bottom: auto !important; /* Override the base .plant style */
+        }
+        
         .plant-card-cost { font-weight: bold; margin-top: 5px; }
 
         .cooldown-overlay {
@@ -130,14 +140,6 @@
             width: 80px; height: 90px;
             bottom: 5px; user-select: none;
         }
-
-        /* --- NEW CSS RULE FOR SHOP ICONS --- */
-        .plant-card-icon .plant.shop-icon {
-            top: 50%;
-            left: 50%;
-            bottom: auto; /* Override the default 'bottom: 5px' */
-            transform: translate(-50%, -50%) scale(0.19); /* Center and scale the icon */
-        }
         
         .lawnmower {
             width: 70px; height: 60px;
@@ -154,7 +156,7 @@
 
         .peashooter .plant-body {
             position: absolute; width: 22px; height: 60px;
-            background: linear-gradient(90deg, #579845, #3c6b30);
+            background: linear-gradient(90deg, #579845, #3c6b0);
             bottom: 0; left: 29px; border-radius: 12px 12px 0 0;
             border: 3px solid #2a4b21;
         }
@@ -376,10 +378,8 @@
                     const type = card.dataset.plantType;
                     const iconContainer = card.querySelector('.plant-card-icon');
                     const tempPlant = document.createElement('div');
-                    // --- CHANGE MADE HERE ---
-                    // Added "shop-icon" class so CSS can style it.
-                    tempPlant.className = `plant ${type} shop-icon`; 
-                    // Removed the inline style from JS.
+                    tempPlant.className = `plant ${type}`;
+                    // The inline style has been REMOVED. The new CSS rule in the <style> tag now handles this.
                     tempPlant.innerHTML = getPlantHTML(type);
                     iconContainer.appendChild(tempPlant);
 

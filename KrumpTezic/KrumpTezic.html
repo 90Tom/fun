@@ -1961,17 +1961,17 @@
                 const doc = await userScoreRef.get();
                 if (doc.exists) {
                     const existingScore = doc.data();
-                    const newScore = {
+                    const newScoreData = {
                         blocks: Math.max(existingScore.blocks, Math.floor(this.GameState.maxBlokyEverAchieved)),
                         timeSpent: (totalTimeSpent / 1000).toFixed(1),
-                        winTime: existingScore.winTime || null,
-                        user: user,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        winTime: existingScore.winTime || null
                     };
-                    if (isWin && (!newScore.winTime || (totalTimeSpent/1000) < parseFloat(newScore.winTime))) {
-                        newScore.winTime = (totalTimeSpent / 1000).toFixed(1);
+
+                    if (isWin && (!existingScore.winTime || (totalTimeSpent / 1000) < parseFloat(existingScore.winTime))) {
+                        newScoreData.winTime = (totalTimeSpent / 1000).toFixed(1);
                     }
-                    await userScoreRef.set(newScore, { merge: true });
+                    
+                    await userScoreRef.set(newScoreData, { merge: true });
                 } else {
                     await userScoreRef.set({
                         user: user,
@@ -1985,7 +1985,6 @@
                 console.error("Error updating leaderboard:", error);
             }
         },
-
         checkWinCondition: function() {
             if (!this.GameState.gameWon && this.GameState.blokyCount >= this.Config.WIN_CONDITION_BLOKY_COUNT) {
                 this.GameState.gameWon = true;
