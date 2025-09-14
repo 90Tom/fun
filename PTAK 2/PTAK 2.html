@@ -4,6 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Super Kočičí Dobrodružství! Turbo Deluxe++ Extreme!</title>
+
+    <!-- Our Kingdom's Connection (Firebase) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
+        authDomain: "tom-fun.firebaseapp.com",
+        projectId: "tom-fun",
+        storageBucket: "tom-fun.appspot.com",
+        messagingSenderId: "710857129785",
+        appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
+        measurementId: "G-6MHP8FHQ87"
+      };
+      let db;
+      try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+      } catch (e) {
+        console.error("Firebase initialization failed:", e);
+      }
+    </script>
+    <!-- End of Connection -->
+
     <style>
         body {
             display: flex;
@@ -1015,10 +1039,10 @@
             boss.state = BossState.DEFEATED;
             boss.stateTimer = 90;
             gamePaused = true;
+            saveScoreToLeaderboard(WIN_LEVEL, elapsedTime);
             triggerScreenShake(40, 110);
             createParticles(boss.x + boss.width/2, boss.y + boss.height/2, 40, { color: `hsl(45, 100%, ${getRandomInt(68, 93)}%)`, size: 36, speed: 12.8, life: 230, gravity: 0.115, drag: 0.97, shape: 'star', light: true, rotationSpeed: 0.115, angleSpread: Math.PI*2 });
             console.log("Boss defeated! State set, animation timer started.");
-            saveScoreToLeaderboard(WIN_LEVEL, elapsedTime);
         } else if (boss.health > 0) {
             const phase2Threshold = boss.maxHealth * 0.66;
             const phase3Threshold = boss.maxHealth * 0.33;
@@ -1031,7 +1055,7 @@
             }
         }
     }
-        function updateBossAttackWave(){
+    function updateBossAttackWave(){
         if(!bossAttackWave.active || !boss) return;
         bossAttackWave.timer--;
         const bossCenterX = boss.x + boss.width / 2;
@@ -1080,31 +1104,241 @@
             bossAttackWave.active = false;
         }
     }
-    
-    function saveScoreToLeaderboard(finalLevel, finalTime) {
-        const user = sessionStorage.getItem('loggedInUser');
-        if (user) {
-            const leaderboardKey = 'ptak2_leaderboard';
-            let scores = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
-            const userIndex = scores.findIndex(s => s.user === user);
+        function updateBossAI() {
+        if (!boss || boss.state === BossState.DEFEATED) return;
+        boss.stateTimer--;
+        if (boss.hitReactionTimer > 0) boss.hitReactionTimer--;
 
+        if (boss.state === BossState.HIT_REACTION && boss.stateTimer <= 0) {
+            boss.state = BossState.IDLE; boss.stateTimer = getRandomInt(25, 60);
+        } else if (boss.state === BossState.PHASE_TRANSITION && boss.stateTimer <= 0) {
+            boss.state = BossState.IDLE; boss.stateTimer = getRandomInt(15, 40);
+            updateBossHealthBar();
+            bossNameElement.textContent = `OBŘÍ PES (Fáze ${boss.phase})`;
+        }
+
+        if (boss.stateTimer <= 0 && boss.state === BossState.IDLE) {
+             const attacks = [BossState.CHARGE_WINDUP, BossState.STOMP_WINDUP];
+             if (boss.phase >= 2) attacks.push(BossState.SPIT_WINDUP);
+             if (boss.phase >= 3) attacks.push(BossState.BARK_WINDUP);
+             boss.state = getRandomElement(attacks);
+
+             switch(boss.state) {
+                 case BossState.CHARGE_WINDUP: boss.stateTimer = 60; break;
+                 case BossState.STOMP_WINDUP: boss.stateTimer = 75; break;
+                 case BossState.SPIT_WINDUP: boss.stateTimer = 55; boss.spitCount = (boss.phase >= 3) ? 3 : 2; break;
+                 case BossState.BARK_WINDUP: boss.stateTimer = 70; break;
+                 default: boss.state = BossState.IDLE; boss.stateTimer = 30; break;
+             }
+        }
+
+        const bossCenterX = boss.x + boss.width / 2;
+        const bossCenterY = boss.y + boss.height / 2;
+
+        switch(boss.state) {
+            case BossState.CHARGE_WINDUP:
+                if (frameCount % 4 === 0) createParticles(bossCenterX, bossCenterY, 1, { color: 'rgba(255, 70, 70, 0.85)', size: 15 + Math.sin(frameCount*0.28)*5.5, life: 13, speed: 0, shape: 'spark', light: true, shrinkRate: 0.78, fadeRate: 0.11 });
+                if (boss.stateTimer <= 0) {
+                    boss.state = BossState.CHARGING;
+                    boss.chargeTargetX = cat.x;
+                    boss.chargeTargetY = cat.y;
+                    boss.stateTimer = 80;
+                    triggerScreenShake(15, 16);
+                    createParticles(bossCenterX, bossCenterY, 15, { color: '#ff6060', size: 10.0, life: 55, speed: 9.0, drag: 0.93, shape: 'spark', angle: Math.atan2(boss.chargeTargetY - boss.y, boss.chargeTargetX - boss.x), angleSpread: 0.65 });
+                }
+                break;
+            case BossState.CHARGING:
+                const dx_c = boss.chargeTargetX - boss.x;
+                const dy_c = boss.chargeTargetY - boss.y;
+                const dist_c = Math.sqrt(dx_c*dx_c + dy_c*dy_c);
+                let moveX_c = 0, moveY_c = 0;
+                if (dist_c > 10) {
+                    moveX_c = (dx_c / dist_c) * boss.chargeSpeed;
+                    moveY_c = (dy_c / dist_c) * boss.chargeSpeed;
+                    let nextX_c = boss.x + moveX_c;
+                    let nextY_c = boss.y + moveY_c;
+                     const wallHit_c = checkWallCollision(nextX_c, nextY_c, boss.width, boss.height);
+                    if (wallHit_c) {
+                         boss.state = BossState.VULNERABLE; boss.stateTimer = 90;
+                         triggerScreenShake(28, 50);
+                         createParticles(boss.x + (moveX_c > 0 ? boss.width : 0), boss.y + (moveY_c > 0 ? boss.height : 0), 30, { color: wallHit_c.baseColor || '#a5a5a5', size: 14, life: 100, speed: 5.0, drag: 0.955, shape: 'square', angleSpread: Math.PI * 1.7 });
+                    } else {
+                        boss.x = nextX_c; boss.y = nextY_c;
+                        if(frameCount % 5 === 0) createParticles(bossCenterX, bossCenterY, 1, { color: '#ff8080', size: 10.0, life: 23, speed: 1.0, drag: 0.92, shape: 'trail', angle: Math.atan2(-dy_c, -dx_c), angleSpread: 1.1 });
+                    }
+                } else {
+                    boss.state = BossState.IDLE; boss.stateTimer = 25;
+                }
+                 if (boss.stateTimer <= 0) { boss.state = BossState.IDLE; boss.stateTimer = 35; }
+                break;
+            case BossState.STOMP_WINDUP:
+                 if (frameCount % 4 === 0) createParticles(bossCenterX, boss.y + boss.height + 7, 1, { color: 'rgba(255, 165, 0, 0.9)', size: 19 + Math.sin(frameCount*0.28)*8.0, life: 17, speed: 0.1, shape: 'circle', light: true, shrinkRate: 0.80, gravity: 0.14, fadeRate: 0.075 });
+                 if (frameCount % 6 === 0) createParticles(bossCenterX + (Math.random()-0.5)*boss.width*0.8, boss.y + boss.height + (Math.random()-0.5)*10 - 5, 1, {color: 'rgba(100, 60, 20, 0.6)', size: 5+Math.random()*6, life: 22, speed: 0, gravity: -0.06, drag: 0.96});
+                 boss.x += (Math.random() - 0.5) * 2.2; boss.y += (Math.random() - 0.5) * 2.2;
+                if (boss.stateTimer <= 0) {
+                    boss.state = BossState.STOMPING;
+                    boss.stateTimer = 30;
+                    triggerScreenShake(37, 44);
+                    bossAttackWave = { active: true, type: 'stomp', radius: 15, startRadius: 15, speed: BOSS_STOMP_WAVE_SPEED, timer: 45, angle:0, spread:0 };
+                    createParticles(bossCenterX, bossCenterY, 15, { color: `hsl(30, 100%, 55%)`, size: 15, life: 75, speed: 3.5, drag: 0.95, shape: 'spark', angleSpread: Math.PI*2 });
+                }
+                break;
+            case BossState.STOMPING:
+                 if (boss.stateTimer <= 0) { boss.state = BossState.IDLE; boss.stateTimer = 45; }
+                break;
+            case BossState.SPIT_WINDUP:
+                 if (frameCount % 5 === 0) createParticles(bossCenterX, boss.y + 20, 1, { color: 'rgba(160, 255, 160, 0.9)', size: 19 + Math.sin(frameCount*0.3)*6.0, life: 16, speed: 0, shape: 'puff', light: true, shrinkRate: 0.84, fadeRate: 0.10 });
+                if (boss.stateTimer <= 0) {
+                     boss.state = BossState.SPITTING;
+                     boss.stateTimer = 12;
+                     triggerScreenShake(9.0, 12);
+                     const angleToCat_s = Math.atan2(cat.y + cat.height/2 - bossCenterY, cat.x + cat.width/2 - bossCenterX);
+                     projectiles.push({
+                         x: bossCenterX, y: bossCenterY, width: 27, height: 27,
+                         vx: Math.cos(angleToCat_s) * boss.spitSpeed, vy: Math.sin(angleToCat_s) * boss.spitSpeed,
+                         color: 'lime', life: 3.7 * 60, damage: BOSS_PROJECTILE_DAMAGE, type: 'boss_spit'
+                     });
+                     createParticles(bossCenterX, bossCenterY, 7, { color: 'lime', size: 6.5, life: 42, speed: 6.0, drag: 0.955, shape: 'puff', angle: angleToCat_s, angleSpread: 0.65 });
+                }
+                break;
+            case BossState.SPITTING:
+                 if (boss.stateTimer <= 0) {
+                     boss.spitCount--;
+                     if (boss.spitCount > 0) { boss.state = BossState.SPIT_WINDUP; boss.stateTimer = 18; }
+                     else { boss.state = BossState.IDLE; boss.stateTimer = 50; }
+                 }
+                break;
+             case BossState.BARK_WINDUP:
+                if (frameCount % 6 === 0) createParticles(bossCenterX + (boss.facingRight ? boss.width/2.0 : -boss.width/2.0), bossCenterY, 1, { color: 'rgba(200, 200, 255, 0.8)', size: 12 + Math.sin(frameCount*0.35)*4.0, life: 17, speed: 0.50, shape: 'puff', light: true, shrinkRate: 0.82, angle: boss.facingRight ? 0 : Math.PI, angleSpread: 1.1, fadeRate: 0.12 });
+                if (boss.stateTimer <= 0) {
+                    boss.state = BossState.BARKING;
+                    boss.stateTimer = 36;
+                    triggerScreenShake(23, 28);
+                    const barkAngle_b = boss.facingRight ? 0 : Math.PI;
+                    const barkSpread_b = 1.1;
+                    for(let i=0; i < 6; i++) {
+                        const pAngle = barkAngle_b + (Math.random() - 0.5) * barkSpread_b;
+                        projectiles.push({
+                            x: bossCenterX + Math.cos(barkAngle_b) * boss.width/2.1, y: bossCenterY + Math.sin(barkAngle_b) * boss.width/2.1,
+                            width: 10 + Math.random()*5, height: 2.8 + Math.random()*1.8,
+                            vx: Math.cos(pAngle) * BOSS_BARK_PARTICLE_SPEED, vy: Math.sin(pAngle) * BOSS_BARK_PARTICLE_SPEED,
+                            color: `hsl(0, 100%, ${80 + Math.random()*15}%)`,
+                            life: 20 + Math.random()*10, damage: 0, type: 'boss_bark_visual',
+                            lineWidth: 2 + Math.random()*2, alpha: 0.6 + Math.random()*0.35, shape: 'line', rotation: pAngle
+                        });
+                    }
+                    bossAttackWave = { active: true, type: 'bark', radius: 25, startRadius: 25, speed: BOSS_BARK_WAVE_SPEED, angle: barkAngle_b, spread: barkSpread_b, timer: 40 };
+                }
+                break;
+            case BossState.BARKING:
+                 if (boss.stateTimer <= 0) { boss.state = BossState.IDLE; boss.stateTimer = 46; }
+                break;
+             case BossState.VULNERABLE:
+                 if (frameCount % 15 === 0) createParticles(boss.x + Math.random()*boss.width, boss.y + Math.random()*boss.height, 1, { color: '#b0b0b0', size: 10.0, life: 30, speed: 0, shape: '?' });
+                 if (boss.stateTimer <= 0) { boss.state = BossState.IDLE; boss.stateTimer = 55; }
+                 break;
+             case BossState.DEFEATED:
+                 if (boss.stateTimer > 0 && frameCount % 7 === 0) {
+                     createParticles(bossCenterX + (Math.random()-0.5)*boss.width, bossCenterY + (Math.random()-0.5)*boss.height, 1, {color: `hsl(${getRandomInt(30, 60)}, 100%, ${60 + Math.random()*20}%)`, size: 8 + Math.random()*15, speed: Math.random()*2+1, gravity: 0.05, shape:'spark', life: 40+Math.random()*30});
+                 }
+                 break;
+        }
+
+         if (boss.state !== BossState.CHARGING && boss.state !== BossState.BARKING && boss.state !== BossState.STOMPING && boss.state !== BossState.DEFEATED) {
+             if (cat.x + cat.width/2 > bossCenterX) boss.facingRight = true;
+             else boss.facingRight = false;
+         }
+
+          if (!isGodModeActive && checkRectCollision(cat, boss) &&
+             boss.state !== BossState.DEFEATED &&
+             boss.state !== BossState.HIT_REACTION &&
+             boss.state !== BossState.VULNERABLE &&
+             boss.state !== BossState.PHASE_TRANSITION &&
+             cat.invincibleTimer <= 0) {
+            cat.health -= BOSS_CONTACT_DAMAGE; cat.health = Math.max(0, cat.health); updateHealthBar(); cat.invincibleTimer = CAT_INVINCIBILITY_DURATION_FRAMES * 0.90; triggerDamageFlash();
+            const knockbackDirX=cat.x+cat.width/2-(boss.x+boss.width/2); const knockbackDirY=cat.y+cat.height/2-(boss.y+boss.height/2); const dist=Math.sqrt(knockbackDirX**2+knockbackDirY**2)||1; const knockbackForce=46;
+            let pushX = (knockbackDirX / dist) * knockbackForce; let pushY = (knockbackDirY / dist) * knockbackForce;
+            cat.x += pushX; cat.y += pushY;
+            relocateIfStuck(cat);
+            triggerScreenShake(14.5, 24);
+             createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 12, {color:'red', size: 8.0, life: 75, speed: 4.6});
+             if (cat.health <= 0) { triggerGameOver(); }
+         }
+    }
+    function updateProjectiles() {
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            const p = projectiles[i];
+            p.x += p.vx; p.y += p.vy; p.life--;
+
+            if (p.type === 'bird_projectile' && boss && boss.state !== BossState.DEFEATED && checkRectCollision(p, boss)) {
+                damageBoss(p.damage);
+                projectiles.splice(i, 1);
+                createParticles(p.x, p.y, 8, { color: (p.birdType === BirdType.GOLDEN ? 'gold' : '#ffeb3b'), size: (p.birdType === BirdType.GOLDEN ? 12 : 9.5), life: 48, speed: 3.0, shape: 'star', light: true, angleSpread: Math.PI * 1.4 });
+                continue;
+            }
+             if (!isGodModeActive && p.type === 'boss_spit' && checkRectCollision(p, cat) && cat.invincibleTimer <= 0) {
+                 cat.health -= p.damage; cat.health = Math.max(0, cat.health); updateHealthBar(); cat.invincibleTimer = CAT_INVINCIBILITY_DURATION_FRAMES; triggerDamageFlash();
+                 projectiles.splice(i, 1);
+                 createParticles(p.x, p.y, 12, { color: 'lime', size: 10.0, life: 60, speed: 3.5, shape: 'puff', drag: 0.93, angleSpread: Math.PI * 1.6 });
+                 if (cat.health <= 0) { triggerGameOver(); }
+                 continue;
+            }
+             if (p.type === 'boss_bark_visual') {
+                 p.alpha *= 0.94;
+                 p.size *= 0.98;
+                 if(p.alpha < 0.1 || p.size < 1) p.life = 0;
+             }
+
+             const wallHit = checkWallCollision(p.x, p.y, p.width, p.height);
+             if (p.life <= 0 || wallHit) {
+                 if (p.type !== 'bird_projectile') {
+                    createParticles(p.x, p.y, 2, { color: p.color || '#ccc', size: p.type === 'boss_bark_visual' ? 4 : 7.0, life: 38, speed: 1.5, shape: wallHit ? 'square' : 'puff', angleSpread: Math.PI * 1.8 });
+                    if(wallHit && p.type !== 'boss_bark_visual') triggerScreenShake(1.5, 3.0);
+                 }
+                 projectiles.splice(i, 1);
+                 continue;
+            }
+             if (p.type === 'bird_projectile' && frameCount % 5 === 0) {
+                 createParticles(p.x + p.width/2, p.y + p.height/2, 1, { color: '#f5f5f5', size: 4.2, life: 15, speed: 0.07, shape: 'trail', angle: Math.atan2(-p.vy, -p.vx), angleSpread: 0.35 });
+             } else if (p.type === 'boss_spit' && frameCount % 5 === 0) {
+                 createParticles(p.x + p.width/2, p.y + p.height/2, 1, { color: 'rgba(150, 255, 150, 0.50)', size: 7.0, life: 19, speed: 0.15, shape: 'puff', gravity: 0.06, angleSpread: Math.PI * 0.9 });
+             }
+        }
+    }
+    
+    async function saveScoreToLeaderboard(finalLevel, finalTime) {
+        const user = sessionStorage.getItem('loggedInUser');
+        if (!user || typeof db === 'undefined') {
+            console.log("User not logged in or DB not available. Cannot save score.");
+            return;
+        }
+
+        const leaderboardRef = db.collection('ptak2_leaderboard');
+        const userScoreRef = leaderboardRef.doc(user);
+
+        try {
+            const doc = await userScoreRef.get();
             const currentScore = {
                 user: user,
                 level: finalLevel,
-                time: finalTime
+                time: finalTime,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            if (userIndex > -1) {
-                const existingScore = scores[userIndex];
+            if (doc.exists) {
+                const existingScore = doc.data();
                 if (currentScore.level > existingScore.level || (currentScore.level === existingScore.level && currentScore.time < existingScore.time)) {
-                    scores[userIndex] = currentScore;
+                    await userScoreRef.set(currentScore);
+                    console.log("New high score saved for user:", user);
+                } else {
+                    console.log("Existing score is better. Not updating.");
                 }
             } else {
-                scores.push(currentScore);
+                await userScoreRef.set(currentScore);
+                console.log("New user score saved:", user);
             }
-
-            scores.sort((a, b) => b.level - a.level || a.time - b.time);
-            localStorage.setItem(leaderboardKey, JSON.stringify(scores.slice(0, 50)));
+        } catch (error) {
+            console.error("Error saving score to leaderboard: ", error);
         }
     }
     
