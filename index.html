@@ -8,12 +8,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
-    <!-- CORRECTED Firebase v8 Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
-      // Your Firebase configuration is correct.
       const firebaseConfig = {
         apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
         authDomain: "tom-fun.firebaseapp.com",
@@ -24,7 +22,6 @@
         measurementId: "G-6MHP8FHQ87"
       };
 
-      // Initialize Firebase
       let db;
       try {
         firebase.initializeApp(firebaseConfig);
@@ -34,7 +31,6 @@
         alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
       }
     </script>
-    <!-- End of Firebase Connection -->
 
     <!-- CSS -->
     <style>
@@ -108,8 +104,8 @@
 
     <main class="game-grid">
         <div class="game-card">
-            <a href="milan/MILAN.html" class="game-link">
-                <img src="milan/milanbg.png" alt="Milanovy klobásy Game Preview">
+            <a href="MILAN/MILAN.html" class="game-link">
+                <img src="MILAN/milanbg.png" alt="Milanovy klobásy Game Preview">
                 <div class="content">
                     <h2 data-translate-key="milanTitle">Milanovy klobásy</h2>
                     <p data-translate-key="milanDesc">Připravujte výtečná jídla v očích prémiového kuchaře Milana.</p>
