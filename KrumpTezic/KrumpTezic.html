@@ -645,6 +645,7 @@
             const scoreData = {
                 user: userDisplayName,
                 blocks: Math.floor(this.GameState.maxBlokyEverAchieved),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             if (isWin) {
@@ -779,7 +780,7 @@
                     { Name: "Truhla", ImageSource: this.Assets.IMAGE_FILES.CHEST, BaseHp: 40, Rarity: 0.7, IsSpecial: true, SpecialValueMin: 50, SpecialValueMax: 200 }
                 ],
             };
-            this.Assets.BIOMES = [ { Name: "Planiny", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_PLAINS}')`, BlockPoolKey: "plains" }, { Name: "Les", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_FOREST}')`, BlockPoolKey: "forest" }, { Name: "Poušť", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_DESERT}')`, BlockPoolKey: "desert" }, { Name: "Jeskyně", ImageSource: this.Assets.IMAGE_FILES.BG_CAVE, BlockPoolKey: "cave" }, { Name: "Nether", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_NETHER}')`, BlockPoolKey: "nether" } ];
+            this.Assets.BIOMES = [ { Name: "Planiny", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_PLAINS}')`, BlockPoolKey: "plains" }, { Name: "Les", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_FOREST}')`, BlockPoolKey: "forest" }, { Name: "Poušť", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_DESERT}')`, BlockPoolKey: "desert" }, { Name: "Jeskyně", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_CAVE}')`, BlockPoolKey: "cave" }, { Name: "Nether", BackgroundImage: `url('${this.Assets.IMAGE_FILES.BG_NETHER}')`, BlockPoolKey: "nether" } ];
         },
 
         getWeightedRandomBlock: function(biomeKey) {

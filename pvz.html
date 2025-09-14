@@ -713,12 +713,11 @@
                             break;
                         case 'chomper':
                             if (plant.state === 'idle') {
-                                // --- CHOMPER BUG FIX ---
                                 const target = zombies.find(z => z.lane === plant.lane && z.x > plant.x && z.x < plant.x + 80);
                                 if (target) {
                                     target.health = 0;
                                     plant.state = 'chewing';
-                                    plant.cooldown = 40 * FPS; // Chew time
+                                    plant.cooldown = 40 * FPS;
                                     el?.classList.add('chewing');
                                     removeZombie(target, true);
                                 }
@@ -811,7 +810,10 @@
                 };
                 sun.el.className = "sun"; sun.el.id = sun.id;
                 sun.el.style.left=`${x}px`; sun.el.style.top=`${y}px`;
-                sun.el.addEventListener("click", () => {
+                sun.el.addEventListener("click", (event) => {
+                    // --- CRITICAL BUG FIX HERE ---
+                    // This stops the click from "leaking" through to the game area behind the sun.
+                    event.stopPropagation();
                     if(gameOver) return;
                     sunAmount+=25;
                     createParticleExplosion(sun.x+35, sun.y+35,"#FFEB3B",30,8);
