@@ -1,11 +1,33 @@
-</body>
-</html>
 <!DOCTYPE html>
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Milanovy klobásy</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
+        authDomain: "tom-fun.firebaseapp.com",
+        projectId: "tom-fun",
+        storageBucket: "tom-fun.appspot.com",
+        messagingSenderId: "710857129785",
+        appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
+        measurementId: "G-6MHP8FHQ87"
+      };
+      let db, auth;
+      try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+      } catch (e) {
+        console.error("Firebase initialization failed:", e);
+      }
+    </script>
+
     <style>
         body, html { margin: 0; padding: 0; overflow: hidden; height: 100%; width: 100%; background-color: #3a8f2e; font-family: 'Courier New', Courier, monospace; }
 
@@ -279,13 +301,14 @@
         let lastTime = 0;
         let animationFrameId;
         let riverLanes = { left: false, center: false, right: false };
+        let currentUser = null;
 
         let currentLanguage = 'cs';
         const translations = {
             cs: {
                 title: "Milanovy klobásy",
                 subtitle: "Připravujte výtečná jídla v očích prémiového kuchaře Milana. Používejte klávesy WASD a E a před doručením jídla jej nezapomeňte vyložit na papírový tácek.",
-                startButton: "Vařit",//meowmeow
+                startButton: "Vařit",
                 langButton: "English",
                 stressLabel: "Stres", timerLabel: "Přežíváš",
                 gameOverTitle: "KONEC HRY", gameOverReasonCollapse: "Totální nervové zhroucení!", gameOverReasonAlcohol: "Otrava alkoholem.", gameOverScore: "Přežil jsi", gameOverSeconds: "sekund.", ordersCompleted: "Dokončené objednávky", playAgain: "Znovu hrát",
@@ -544,7 +567,9 @@
         }
 
         function gameLoop(timestamp){
-            if (!gameRunning) return;
+            if (!gameRunning) {
+                return;
+            };
             animationFrameId = requestAnimationFrame(gameLoop);
             
             if (!lastTime) lastTime = timestamp;
@@ -763,7 +788,7 @@
                     ${clothingHTML}
                     <div class="leg left"></div><div class="leg right"></div>`;
 
-            } else { // Man
+            } else {
                 const shortsStyles = ['style-a', 'style-boardshorts', 'style-speedo'];
                 const shortsClass = shortsStyles[Math.floor(Math.random() * shortsStyles.length)];
                 genderSpecificHTML = `
@@ -968,33 +993,11 @@
         }
 
         function endGame(reason) {
-            gameRunning=false;
+            if (!gameRunning) return;
+            gameRunning = false;
             cancelAnimationFrame(animationFrameId);
             
-            const user = sessionStorage.getItem('loggedInUser');
-            if (user) {
-                const leaderboardKey = 'milan_leaderboard';
-                let scores = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
-                const userIndex = scores.findIndex(s => s.user === user);
-
-                const currentScore = {
-                    user: user,
-                    orders: ordersCompleted,
-                    time: Math.floor(survivalTime)
-                };
-
-                if (userIndex > -1) {
-                    const existingScore = scores[userIndex];
-                    if (currentScore.orders > existingScore.orders || (currentScore.orders === existingScore.orders && currentScore.time > existingScore.time)) {
-                        scores[userIndex] = currentScore;
-                    }
-                } else {
-                    scores.push(currentScore);
-                }
-                
-                scores.sort((a, b) => b.orders - a.orders || b.time - a.time);
-                localStorage.setItem(leaderboardKey, JSON.stringify(scores.slice(0, 50)));
-            }
+            saveScoreToFirestore();
 
             const t = translations[currentLanguage];
             document.getElementById('end-reason').textContent = reason;
@@ -1004,9 +1007,14 @@
         }
 
         window.onload = () => {
+            auth.onAuthStateChanged(user => {
+                currentUser = user;
+            });
             document.getElementById('start-btn').addEventListener('click', startGame);
             document.getElementById('lang-switch-btn').addEventListener('click', () => { currentLanguage = currentLanguage === 'cs' ? 'en' : 'cs'; updateAllText(); });
             document.getElementById('play-again-btn').addEventListener('click', () => window.location.reload());
             updateAllText();
         };
     </script>
+</body>
+</html>
