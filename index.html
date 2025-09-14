@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -303,7 +302,6 @@
         async function deleteLeaderboardEntry(gameId, userToDelete) {
             if (typeof db === 'undefined') { alert("Spojení s databází selhalo."); return; }
             const gameData = {
-                // *** FIX: Changed collection name to milan_leaderboard2 ***
                 milan: { key: "milan_leaderboard2" },
                 krumptezic: { key: "krumptezic_leaderboard" },
                 ptak2: { key: "ptak2_leaderboard" },
@@ -339,7 +337,6 @@
             let query, fields;
 
             if (gameId === 'milan') {
-                // *** FIX: Changed collection name to milan_leaderboard2 ***
                 query = db.collection("milan_leaderboard2").orderBy('orders', 'desc').orderBy('time', 'desc');
                 fields = ['Objednávky', 'Čas Přežití'];
                 titleEl.textContent = `Žebříček: Milanovy Klobásy`;
@@ -446,14 +443,16 @@
             
             auth.onAuthStateChanged(user => {
                 if (user) {
-                    sessionStorage.setItem('loggedInUser', user.displayName || user.email);
+                    // *** FIX: Changed from sessionStorage to localStorage for persistence ***
+                    localStorage.setItem('loggedInUser', user.displayName || user.email);
                     loginBtn.textContent = `Odhlásit se (${user.displayName || user.email})`;
                     loginBtn.onclick = (e) => {
                         e.preventDefault();
                         auth.signOut();
                     };
                 } else {
-                    sessionStorage.removeItem('loggedInUser');
+                    // *** FIX: Changed from sessionStorage to localStorage for persistence ***
+                    localStorage.removeItem('loggedInUser');
                     loginBtn.textContent = "Přihlásit se";
                     loginBtn.onclick = (e) => {
                         e.preventDefault();

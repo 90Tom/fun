@@ -935,12 +935,13 @@
         function scheduleNextCustomer() { const nextSpawn = () => { if (gameRunning) { createCustomer(); setTimeout(nextSpawn, customerSpawnInterval); } }; nextSpawn(); }
         
         async function saveScoreToFirestore() {
-            const userDisplayName = sessionStorage.getItem('loggedInUser');
+            // *** FIX: Changed from sessionStorage to localStorage for persistence ***
+            const userDisplayName = localStorage.getItem('loggedInUser');
             if (!userDisplayName) {
+                console.log("No user logged in. Score not saved.");
                 return;
             }
 
-            // *** FIX: Changed collection name to milan_leaderboard2 ***
             const userDocRef = db.collection('milan_leaderboard2').doc(userDisplayName);
             const newScore = {
                 user: userDisplayName,
