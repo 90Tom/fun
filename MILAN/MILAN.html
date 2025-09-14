@@ -935,10 +935,13 @@
         function scheduleNextCustomer() { const nextSpawn = () => { if (gameRunning) { createCustomer(); setTimeout(nextSpawn, customerSpawnInterval); } }; nextSpawn(); }
         
         async function saveScoreToFirestore() {
-            // *** FIX: Changed from sessionStorage to localStorage for persistence ***
             const userDisplayName = localStorage.getItem('loggedInUser');
+
+            console.log(`Attempting to save score for user: "${userDisplayName}"`);
+
             if (!userDisplayName) {
-                console.log("No user logged in. Score not saved.");
+                console.log("No user is logged in. Score will not be saved.");
+                alert("You are not logged in! Your score will not be saved. Please log in on the main page and try again.");
                 return;
             }
 
@@ -953,18 +956,26 @@
                 const doc = await userDocRef.get();
 
                 if (!doc.exists) {
+                    console.log("No previous score found. Saving new score.");
                     await userDocRef.set(newScore);
+                    console.log("Score saved successfully!");
                 } else {
                     const existingScore = doc.data();
+                    console.log("Existing score found:", existingScore);
                     const isNewHighScore = newScore.orders > existingScore.orders ||
                                            (newScore.orders === existingScore.orders && newScore.time > existingScore.time);
 
                     if (isNewHighScore) {
+                        console.log("New high score! Updating score.");
                         await userDocRef.set(newScore);
+                        console.log("Score updated successfully!");
+                    } else {
+                        console.log("Score is not higher than the existing one. Not saving.");
                     }
                 }
             } catch (error) {
                 console.error("Error saving score to Firestore:", error);
+                alert(`Failed to save score! There might be a problem with database permissions. Please check the console (F12) for more details. Error: ${error.message}`);
             }
         }
 
@@ -1028,16 +1039,17 @@
 
         function endGame(reason) {
             if (!gameRunning) return;
-            gameRunning=false;
+            gameRunning = false;
             cancelAnimationFrame(animationFrameId);
             
+            console.log("Game over! Reason:", reason);
             saveScoreToFirestore();
 
             const t = translations[currentLanguage];
             document.getElementById('end-reason').textContent = reason;
             document.getElementById('end-score').textContent = `${t.gameOverScore} ${Math.floor(survivalTime)} ${t.gameOverSeconds}`;
             document.getElementById('end-orders').textContent = `${t.ordersCompleted}: ${ordersCompleted}`;
-            gameOverScreen.style.display='flex'; 
+            gameOverScreen.style.display = 'flex'; 
         }
 
         window.onload = () => {

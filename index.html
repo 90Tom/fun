@@ -443,7 +443,7 @@
             
             auth.onAuthStateChanged(user => {
                 if (user) {
-                    // *** FIX: Changed from sessionStorage to localStorage for persistence ***
+                    // *** FIX: Switched to localStorage to persist login across pages ***
                     localStorage.setItem('loggedInUser', user.displayName || user.email);
                     loginBtn.textContent = `Odhlásit se (${user.displayName || user.email})`;
                     loginBtn.onclick = (e) => {
@@ -451,7 +451,7 @@
                         auth.signOut();
                     };
                 } else {
-                    // *** FIX: Changed from sessionStorage to localStorage for persistence ***
+                    // *** FIX: Switched to localStorage to persist login across pages ***
                     localStorage.removeItem('loggedInUser');
                     loginBtn.textContent = "Přihlásit se";
                     loginBtn.onclick = (e) => {
