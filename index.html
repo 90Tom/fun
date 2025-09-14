@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
-    <!-- Our Secret Kingdom's Connection (Firebase) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -33,9 +32,7 @@
         alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
       }
     </script>
-    <!-- End of Our Secret Connection -->
-
-    <!-- CSS -->
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Poppins', sans-serif; color: #333; line-height: 1.6; background-image: url('IndexImages/backgroundindex.png'); background-size: cover; background-position: center center; background-attachment: fixed; display: flex; flex-direction: column; min-height: 100vh; align-items: center; padding: 20px; position: relative; z-index: 1; }
@@ -86,6 +83,9 @@
         #leaderboard-table th, #leaderboard-table td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
         #leaderboard-table th { background-color: #f2f2f2; }
         #leaderboard-table tr:hover { background-color: #f9f9f9; }
+        #leaderboard-sort-controls { display: none; margin-top: 15px; margin-bottom: -10px; }
+        .sort-btn { padding: 5px 10px; margin: 0 5px; font-family: 'Poppins', sans-serif; border: 1px solid #ddd; background-color: #f9f9f9; cursor: pointer; border-radius: 4px; }
+        .sort-btn.active { background-color: #e83e8c; color: white; border-color: #e83e8c; }
         .delete-score-btn { background: #ff5c5c; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; line-height: 25px; font-size: 14px; }
         .delete-score-btn:hover { background: #ff1c1c; }
         @media (max-width: 768px) { header h1 { font-size: 2.8em; padding-right: 40px; } .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; } .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; } #language-switcher-btn, #login-btn { padding: 6px 12px; font-size: 0.85em; } #top-actions-container { top: 15px; right: 15px; gap: 8px;} }
@@ -204,6 +204,9 @@
         <div class="modal-content">
             <span class="close-btn">&times;</span>
             <h1 id="leaderboard-title">Leaderboard</h1>
+            <div id="leaderboard-sort-controls">
+                <button id="toggle-sort-btn" class="sort-btn" data-current-sort="blocks"></button>
+            </div>
             <table id="leaderboard-table">
                 <thead id="leaderboard-head"></thead>
                 <tbody id="leaderboard-body"></tbody>
@@ -215,7 +218,6 @@
         <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
     </footer>
 
-    <!-- JS -->
     <script type="text/javascript">
         const translations = {
             cs: {
@@ -307,17 +309,15 @@
             const collectionName = gameData[gameId].key;
 
             try {
-                // In Firestore, the document ID is the user's display name for these leaderboards.
                 const userDocRef = db.collection(collectionName).doc(userToDelete);
                 await userDocRef.delete();
-                console.log(`Successfully deleted entry for ${userToDelete} from ${collectionName}`);
                 showLeaderboard(gameId); 
             } catch (error) {
                 console.error("Error deleting document: ", error);
             }
         }
         
-       async function showLeaderboard(gameId) {
+        async function showLeaderboard(gameId, sortBy = 'default') {
             if (typeof db === 'undefined') {
                 alert("Nelze se připojit k žebříčku. Zkontrolujte připojení nebo zkuste to znovu později.");
                 return;
@@ -327,18 +327,40 @@
             const titleEl = document.getElementById('leaderboard-title');
             const headEl = document.getElementById('leaderboard-head');
             const bodyEl = document.getElementById('leaderboard-body');
+            const sortControls = document.getElementById('leaderboard-sort-controls');
+            const toggleSortBtn = document.getElementById('toggle-sort-btn');
             const currentUser = auth.currentUser;
             const isAdmin = currentUser && currentUser.displayName === '90Tom';
 
-            const gameData = {
-                milan: { title: "Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
-                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
-                ptak2: { title: "PTAK 2", fields: ['Úroveň', 'Čas'], query: db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
-            };
+            sortControls.style.display = 'none';
 
-            const { title, fields, query } = gameData[gameId];
-            titleEl.textContent = `Žebříček: ${title}`;
-            
+            let query, fields;
+
+            if (gameId === 'milan') {
+                query = db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc');
+                fields = ['Objednávky', 'Čas Přežití'];
+                titleEl.textContent = `Žebříček: Milanovy Klobásy`;
+            } else if (gameId === 'ptak2') {
+                query = db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc');
+                fields = ['Úroveň', 'Čas'];
+                titleEl.textContent = `Žebříček: PTAK 2`;
+            } else if (gameId === 'krumptezic') {
+                sortControls.style.display = 'block';
+                const currentSort = (sortBy === 'default') ? 'blocks' : sortBy;
+                toggleSortBtn.dataset.currentSort = currentSort;
+
+                if (currentSort === 'winTime') {
+                    query = db.collection("krumptezic_leaderboard").where('winTime', '>', 0).orderBy('winTime', 'asc');
+                    fields = ['Čas Výhry'];
+                    toggleSortBtn.textContent = 'Řadit podle Bloků';
+                } else {
+                    query = db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc');
+                    fields = ['Nejvyšší Počet Bloků'];
+                    toggleSortBtn.textContent = 'Řadit podle Času Výhry';
+                }
+                titleEl.textContent = `Žebříček: KrumpTezic`;
+            }
+
             bodyEl.innerHTML = '<tr><td colspan="5">Načítání...</td></tr>';
             leaderboardModal.style.display = 'flex';
 
@@ -363,7 +385,11 @@
                         if (gameId === 'milan') {
                             row += `<td>${score.orders}</td><td>${score.time}s</td>`;
                         } else if (gameId === 'krumptezic') {
-                            row += `<td>${Math.floor(score.blocks)}</td><td>${score.winTime ? score.winTime + 's' : '-'}</td>`;
+                             if (sortBy === 'winTime') {
+                                row += `<td>${score.winTime ? score.winTime + 's' : '-'}</td>`;
+                            } else {
+                                row += `<td>${Math.floor(score.blocks)}</td>`;
+                            }
                         } else if (gameId === 'ptak2') {
                              const timeInSeconds = (score.time / 1000).toFixed(2);
                             row += `<td>${score.level}</td><td>${timeInSeconds}s</td>`;
@@ -376,7 +402,7 @@
                 }
             } catch (error) {
                  console.error("Error fetching leaderboard:", error);
-                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku. Zkontrolujte, zda jsou v databázi nastaveny správné indexy pro kolekci: ${gameData[gameId].key}.</td></tr>`;
+                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku.</td></tr>`;
             }
         }
 
@@ -434,7 +460,6 @@
                     };
                 }
             });
-
             
             showRegisterLink.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -456,6 +481,12 @@
                 });
             });
             
+            document.getElementById('toggle-sort-btn').addEventListener('click', function() {
+                const currentSort = this.dataset.currentSort;
+                const nextSort = currentSort === 'blocks' ? 'winTime' : 'blocks';
+                showLeaderboard('krumptezic', nextSort);
+            });
+
             leaderboardModal.addEventListener('click', function(e) {
                 if (e.target.classList.contains('delete-score-btn')) {
                     const userToDelete = e.target.dataset.user;
