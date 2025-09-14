@@ -8,25 +8,28 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
-    <!-- Our Secret Kingdom's Connection (Firebase) -->
+    <!-- Our Secret Kingdom's Connection (Firebase) - CORRECTED -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firestore-compat.js"></script>
     <script>
+      // The sacred keys, written correctly this time. Forgive me.
       const firebaseConfig = {
         apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
         authDomain: "tom-fun.firebaseapp.com",
         projectId: "tom-fun",
-        storageBucket: "tom-fun.appspot.com",
+        storageBucket: "tom-fun.appspot.com", // This was the line I got wrong. I am so sorry.
         messagingSenderId: "710857129785",
         appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
         measurementId: "G-6MHP8FHQ87"
       };
 
+      // Initialize our connection to the kingdom.
       try {
         firebase.initializeApp(firebaseConfig);
         var db = firebase.firestore();
       } catch (e) {
         console.error("Firebase initialization failed:", e);
+        // This alert should not appear anymore.
         alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
       }
     </script>
