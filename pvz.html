@@ -130,6 +130,14 @@
             width: 80px; height: 90px;
             bottom: 5px; user-select: none;
         }
+
+        /* --- NEW CSS RULE FOR SHOP ICONS --- */
+        .plant-card-icon .plant.shop-icon {
+            top: 50%;
+            left: 50%;
+            bottom: auto; /* Override the default 'bottom: 5px' */
+            transform: translate(-50%, -50%) scale(0.19); /* Center and scale the icon */
+        }
         
         .lawnmower {
             width: 70px; height: 60px;
@@ -368,8 +376,10 @@
                     const type = card.dataset.plantType;
                     const iconContainer = card.querySelector('.plant-card-icon');
                     const tempPlant = document.createElement('div');
-                    tempPlant.className = `plant ${type}`;
-                    tempPlant.style.cssText = 'transform: scale(0.38); top: -22px; left: -12px;'; // EVEN SMALLER ICONS
+                    // --- CHANGE MADE HERE ---
+                    // Added "shop-icon" class so CSS can style it.
+                    tempPlant.className = `plant ${type} shop-icon`; 
+                    // Removed the inline style from JS.
                     tempPlant.innerHTML = getPlantHTML(type);
                     iconContainer.appendChild(tempPlant);
 
@@ -652,7 +662,7 @@
             function updateUI(){sunCounterDisplay.innerHTML=`☀️ ${sunAmount}`,document.querySelectorAll(".plant-card").forEach(c=>{const t=c.dataset.plantType,o=c.querySelector(".cooldown-overlay");sunAmount<plantData[t].cost||plantCooldowns[t]>0?c.classList.add("disabled"):c.classList.remove("disabled");if(plantData[t]){const cooldownHeight=100-Math.min(100,plantCooldowns[t]/plantData[t].recharge*100);o.style.transform=`translateY(${cooldownHeight}%)`}})}
             function removeElement(el){el?.parentNode?.removeChild(el)}
             function createParticleExplosion(x,y,color,count=20,size=5){for(let i=0;i<count;i++)particles.push(new Particle(x,y,color,size))}
-            class Particle{constructor(x,y,color,baseSize){this.x=x,this.y=y,this.el=document.createElement("div"),this.el.className="particle",this.el.style.backgroundColor=color;const size=Math.random()*baseSize+2;this.el.style.width=`${size}px`,this.el.style.height=`${size}px`,this.el.style.transform=`translate(${x}px, ${y}px)`,gameArea.appendChild(this.el);const angle=Math.random()*Math.PI*2,speed=Math.random()*5+2;this.vx=Math.cos(angle)*speed,this.vy=Math.sin(angle)*speed,this.life=100}update(){this.x+=this.vx,this.y+=this.vy,this.vy+=.1,this.life-=2,this.el.style.transform=`translate(${this.x}px, ${this.y}px) scale(${this.life/100})`,this.el.style.opacity=this.life/100,this.life<=0&&removeElement(this.el)}}
+            class Particle{constructor(x,y,color,baseSize){this.x=x,this.y=y,this.el=document.createElement("div"),this.el.className="particle",this.el.style.backgroundColor=color;const size=Math.random()*baseSize+2;this.el.style.width=`${size}px`,this.el.style.height=`${size}px`,this.el.style.transform=`translate(${x}px, ${y}px)`,gameArea.appendChild(this.el);const angle=Math.random()*Math.PI*2,speed=Math.random()*5+2;this.vx=Math.cos(angle)*speed,this.vy=Math.sin(angle)*speed,this.life=100}update(){this.x+=this.vx,this.y+=this.vy,this.vy+=.1,this.life-=2,this.el.style.transform=`translate(${this.x}px, ${y}px) scale(${this.life/100})`,this.el.style.opacity=this.life/100,this.life<=0&&removeElement(this.el)}}
             function updateParticles(){particles=particles.filter(p=>p.life>0),particles.forEach(p=>p.update())}
             function endGame(isWin){if(gameOver)return;gameOver=!0;const msgBox=document.getElementById("message-box");msgBox.querySelector("#message-text").innerText=isWin?"You Win!":"The zombies ate your brains!",msgBox.style.display="block"}
 
