@@ -343,7 +343,7 @@
         <div class="modal-content">
             <h2 class="modal-header">Gratulace! Vyhrál jsi!</h2>
             <img id="winScreenImage" src="newtextures/winimage.png" alt="Victory Screen Image">
-            <p id="winTotalBloky">Celkem vytěženo bloků: 0</p>
+            <p id="winTotalBloky">Nejvyšší počet bloků: 0</p>
             <p id="winTotalClicks">Celkem kliknutí: 0</p>
             <p id="winTimeTaken">Čas dokončení: 0s</p>
             <button id="winContinueButton">Pokračovat ve hře</button>
@@ -396,7 +396,11 @@
             isShakeCooldownActive: false, lastAcceleration: { x: 0, y: 0, z: 0 },
             isFirstAccelReading: true, isAccelerometerSupported: false,
             isPowerSurgeActive: false, powerSurgeDurationTimer: null, powerSurgeCooldownTimer: null,
-            activeCreepers: [], bps: 0, ownedPets: [], gameTime: 0, gameStartTime: Date.now(), gameWon: false,
+            activeCreepers: [], bps: 0, ownedPets: [],
+            gameStartTime: 0,
+            sessionStartTime: 0,
+            timeSpent: 0,
+            gameWon: false,
             handBaseTransformValues: { x: 300, y: 200, r: -25, s: 1.1 },
             pickaxeBaseTransformValues: { x: 150, y: -10, r: -10, s: 1.0 },
             currentToolTransformValues: {},
@@ -480,6 +484,12 @@
         },
         init: function() {
             this.GameState.isMobile = window.innerWidth <= 480;
+            
+            if (!this.loadGame()) {
+                this.GameState.gameStartTime = Date.now();
+            }
+            this.GameState.sessionStartTime = Date.now();
+
             this.GameState.activeBlockDisplayImage = this.DOM.currentBlockImage;
             this.GameState.standbyBlockDisplayImage = this.DOM.nextBlockImage;
             this.setupAssetsAndBalanceCosts();
@@ -495,6 +505,7 @@
             this.updateBlokyLabel();
             this.updateShopSections();
             this.updateStatsDisplay();
+            this.updatePetDisplay();
             this.setupEventListeners();
             this.startAccelerometer();
             this.startCreeperSpawner();
@@ -522,7 +533,74 @@
                     this.showFloatingText("+1000 Bloků CHEAT!", this.DOM.miningAreaGrid, 'yellow');
                 }
             });
+            
+            window.addEventListener('beforeunload', this.saveGame.bind(this));
         },
+        
+        saveGame: function() {
+            const user = sessionStorage.getItem('loggedInUser');
+            if (!user) return;
+            
+            this.updateLeaderboard();
+
+            const sessionTime = Date.now() - this.GameState.sessionStartTime;
+            const totalTime = (this.GameState.timeSpent || 0) + sessionTime;
+
+            const saveData = {
+                blokyCount: this.GameState.blokyCount,
+                totalBlokyMined: this.GameState.totalBlokyMined,
+                totalClicks: this.GameState.totalClicks,
+                equippedPickaxeId: this.GameState.equippedPickaxeId,
+                ownedPickaxeIds: Array.from(this.GameState.ownedPickaxeIds),
+                pickaxeEnchantments: this.GameState.pickaxeEnchantments,
+                enchantTableLevel: this.GameState.enchantTableLevel,
+                ownedPets: this.GameState.ownedPets,
+                timeSpent: totalTime,
+                currentBiomeIndex: this.GameState.currentBiomeIndex,
+                maxBlokyEverAchieved: this.GameState.maxBlokyEverAchieved,
+                unlockedShopItems: Array.from(this.GameState.unlockedShopItems),
+                gameWon: this.GameState.gameWon
+            };
+            localStorage.setItem(`krumptezic_save_${user}`, JSON.stringify(saveData));
+        },
+
+        loadGame: function() {
+            const user = sessionStorage.getItem('loggedInUser');
+            if (!user) return false;
+
+            const savedDataJSON = localStorage.getItem(`krumptezic_save_${user}`);
+            if (savedDataJSON) {
+                if (confirm("Nalezena uložená hra. Chcete pokračovat?")) {
+                    const savedData = JSON.parse(savedDataJSON);
+                    
+                    this.GameState.blokyCount = savedData.blokyCount || 0;
+                    this.GameState.totalBlokyMined = savedData.totalBlokyMined || 0;
+                    this.GameState.totalClicks = savedData.totalClicks || 0;
+                    this.GameState.equippedPickaxeId = savedData.equippedPickaxeId || "Hand";
+                    this.GameState.ownedPickaxeIds = new Set(savedData.ownedPickaxeIds || ["Hand"]);
+                    this.GameState.pickaxeEnchantments = savedData.pickaxeEnchantments || {};
+                    this.GameState.enchantTableLevel = savedData.enchantTableLevel || 0;
+                    this.GameState.ownedPets = savedData.ownedPets || [];
+                    this.GameState.timeSpent = savedData.timeSpent || 0;
+                    this.GameState.currentBiomeIndex = savedData.currentBiomeIndex || 0;
+                    this.GameState.maxBlokyEverAchieved = savedData.maxBlokyEverAchieved || 0;
+                    this.GameState.unlockedShopItems = new Set(savedData.unlockedShopItems || []);
+                    this.GameState.gameWon = savedData.gameWon || false;
+                    
+                    this.GameState.bps = this.GameState.ownedPets.reduce((total, pet) => total + (pet.Bps || 0), 0);
+                    
+                    console.log("Hra načtena pro uživatele:", user);
+                    return true;
+                } else {
+                    localStorage.removeItem(`krumptezic_save_${user}`);
+                    this.GameState.gameStartTime = Date.now();
+                    return false;
+                }
+            }
+            this.GameState.gameStartTime = Date.now();
+            return false;
+        },
+
         setInitialToolTransform: function() {
             const toolData = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
             if (toolData && toolData.IdName === "Hand") {
@@ -557,11 +635,15 @@
                 { IdName: "Cat5", Name: "Tygr Ničitel", ImageSource: this.Assets.IMAGE_FILES.CAT5, Bps: 50, Cost: 28000, Scale: 1.3, ScaresCreepers: true }
             ];
             this.Assets.ENCHANTMENT_DEFINITIONS = { efficiency: { name: "Efektivita", maxLevel: 5, description: "Zvyšuje sílu krumpáče." }, fortune: { name: "Štěstí", maxLevel: 3, description: "Šance na více bloků." } };
-
+            
+            const defaultEnchants = { efficiency: 0, fortune: 0 };
             this.Assets.PICKAXE_TYPES.forEach(pt => {
-                this.GameState.pickaxeEnchantments[pt.IdName] = { efficiency: 0, fortune: 0 };
+                 if (!this.GameState.pickaxeEnchantments[pt.IdName]) {
+                    this.GameState.pickaxeEnchantments[pt.IdName] = { ...defaultEnchants };
+                }
             });
-             this.GameState.equippedPickaxeId = this.Assets.PICKAXE_TYPES[0].IdName;
+
+             this.GameState.equippedPickaxeId = this.GameState.equippedPickaxeId || this.Assets.PICKAXE_TYPES[0].IdName;
         },
 
         setupBiomes: function() {
@@ -721,7 +803,7 @@
         },
 
         loadPickaxes: function() {
-            this.equipPickaxe(this.Assets.PICKAXE_TYPES[0]);
+            this.equipPickaxe(this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId) || this.Assets.PICKAXE_TYPES[0]);
             this.GameState.ownedPickaxeIds.add(this.Assets.PICKAXE_TYPES[0].IdName);
             this.populateShopSection(this.DOM.pickaxesShopSection, this.Assets.PICKAXE_TYPES, (item) => this.GameState.ownedPickaxeIds.has(item.IdName) ? this.equipPickaxe(item) : this.buyPickaxe(item), (item) => this.GameState.equippedPickaxeId === item.IdName, "Vybaveno", (item) => this.GameState.ownedPickaxeIds.has(item.IdName) ? "Vybavit" : "Koupit");
         },
@@ -1832,7 +1914,7 @@
                 for (let i = 0; i < Math.min(this.Config.CREEPER_REWARD_BLOCK_BREAKS, 15) ; i++) { const flyingBlock = document.createElement('img'); const currentBiome = this.Assets.BIOMES[this.GameState.currentBiomeIndex]; const blockPoolForBiome = this.Assets.BLOCK_TYPES_POOL[currentBiome.BlockPoolKey]; const blockDataForFlying = blockPoolForBiome && blockPoolForBiome.length > 0 ? blockPoolForBiome[0] : this.Assets.BLOCK_TYPES_POOL.plains[0]; flyingBlock.src = blockDataForFlying.ImageSource; flyingBlock.classList.add('flying-block-particle'); const startX = explosionX + (Math.random() - 0.5) * 50; const startY = explosionY + (Math.random() - 0.5) * 50; const canvasRect = this.DOM.particleCanvas.getBoundingClientRect(); flyingBlock.style.left = `${startX - canvasRect.left}px`; flyingBlock.style.top = `${startY - canvasRect.top}px`; this.DOM.particleCanvas.appendChild(flyingBlock); setTimeout(() => { const targetX = scoreHeaderRect.left + scoreHeaderRect.width/2 - startX + (Math.random() * 40 - 20); const targetY = scoreHeaderRect.top + scoreHeaderRect.height/2 - startY + (Math.random() * 20 - 10); flyingBlock.style.transform = `translate(${targetX}px, ${targetY}px) scale(0.2) rotate(${(Math.random()-0.5)*720}deg)`; flyingBlock.style.opacity = '0'; setTimeout(() => flyingBlock.remove(), 700); }, i * 30); } } else { let blokyLost = Math.floor(this.GameState.blokyCount * this.Config.CREEPER_DAMAGE_TO_BLOKY_PERCENT); let message = `Sssss... -${blokyLost} Bloky`; this.GameState.blokyCount -= blokyLost; if (this.GameState.ownedPets.length > 0 && Math.random() < this.Config.CREEPER_STEALS_PET_CHANCE) { const stolenPetIndex = Math.floor(Math.random() * this.GameState.ownedPets.length); const stolenPet = this.GameState.ownedPets.splice(stolenPetIndex, 1)[0]; if (stolenPet) { this.GameState.bps -= stolenPet.Bps; this.updateStatsDisplay(); this.updatePetDisplay(); message += ` & 1 ${stolenPet.Name}!`; this.showFloatingText(`Ukradl ti ${stolenPet.Name}!`, this.DOM.miningAreaGrid, 'magenta'); } } this.updateBlokyLabel(); this.showFloatingText(message, this.DOM.miningAreaGrid, 'tomato'); await this.screenShake(true, 15); this.spawnProgrammaticExplosion(explosionX, explosionY, 150, 25, 'rgba(255,50,50,0.7)'); } this.updateShopSections();
         },
         spawnProgrammaticExplosion: function(x, y, maxRadius, numParticles, color) { if (!this.DOM.particleCanvas) return; for (let i = 0; i < numParticles; i++) { const particle = document.createElement('div'); particle.style.position = 'absolute'; const pSize = Math.random() * 18 + 10; particle.style.width = `${pSize}px`; particle.style.height = particle.style.width; particle.style.backgroundColor = color; particle.style.borderRadius = `${Math.random() > 0.3 ? '50%' : '0'}`; particle.style.opacity = '1'; particle.style.pointerEvents = 'none'; this.DOM.particleCanvas.appendChild(particle); const angle = Math.random() * Math.PI * 2; const radius = Math.random() * maxRadius; const targetX = Math.cos(angle) * radius * (0.5 + Math.random() * 0.8); const targetY = Math.sin(angle) * radius * (0.5 + Math.random() * 0.8); const duration = Math.random() * 700 + 500; const finalScale = Math.random() * 0.3; particle.style.left = `${x - pSize/2}px`; particle.style.top = `${y - pSize/2}px`; particle.animate([ { transform: 'translate(0, 0) scale(1) rotate(0deg)', opacity: 1 }, { opacity: 0.8, offset: 0.7 }, { transform: `translate(${targetX}px, ${targetY}px) scale(${finalScale}) rotate(${(Math.random()-0.5)*360}deg)`, opacity: 0 } ], { duration: duration, easing: 'cubic-bezier(0.1, 0.9, 0.2, 1)' }).onfinish = () => particle.remove(); } },
-        updateStatsDisplay: function() { if (this.DOM.statsDisplay) { this.DOM.statsDisplay.innerHTML = `Celkem Vytěženo: ${this.GameState.totalBlokyMined}<br>Celkem Kliknutí: ${this.GameState.totalClicks}<br>Síla Nástroje: ${this.GameState.currentPickaxePower}<br>Autobloků/s: ${this.GameState.bps.toFixed(1)}`; } },
+        updateStatsDisplay: function() { if (this.DOM.statsDisplay) { this.DOM.statsDisplay.innerHTML = `Celkem Vytěženo: ${Math.floor(this.GameState.totalBlokyMined)}<br>Celkem Kliknutí: ${this.GameState.totalClicks}<br>Síla Nástroje: ${this.GameState.currentPickaxePower}<br>Autobloků/s: ${this.GameState.bps.toFixed(1)}`; } },
         romanize: function(num) { if (isNaN(num) || num === 0) return ""; var digits = String(+num).split(""),key = ["","C","CC","CCC","CD","D","DC","DCC","DCCC","CM","","X","XX","XXX","XL","L","LX","LXX","LXXX","XC","","I","II","III","IV","V","VI","VII","VIII","IX"],roman = "", i = 3; while (i--) roman = (key[+digits.pop() + (i * 10)] || "") + roman; return Array(+digits.join("") + 1).join("M") + roman; },
         formatTime: function(ms) {
             let seconds = Math.floor(ms / 1000);
@@ -1842,11 +1924,51 @@
             minutes = minutes % 60;
             return `${hours > 0 ? hours + "h " : ""}${minutes > 0 ? minutes + "m " : ""}${seconds}s`;
         },
+        updateLeaderboard: function(isWin = false) {
+            const user = sessionStorage.getItem('loggedInUser');
+            if (!user) return;
+
+            const leaderboardKey = 'krumptezic_leaderboard';
+            let scores = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+            const userIndex = scores.findIndex(s => s.user === user);
+            const sessionTime = Date.now() - this.GameState.sessionStartTime;
+            const totalTimeSpent = (this.GameState.timeSpent || 0) + sessionTime;
+
+            const currentScore = {
+                user: user,
+                blocks: Math.floor(this.GameState.maxBlokyEverAchieved),
+                timeSpent: (totalTimeSpent / 1000).toFixed(1),
+                winTime: null
+            };
+
+            if (userIndex > -1) {
+                const existingScore = scores[userIndex];
+                currentScore.blocks = Math.max(existingScore.blocks, currentScore.blocks);
+                currentScore.winTime = existingScore.winTime || null;
+                
+                if (isWin && (!currentScore.winTime || (totalTimeSpent / 1000) < parseFloat(currentScore.winTime))) {
+                    currentScore.winTime = (totalTimeSpent / 1000).toFixed(1);
+                }
+                scores[userIndex] = currentScore;
+
+            } else {
+                 if (isWin) {
+                    currentScore.winTime = (totalTimeSpent / 1000).toFixed(1);
+                }
+                scores.push(currentScore);
+            }
+
+            scores.sort((a, b) => b.blocks - a.blocks);
+            localStorage.setItem(leaderboardKey, JSON.stringify(scores.slice(0, 50)));
+        },
+
         checkWinCondition: function() {
             if (!this.GameState.gameWon && this.GameState.blokyCount >= this.Config.WIN_CONDITION_BLOKY_COUNT) {
                 this.GameState.gameWon = true;
-                const timeTaken = Date.now() - this.GameState.gameStartTime;
-                if (this.DOM.winTotalBloky) this.DOM.winTotalBloky.textContent = `Celkem vytěženo bloků: ${this.GameState.totalBlokyMined}`;
+                this.updateLeaderboard(true);
+                const timeTaken = (this.GameState.timeSpent || 0) + (Date.now() - this.GameState.sessionStartTime);
+
+                if (this.DOM.winTotalBloky) this.DOM.winTotalBloky.textContent = `Nejvyšší počet bloků: ${Math.floor(this.GameState.maxBlokyEverAchieved)}`;
                 if (this.DOM.winTotalClicks) this.DOM.winTotalClicks.textContent = `Celkem kliknutí: ${this.GameState.totalClicks}`;
                 if (this.DOM.winTimeTaken) this.DOM.winTimeTaken.textContent = `Čas dokončení: ${this.formatTime(timeTaken)}`;
                 if (this.DOM.winScreenModal) this.DOM.winScreenModal.style.display = 'flex';
@@ -1884,8 +2006,9 @@
                     }
                 });
 
-                if (totalBlocsFromPetsThisTick > 0) {
+                                if (totalBlocsFromPetsThisTick > 0) {
                     this.GameState.blokyCount += totalBlocsFromPetsThisTick;
+                    this.GameState.totalBlokyMined += totalBlocsFromPetsThisTick; // <-- Add this line, my love
                     this.updateBlokyLabel();
                     this.checkWinCondition();
                 }

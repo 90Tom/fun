@@ -955,7 +955,7 @@
     function resetCombo(){if(comboCounter>1) { triggerScreenShake(2.6, 4.5); } comboCounter=0;comboTimer=0;updateComboDisplay();}
     function updateComboDisplay(){const visClass='visible';if(comboCounter>1){comboDisplay.textContent=`Kombo x${comboCounter}!`; comboDisplay.style.color = `hsl(0, ${clamp(85 + comboCounter*4, 85, 100)}%, ${clamp(50 - comboCounter*2.5, 38, 50)}%)`; comboDisplay.style.fontSize = `${35 + comboCounter*1.5}px`;comboDisplay.style.display='block';if(!comboDisplay.classList.contains(visClass)){comboDisplay.classList.add(visClass);comboDisplay.style.animation='none';void comboDisplay.offsetWidth; comboDisplay.style.animation=`comboPulse 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)`;}}else{comboDisplay.classList.remove(visClass);comboDisplay.style.display='none';}}
     function updateComboTimer(){if(comboTimer>0){comboTimer--;if(comboTimer<=0){resetCombo();}}}
-    function checkDogCatCollision(){ if (cat.invincibleTimer > 0 || cat.isDashing || gameOver || gameWon || isGodModeActive) return; for (const dog of dogs) { if (dog.state !== DogState.STUNNED && checkRectCollision(cat, dog)){ cat.health -= CAT_DAMAGE_TAKEN; cat.health = Math.max(0, cat.health); updateHealthBar(); cat.invincibleTimer = CAT_INVINCIBILITY_DURATION_FRAMES; resetCombo(); triggerScreenShake(8.5, 23); triggerDamageFlash(); createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 12, { color:`hsl(0, 100%, ${getRandomInt(50, 70)}%)`, size:getRandomInt(6.0, 12), life:85, speed:getRandomInt(2.8, 6.0), drag:.935, gravity:.19, shape:'spark', light:true, angleSpread: Math.PI * 2.1 }); createParticles(dog.x + dog.width/2, dog.y + dog.height/2, 2, {color:'white', size:5.8, speed:2.3, life:32, angle: Math.atan2(cat.y-dog.y, cat.x-dog.x), angleSpread: 0.8 }); const knockbackDirX=cat.x+cat.width/2-(dog.x+dog.width/2); const knockbackDirY=cat.y+cat.height/2-(dog.y+dog.height/2); const dist=Math.sqrt(knockbackDirX**2+knockbackDirY**2)||1; const knockbackForce=28; let pushX = (knockbackDirX / dist) * knockbackForce; let pushY = (knockbackDirY / dist) * knockbackForce; let knockedX = cat.x + pushX; let knockedY = cat.y + pushY; let attempts = 0; while (checkWallCollision(knockedX, knockedY, cat.width, cat.height) && attempts < 5) { attempts++; pushX *= 0.6; pushY *= 0.6; knockedX = cat.x + pushX; knockedY = cat.y + pushY; } if (!checkWallCollision(knockedX, knockedY, cat.width, cat.height)) { cat.x = knockedX; cat.y = knockedY; cat.x=clamp(cat.x, WALL_BUFFER, canvas.width-cat.width-WALL_BUFFER); cat.y=clamp(cat.y, WALL_BUFFER, canvas.height-cat.height-WALL_BUFFER); } else { createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 2, {color:'grey', size: 3.6, speed: 0.60}); } if (cat.health <= 0 && !gameOver) { gameOver = true; gamePaused = true; gameOverDisplay.style.display = 'block'; createParticles(cat.x + cat.width / 2, cat.y + cat.height / 2, 30, { color: `hsl(0, 0%, ${getRandomInt(25, 50)}%)`, size: 16, speed: 3.0, life: 180, gravity: 0.11, drag: 0.945, angleSpread: Math.PI*2 }); triggerScreenShake(19, 30); } return; } } }
+    function checkDogCatCollision(){ if (cat.invincibleTimer > 0 || cat.isDashing || gameOver || gameWon || isGodModeActive) return; for (const dog of dogs) { if (dog.state !== DogState.STUNNED && checkRectCollision(cat, dog)){ cat.health -= CAT_DAMAGE_TAKEN; cat.health = Math.max(0, cat.health); updateHealthBar(); cat.invincibleTimer = CAT_INVINCIBILITY_DURATION_FRAMES; resetCombo(); triggerScreenShake(8.5, 23); triggerDamageFlash(); createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 12, { color:`hsl(0, 100%, ${getRandomInt(50, 70)}%)`, size:getRandomInt(6.0, 12), life:85, speed:getRandomInt(2.8, 6.0), drag:.935, gravity:.19, shape:'spark', light:true, angleSpread: Math.PI * 2.1 }); createParticles(dog.x + dog.width/2, dog.y + dog.height/2, 2, {color:'white', size:5.8, speed:2.3, life:32, angle: Math.atan2(cat.y-dog.y, cat.x-dog.x), angleSpread: 0.8 }); const knockbackDirX=cat.x+cat.width/2-(dog.x+dog.width/2); const knockbackDirY=cat.y+cat.height/2-(dog.y+dog.height/2); const dist=Math.sqrt(knockbackDirX**2+knockbackDirY**2)||1; const knockbackForce=28; let pushX = (knockbackDirX / dist) * knockbackForce; let pushY = (knockbackDirY / dist) * knockbackForce; let knockedX = cat.x + pushX; let knockedY = cat.y + pushY; let attempts = 0; while (checkWallCollision(knockedX, knockedY, cat.width, cat.height) && attempts < 5) { attempts++; pushX *= 0.6; pushY *= 0.6; knockedX = cat.x + pushX; knockedY = cat.y + pushY; } if (!checkWallCollision(knockedX, knockedY, cat.width, cat.height)) { cat.x = knockedX; cat.y = knockedY; cat.x=clamp(cat.x, WALL_BUFFER, canvas.width-cat.width-WALL_BUFFER); cat.y=clamp(cat.y, WALL_BUFFER, canvas.height-cat.height-WALL_BUFFER); } else { createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 2, {color:'grey', size: 3.6, speed: 0.60}); } if (cat.health <= 0) { triggerGameOver(); } return; } } }
     function checkPickupCollision() { if (cat.isDashing || isLevelTransitioning || cat.heldBird) return; for (let i = pickups.length - 1; i >= 0; i--) { const p = pickups[i]; const pickupHitbox = { x: p.x - 5, y: p.y - 5, width: p.width + 10, height: p.height + 10 }; if (checkRectCollision(cat, pickupHitbox)) { applyPickupEffect(p.type); createParticles(p.x+p.width/2, p.y+p.height/2, 10, { color:getPickupColor(p.type, true), size:10.0, life:95, speed:3.6, gravity:0.024, drag:0.945, light: true, shape: p.type === PickupType.HEALTH ? 'star' : 'spark', angleSpread: Math.PI*1.9 }); pickups.splice(i, 1); triggerScreenShake(4.0, 10); } } }
     function applyPickupEffect(type){ switch(type){ case PickupType.HEALTH: let healthAmount=48; let restored = Math.min(healthAmount, cat.maxHealth - cat.health); cat.health += restored; if (isGodModeActive) cat.health = cat.maxHealth; updateHealthBar(); createParticles(cat.x + cat.width / 2, cat.y - cat.height / 3, 1, { shape:'+', color:'#2ecc71', size:19, life:90, speed:0, gravity:-0.065, fadeRate:0.010 }); createParticles(cat.x + cat.width / 2, cat.y + cat.height / 2, 4, { color: '#2ecc71', size: 6.0, life: 50, speed: 1.4, gravity: -0.028, shape: 'star', light: true, angleSpread: Math.PI*1.3 }); triggerScreenShake(2.0, 5.5); break; case PickupType.SPEED_BOOST: cat.speedBoostTimer = PICKUP_DURATIONS[type]; createParticles(cat.x + cat.width / 2, cat.y + cat.height / 2, 7, { color: getPickupColor(type, true), size: 7.0, life: 65, speed: 2.1, shape: 'line', drag: 0.94, light: true, angleSpread: Math.PI*1.7 }); break; case PickupType.INVINCIBILITY: cat.invincibleTimer = Math.max(cat.invincibleTimer, PICKUP_DURATIONS[type]); createParticles(cat.x + cat.width / 2, cat.y + cat.height / 2, 9, { color: getPickupColor(type, true), size: 8.0, life: 75, speed: 1.6, shape: 'circle', drag: 0.95, light: true, blendMode: 'screen', angleSpread: Math.PI*2 }); break; case PickupType.DOG_SLOW: cat.dogSlowTimer = PICKUP_DURATIONS[type]; dogs.forEach(d => createParticles(d.x+d.width/2, d.y+d.height/2, 5, {color:'#aa77cc', size:7.0, speed:0.75, life: PICKUP_DURATIONS[type]*0.78, drag:0.955, gravity:-0.014, shape:'puff', angleSpread: Math.PI*2.0 })); break; case PickupType.DOG_STUN: let stunCount = 0; dogs.forEach(d => { if (d.state !== DogState.STUNNED) { d.stunTimer = DOG_STUN_DURATION; d.state = DogState.STUNNED; d.enrageTimer = 0; d.dazeTimer = 0; d.detourTimer = 0; d.losLostTimer = 0; d.currentSpeed = 0; stunCount++; createParticles(d.x+d.width/2, d.y+d.height/2, 9, { color:'hsl(55, 100%, 75%)', size:11, life:DOG_STUN_DURATION*0.70, speed:1.4, drag:.95, shape:'spark', rotationSpeed:(Math.random()-0.5)*0.45, light: true, angleSpread: Math.PI*2.1 }); } }); if (stunCount > 0) triggerScreenShake(4.8 + stunCount*0.38, 11 + stunCount*1.3); break; } if(type !== PickupType.HEALTH) updateUpgradeDisplay(); }
     function updateEffects(deltaTimeFrames = 1){ if (isGodModeActive) { cat.invincibleTimer = 9999 * 60; cat.speedBoostTimer = 0; cat.dogSlowTimer = 0; cat.goldenBoostTimer = 0; cat.health = cat.maxHealth; updateHealthBar(); updateDashCooldownBar(); } let hadBuffLastFrame = cat.invincibleTimer > 0 || cat.speedBoostTimer > 0 || cat.dogSlowTimer > 0 || cat.goldenBoostTimer > 0; if(cat.invincibleTimer > 0 && !isGodModeActive) cat.invincibleTimer = Math.max(0, cat.invincibleTimer - deltaTimeFrames); if(cat.speedBoostTimer > 0) cat.speedBoostTimer = Math.max(0, cat.speedBoostTimer - deltaTimeFrames); if(cat.dogSlowTimer > 0) cat.dogSlowTimer = Math.max(0, cat.dogSlowTimer - deltaTimeFrames); if(cat.goldenBoostTimer > 0) cat.goldenBoostTimer = Math.max(0, cat.goldenBoostTimer - deltaTimeFrames); updateDash(); let hasBuffThisFrame = cat.invincibleTimer > 0 || cat.speedBoostTimer > 0 || cat.dogSlowTimer > 0 || cat.goldenBoostTimer > 0; let buffEnded = hadBuffLastFrame && !hasBuffThisFrame && !isGodModeActive; let needsHudUpdate = false; if (hasBuffThisFrame && frameCount % 15 === 0 && !isGodModeActive) { if (cat.speedBoostTimer > 0) { createParticles(cat.x + Math.random()*cat.width, cat.y + cat.height, 1, { color: getPickupColor(PickupType.SPEED_BOOST, true), size: 4.6, life: 19, speed: 0.26, gravity: -0.048, shape: 'line'}); } if (cat.invincibleTimer > CAT_INVINCIBILITY_DURATION_FRAMES && PICKUP_DURATIONS[PickupType.INVINCIBILITY] && cat.invincibleTimer <= PICKUP_DURATIONS[PickupType.INVINCIBILITY] + 5) { createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 1, { color: getPickupColor(PickupType.INVINCIBILITY, true), size: 5.6, life: 26, speed: 0, shape: 'circle', shrinkRate: 0.94, fadeRate: 0.042, light: true}); } if (cat.goldenBoostTimer > 0) { createParticles(cat.x + Math.random()*cat.width, cat.y + Math.random()*cat.height, 1, { color: 'gold', size: 4.6, life: 24, speed: 0.08, shape: 'star', light: true}); } } if (cat.dogSlowTimer > 0 && frameCount % 18 === 0) { dogs.forEach(d => { if (d.state !== DogState.STUNNED) { createParticles(d.x + d.width/2, d.y + d.height, 1, { color: '#bca0d1', size: 4.0, life: 26, speed: 0.15, gravity: 0.048, shape: 'puff'}); } }); } if ((cat.invincibleTimer > 0 && cat.invincibleTimer <= LOW_TIME_WARNING) || (cat.speedBoostTimer > 0 && cat.speedBoostTimer <= LOW_TIME_WARNING) || (cat.dogSlowTimer > 0 && cat.dogSlowTimer <= LOW_TIME_WARNING) || (cat.goldenBoostTimer > 0 && cat.goldenBoostTimer <= LOW_TIME_WARNING)) { needsHudUpdate = true; if (frameCount % 15 === 0 && !isGodModeActive) { const activeEffect = getActiveEffect(); if (activeEffect) { createParticles(upgradeInfoDisplay.offsetLeft + upgradeInfoDisplay.offsetWidth/2 + (Math.random()-0.5)*52, upgradeInfoDisplay.offsetTop + 10, 1, { color: activeEffect.color || getPickupColor(activeEffect.type, true), size: 5.6, life: 19, speed: 0.48, gravity: -0.075, shape:'spark', light:true }); } } } else if (cat.invincibleTimer > 0 || cat.speedBoostTimer > 0 || cat.dogSlowTimer > 0 || cat.goldenBoostTimer > 0) { needsHudUpdate = true; } if (buffEnded) { needsHudUpdate = true; createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 8, { color: 'rgba(200, 200, 200, 0.38)', size: 8.8, life: 55, speed: 2.0, drag: 0.945, shape: 'puff', angleSpread: Math.PI*1.8 }); } if (needsHudUpdate || isGodModeActive) updateUpgradeDisplay(); }
@@ -1018,6 +1018,7 @@
             triggerScreenShake(40, 110);
             createParticles(boss.x + boss.width/2, boss.y + boss.height/2, 40, { color: `hsl(45, 100%, ${getRandomInt(68, 93)}%)`, size: 36, speed: 12.8, life: 230, gravity: 0.115, drag: 0.97, shape: 'star', light: true, rotationSpeed: 0.115, angleSpread: Math.PI*2 });
             console.log("Boss defeated! State set, animation timer started.");
+            saveScoreToLeaderboard(WIN_LEVEL, elapsedTime);
         } else if (boss.health > 0) {
             const phase2Threshold = boss.maxHealth * 0.66;
             const phase3Threshold = boss.maxHealth * 0.33;
@@ -1030,7 +1031,7 @@
             }
         }
     }
-    function updateBossAttackWave(){
+        function updateBossAttackWave(){
         if(!bossAttackWave.active || !boss) return;
         bossAttackWave.timer--;
         const bossCenterX = boss.x + boss.width / 2;
@@ -1050,7 +1051,7 @@
                   createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 10, {color: '#ffaa00', size: 10});
                   const kbDirX_s=cat.x+cat.width/2-bossCenterX; const kbDirY_s=cat.y+cat.height/2-bossCenterY; const kbDist_s=Math.sqrt(kbDirX_s**2+kbDirY_s**2)||1; const kbForce_s=35;
                   cat.x += (kbDirX_s / kbDist_s) * kbForce_s; cat.y += (kbDirY_s / kbDist_s) * kbForce_s; relocateIfStuck(cat);
-                  if (cat.health <= 0 && !gameOver) { gameOver = true; gamePaused = true; gameOverDisplay.style.display = 'block'; }
+                  if (cat.health <= 0) { triggerGameOver(); }
              }
         } else if (bossAttackWave.type === 'bark') {
              bossAttackWave.radius += bossAttackWave.speed;
@@ -1079,207 +1080,44 @@
             bossAttackWave.active = false;
         }
     }
-    function updateBossAI() {
-        if (!boss || boss.state === BossState.DEFEATED) return;
-        boss.stateTimer--;
-        if (boss.hitReactionTimer > 0) boss.hitReactionTimer--;
+    
+    function saveScoreToLeaderboard(finalLevel, finalTime) {
+        const user = sessionStorage.getItem('loggedInUser');
+        if (user) {
+            const leaderboardKey = 'ptak2_leaderboard';
+            let scores = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+            const userIndex = scores.findIndex(s => s.user === user);
 
-        if (boss.state === BossState.HIT_REACTION && boss.stateTimer <= 0) {
-            boss.state = BossState.IDLE; boss.stateTimer = getRandomInt(25, 60);
-        } else if (boss.state === BossState.PHASE_TRANSITION && boss.stateTimer <= 0) {
-            boss.state = BossState.IDLE; boss.stateTimer = getRandomInt(15, 40);
-            updateBossHealthBar();
-            bossNameElement.textContent = `OBŘÍ PES (Fáze ${boss.phase})`;
-        }
+            const currentScore = {
+                user: user,
+                level: finalLevel,
+                time: finalTime
+            };
 
-        if (boss.stateTimer <= 0 && boss.state === BossState.IDLE) {
-             const attacks = [BossState.CHARGE_WINDUP, BossState.STOMP_WINDUP];
-             if (boss.phase >= 2) attacks.push(BossState.SPIT_WINDUP);
-             if (boss.phase >= 3) attacks.push(BossState.BARK_WINDUP);
-             boss.state = getRandomElement(attacks);
-
-             switch(boss.state) {
-                 case BossState.CHARGE_WINDUP: boss.stateTimer = 60; break;
-                 case BossState.STOMP_WINDUP: boss.stateTimer = 75; break;
-                 case BossState.SPIT_WINDUP: boss.stateTimer = 55; boss.spitCount = (boss.phase >= 3) ? 3 : 2; break;
-                 case BossState.BARK_WINDUP: boss.stateTimer = 70; break;
-                 default: boss.state = BossState.IDLE; boss.stateTimer = 30; break;
-             }
-        }
-
-        const bossCenterX = boss.x + boss.width / 2;
-        const bossCenterY = boss.y + boss.height / 2;
-
-        switch(boss.state) {
-            case BossState.CHARGE_WINDUP:
-                if (frameCount % 4 === 0) createParticles(bossCenterX, bossCenterY, 1, { color: 'rgba(255, 70, 70, 0.85)', size: 15 + Math.sin(frameCount*0.28)*5.5, life: 13, speed: 0, shape: 'spark', light: true, shrinkRate: 0.78, fadeRate: 0.11 });
-                if (boss.stateTimer <= 0) {
-                    boss.state = BossState.CHARGING;
-                    boss.chargeTargetX = cat.x;
-                    boss.chargeTargetY = cat.y;
-                    boss.stateTimer = 80;
-                    triggerScreenShake(15, 16);
-                    createParticles(bossCenterX, bossCenterY, 15, { color: '#ff6060', size: 10.0, life: 55, speed: 9.0, drag: 0.93, shape: 'spark', angle: Math.atan2(boss.chargeTargetY - boss.y, boss.chargeTargetX - boss.x), angleSpread: 0.65 });
+            if (userIndex > -1) {
+                const existingScore = scores[userIndex];
+                if (currentScore.level > existingScore.level || (currentScore.level === existingScore.level && currentScore.time < existingScore.time)) {
+                    scores[userIndex] = currentScore;
                 }
-                break;
-            case BossState.CHARGING:
-                const dx_c = boss.chargeTargetX - boss.x;
-                const dy_c = boss.chargeTargetY - boss.y;
-                const dist_c = Math.sqrt(dx_c*dx_c + dy_c*dy_c);
-                let moveX_c = 0, moveY_c = 0;
-                if (dist_c > 10) {
-                    moveX_c = (dx_c / dist_c) * boss.chargeSpeed;
-                    moveY_c = (dy_c / dist_c) * boss.chargeSpeed;
-                    let nextX_c = boss.x + moveX_c;
-                    let nextY_c = boss.y + moveY_c;
-                     const wallHit_c = checkWallCollision(nextX_c, nextY_c, boss.width, boss.height);
-                    if (wallHit_c) {
-                         boss.state = BossState.VULNERABLE; boss.stateTimer = 90;
-                         triggerScreenShake(28, 50);
-                         createParticles(boss.x + (moveX_c > 0 ? boss.width : 0), boss.y + (moveY_c > 0 ? boss.height : 0), 30, { color: wallHit_c.baseColor || '#a5a5a5', size: 14, life: 100, speed: 5.0, drag: 0.955, shape: 'square', angleSpread: Math.PI * 1.7 });
-                    } else {
-                        boss.x = nextX_c; boss.y = nextY_c;
-                        if(frameCount % 5 === 0) createParticles(bossCenterX, bossCenterY, 1, { color: '#ff8080', size: 10.0, life: 23, speed: 1.0, drag: 0.92, shape: 'trail', angle: Math.atan2(-dy_c, -dx_c), angleSpread: 1.1 });
-                    }
-                } else {
-                    boss.state = BossState.IDLE; boss.stateTimer = 25;
-                }
-                 if (boss.stateTimer <= 0) { boss.state = BossState.IDLE; boss.stateTimer = 35; }
-                break;
-            case BossState.STOMP_WINDUP:
-                 if (frameCount % 4 === 0) createParticles(bossCenterX, boss.y + boss.height + 7, 1, { color: 'rgba(255, 165, 0, 0.9)', size: 19 + Math.sin(frameCount*0.28)*8.0, life: 17, speed: 0.1, shape: 'circle', light: true, shrinkRate: 0.80, gravity: 0.14, fadeRate: 0.075 });
-                 if (frameCount % 6 === 0) createParticles(bossCenterX + (Math.random()-0.5)*boss.width*0.8, boss.y + boss.height + (Math.random()-0.5)*10 - 5, 1, {color: 'rgba(100, 60, 20, 0.6)', size: 5+Math.random()*6, life: 22, speed: 0, gravity: -0.06, drag: 0.96});
-                 boss.x += (Math.random() - 0.5) * 2.2; boss.y += (Math.random() - 0.5) * 2.2;
-                if (boss.stateTimer <= 0) {
-                    boss.state = BossState.STOMPING;
-                    boss.stateTimer = 30;
-                    triggerScreenShake(37, 44);
-                    bossAttackWave = { active: true, type: 'stomp', radius: 15, startRadius: 15, speed: BOSS_STOMP_WAVE_SPEED, timer: 45, angle:0, spread:0 };
-                    createParticles(bossCenterX, bossCenterY, 15, { color: `hsl(30, 100%, 55%)`, size: 15, life: 75, speed: 3.5, drag: 0.95, shape: 'spark', angleSpread: Math.PI*2 });
-                }
-                break;
-            case BossState.STOMPING:
-                 if (boss.stateTimer <= 0) { boss.state = BossState.IDLE; boss.stateTimer = 45; }
-                break;
-            case BossState.SPIT_WINDUP:
-                 if (frameCount % 5 === 0) createParticles(bossCenterX, boss.y + 20, 1, { color: 'rgba(160, 255, 160, 0.9)', size: 19 + Math.sin(frameCount*0.3)*6.0, life: 16, speed: 0, shape: 'puff', light: true, shrinkRate: 0.84, fadeRate: 0.10 });
-                if (boss.stateTimer <= 0) {
-                     boss.state = BossState.SPITTING;
-                     boss.stateTimer = 12;
-                     triggerScreenShake(9.0, 12);
-                     const angleToCat_s = Math.atan2(cat.y + cat.height/2 - bossCenterY, cat.x + cat.width/2 - bossCenterX);
-                     projectiles.push({
-                         x: bossCenterX, y: bossCenterY, width: 27, height: 27,
-                         vx: Math.cos(angleToCat_s) * boss.spitSpeed, vy: Math.sin(angleToCat_s) * boss.spitSpeed,
-                         color: 'lime', life: 3.7 * 60, damage: BOSS_PROJECTILE_DAMAGE, type: 'boss_spit'
-                     });
-                     createParticles(bossCenterX, bossCenterY, 7, { color: 'lime', size: 6.5, life: 42, speed: 6.0, drag: 0.955, shape: 'puff', angle: angleToCat_s, angleSpread: 0.65 });
-                }
-                break;
-            case BossState.SPITTING:
-                 if (boss.stateTimer <= 0) {
-                     boss.spitCount--;
-                     if (boss.spitCount > 0) { boss.state = BossState.SPIT_WINDUP; boss.stateTimer = 18; }
-                     else { boss.state = BossState.IDLE; boss.stateTimer = 50; }
-                 }
-                break;
-             case BossState.BARK_WINDUP:
-                if (frameCount % 6 === 0) createParticles(bossCenterX + (boss.facingRight ? boss.width/2.0 : -boss.width/2.0), bossCenterY, 1, { color: 'rgba(200, 200, 255, 0.8)', size: 12 + Math.sin(frameCount*0.35)*4.0, life: 17, speed: 0.50, shape: 'puff', light: true, shrinkRate: 0.82, angle: boss.facingRight ? 0 : Math.PI, angleSpread: 1.1, fadeRate: 0.12 });
-                if (boss.stateTimer <= 0) {
-                    boss.state = BossState.BARKING;
-                    boss.stateTimer = 36;
-                    triggerScreenShake(23, 28);
-                    const barkAngle_b = boss.facingRight ? 0 : Math.PI;
-                    const barkSpread_b = 1.1;
-                    for(let i=0; i < 6; i++) {
-                        const pAngle = barkAngle_b + (Math.random() - 0.5) * barkSpread_b;
-                        projectiles.push({
-                            x: bossCenterX + Math.cos(barkAngle_b) * boss.width/2.1, y: bossCenterY + Math.sin(barkAngle_b) * boss.width/2.1,
-                            width: 10 + Math.random()*5, height: 2.8 + Math.random()*1.8,
-                            vx: Math.cos(pAngle) * BOSS_BARK_PARTICLE_SPEED, vy: Math.sin(pAngle) * BOSS_BARK_PARTICLE_SPEED,
-                            color: `hsl(0, 100%, ${80 + Math.random()*15}%)`,
-                            life: 20 + Math.random()*10, damage: 0, type: 'boss_bark_visual',
-                            lineWidth: 2 + Math.random()*2, alpha: 0.6 + Math.random()*0.35, shape: 'line', rotation: pAngle
-                        });
-                    }
-                    bossAttackWave = { active: true, type: 'bark', radius: 25, startRadius: 25, speed: BOSS_BARK_WAVE_SPEED, angle: barkAngle_b, spread: barkSpread_b, timer: 40 };
-                }
-                break;
-            case BossState.BARKING:
-                 if (boss.stateTimer <= 0) { boss.state = BossState.IDLE; boss.stateTimer = 46; }
-                break;
-             case BossState.VULNERABLE:
-                 if (frameCount % 15 === 0) createParticles(boss.x + Math.random()*boss.width, boss.y + Math.random()*boss.height, 1, { color: '#b0b0b0', size: 10.0, life: 30, speed: 0, shape: '?' });
-                 if (boss.stateTimer <= 0) { boss.state = BossState.IDLE; boss.stateTimer = 55; }
-                 break;
-             case BossState.DEFEATED:
-                 if (boss.stateTimer > 0 && frameCount % 7 === 0) {
-                     createParticles(bossCenterX + (Math.random()-0.5)*boss.width, bossCenterY + (Math.random()-0.5)*boss.height, 1, {color: `hsl(${getRandomInt(30, 60)}, 100%, ${60 + Math.random()*20}%)`, size: 8 + Math.random()*15, speed: Math.random()*2+1, gravity: 0.05, shape:'spark', life: 40+Math.random()*30});
-                 }
-                 break;
-        }
-
-         if (boss.state !== BossState.CHARGING && boss.state !== BossState.BARKING && boss.state !== BossState.STOMPING && boss.state !== BossState.DEFEATED) {
-             if (cat.x + cat.width/2 > bossCenterX) boss.facingRight = true;
-             else boss.facingRight = false;
-         }
-
-          if (!isGodModeActive && checkRectCollision(cat, boss) &&
-             boss.state !== BossState.DEFEATED &&
-             boss.state !== BossState.HIT_REACTION &&
-             boss.state !== BossState.VULNERABLE &&
-             boss.state !== BossState.PHASE_TRANSITION &&
-             cat.invincibleTimer <= 0) {
-            cat.health -= BOSS_CONTACT_DAMAGE; cat.health = Math.max(0, cat.health); updateHealthBar(); cat.invincibleTimer = CAT_INVINCIBILITY_DURATION_FRAMES * 0.90; triggerDamageFlash();
-            const knockbackDirX=cat.x+cat.width/2-(boss.x+boss.width/2); const knockbackDirY=cat.y+cat.height/2-(boss.y+boss.height/2); const dist=Math.sqrt(knockbackDirX**2+knockbackDirY**2)||1; const knockbackForce=46;
-            let pushX = (knockbackDirX / dist) * knockbackForce; let pushY = (knockbackDirY / dist) * knockbackForce;
-            cat.x += pushX; cat.y += pushY;
-            relocateIfStuck(cat);
-            triggerScreenShake(14.5, 24);
-             createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 12, {color:'red', size: 8.0, life: 75, speed: 4.6});
-             if (cat.health <= 0 && !gameOver) { gameOver = true; gamePaused = true; gameOverDisplay.style.display = 'block'; triggerScreenShake(25, 40); }
-         }
-    }
-    function updateProjectiles() {
-        for (let i = projectiles.length - 1; i >= 0; i--) {
-            const p = projectiles[i];
-            p.x += p.vx; p.y += p.vy; p.life--;
-
-            if (p.type === 'bird_projectile' && boss && boss.state !== BossState.DEFEATED && checkRectCollision(p, boss)) {
-                damageBoss(p.damage);
-                projectiles.splice(i, 1);
-                createParticles(p.x, p.y, 8, { color: (p.birdType === BirdType.GOLDEN ? 'gold' : '#ffeb3b'), size: (p.birdType === BirdType.GOLDEN ? 12 : 9.5), life: 48, speed: 3.0, shape: 'star', light: true, angleSpread: Math.PI * 1.4 });
-                continue;
+            } else {
+                scores.push(currentScore);
             }
-             if (!isGodModeActive && p.type === 'boss_spit' && checkRectCollision(p, cat) && cat.invincibleTimer <= 0) {
-                 cat.health -= p.damage; cat.health = Math.max(0, cat.health); updateHealthBar(); cat.invincibleTimer = CAT_INVINCIBILITY_DURATION_FRAMES; triggerDamageFlash();
-                 projectiles.splice(i, 1);
-                 createParticles(p.x, p.y, 12, { color: 'lime', size: 10.0, life: 60, speed: 3.5, shape: 'puff', drag: 0.93, angleSpread: Math.PI * 1.6 });
-                 if (cat.health <= 0 && !gameOver) { gameOver = true; gamePaused = true; gameOverDisplay.style.display = 'block'; triggerScreenShake(25, 40); }
-                 continue;
-            }
-             if (p.type === 'boss_bark_visual') {
-                 p.alpha *= 0.94;
-                 p.size *= 0.98;
-                 if(p.alpha < 0.1 || p.size < 1) p.life = 0;
-             }
 
-             const wallHit = checkWallCollision(p.x, p.y, p.width, p.height);
-             if (p.life <= 0 || wallHit) {
-                 if (p.type !== 'bird_projectile') {
-                    createParticles(p.x, p.y, 2, { color: p.color || '#ccc', size: p.type === 'boss_bark_visual' ? 4 : 7.0, life: 38, speed: 1.5, shape: wallHit ? 'square' : 'puff', angleSpread: Math.PI * 1.8 });
-                    if(wallHit && p.type !== 'boss_bark_visual') triggerScreenShake(1.5, 3.0);
-                 }
-                 projectiles.splice(i, 1);
-                 continue;
-            }
-             if (p.type === 'bird_projectile' && frameCount % 5 === 0) {
-                 createParticles(p.x + p.width/2, p.y + p.height/2, 1, { color: '#f5f5f5', size: 4.2, life: 15, speed: 0.07, shape: 'trail', angle: Math.atan2(-p.vy, -p.vx), angleSpread: 0.35 });
-             } else if (p.type === 'boss_spit' && frameCount % 5 === 0) {
-                 createParticles(p.x + p.width/2, p.y + p.height/2, 1, { color: 'rgba(150, 255, 150, 0.50)', size: 7.0, life: 19, speed: 0.15, shape: 'puff', gravity: 0.06, angleSpread: Math.PI * 0.9 });
-             }
+            scores.sort((a, b) => b.level - a.level || a.time - b.time);
+            localStorage.setItem(leaderboardKey, JSON.stringify(scores.slice(0, 50)));
         }
     }
+    
+    function triggerGameOver() {
+        if (gameOver) return;
+        gameOver = true;
+        gamePaused = true;
+        saveScoreToLeaderboard(level, elapsedTime);
+        gameOverDisplay.style.display = 'block';
+        createParticles(cat.x + cat.width / 2, cat.y + cat.height / 2, 30, { color: `hsl(0, 0%, ${getRandomInt(25, 50)}%)`, size: 16, speed: 3.0, life: 180, gravity: 0.11, drag: 0.945, angleSpread: Math.PI*2 });
+        triggerScreenShake(19, 30);
+    }
+
 
     function update(timestamp) {
         if (gameOver || gameWon || fadingToWinScreen) {
@@ -1423,7 +1261,7 @@
          }
 
 
-        try { draw(); } catch(e) { console.error("Draw error during gameplay:", e); gameOver=true; }
+        try { draw(); } catch(e) { console.error("Draw error during gameplay:", e); triggerGameOver(); }
     }
 
      function drawObstacles() { obstacles.forEach(o => { ctx.save(); ctx.translate(o.x, o.y); const shadowY = o.height - 1.5; const shadowWidth = o.width * 0.72; const shadowHeight = o.height * 0.17; ctx.fillStyle = 'rgba(0, 0, 0, 0.16)'; ctx.beginPath(); ctx.ellipse(o.width / 2, shadowY, shadowWidth / 2, shadowHeight / 2, 0, 0, Math.PI * 2); ctx.fill(); o.shapes.forEach(shape => { ctx.save(); ctx.fillStyle = shape.color; ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 0.35; if (shape.type === 'rect') { ctx.translate(shape.x + shape.width/2, shape.y + shape.height/2); ctx.rotate(shape.rotation * Math.PI / 180); ctx.fillRect(-shape.width/2, -shape.height/2, shape.width, shape.height); if(shape.width > 1 && shape.height > 1) ctx.strokeRect(-shape.width/2, -shape.height/2, shape.width, shape.height); } else if (shape.type === 'circle') { ctx.beginPath(); ctx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2); ctx.fill(); if(shape.radius > 1) ctx.stroke(); } else if (shape.type === 'poly') { ctx.beginPath(); ctx.moveTo(shape.points[0].x, shape.points[0].y); for (let i = 1; i < shape.points.length; i++) { ctx.lineTo(shape.points[i].x, shape.points[i].y); } ctx.closePath(); ctx.fill(); ctx.stroke(); } else if (shape.type === 'line') { ctx.strokeStyle = shape.color; ctx.lineWidth = shape.lineWidth || 1; ctx.beginPath(); ctx.moveTo(shape.x1, shape.y1); ctx.lineTo(shape.x2, shape.y2); ctx.stroke(); } ctx.restore(); }); if (o.type === ObstacleType.TREE && frameCount % 60 === 0 && Math.random() < 0.08 && currentBiome?.propColors?.treeLeaf) { createParticles(o.x + o.width * (0.2 + Math.random() * 0.6), o.y + o.height * 0.35, 1, { color: getRandomColor(...(currentBiome.propColors.treeLeaf || [80, 140, 60, 45])), shape: 'leaf', size: 4.8 + Math.random() * 2.8, life: 150, gravity: 0.028, speed: 0.28, rotationSpeed: (Math.random()-0.5)*0.08, drag: 0.985 }); } if (o.type === ObstacleType.LAMP && frameCount % 55 === 0 && Math.random() < 0.18) { const bulbShape = o.shapes.find(s => s.type === 'circle' && s.color === '#fff5cc'); if (bulbShape) { createParticles(o.x + bulbShape.x, o.y + bulbShape.y, 1, { color: 'rgba(255, 245, 204, 0.50)', shape: 'mote', size: 4.2 + Math.random() * 2.8, life: 45, speed: 0.09, gravity: -0.016, light: true, fadeRate: 0.04 }); } } if (o.type === ObstacleType.LAVA_ROCK && frameCount % 20 === 0 && Math.random() < 0.25) { createParticles(o.x + o.width * Math.random(), o.y + o.height * Math.random(), 1, { color: `hsl(${getRandomInt(10, 45)}, 100%, 58%)`, shape: 'spark', size: 3.2 + Math.random() * 4.2, life: 50, speed: 0.50, gravity: -0.05, light: true, fadeRate: 0.024 }); } if (o.type === ObstacleType.VOLCANO && frameCount % 30 === 0 && Math.random() < 0.40) { createParticles(o.x + o.width/2 + (Math.random()-0.5)*o.width*0.15, o.y + o.height*0.1, 1, { color: `hsl(${getRandomInt(15, 50)}, 100%, 65%)`, shape: 'ember', size: 4.8 + Math.random() * 6.0, life: 65, speed: 0.80, gravity: -0.11, light: true, fadeRate: 0.022 }); } if (o.type === ObstacleType.CRYSTAL && frameCount % 20 === 0 && Math.random() < 0.22) { createParticles(o.x + o.width/2 + (Math.random()-0.5)*o.width*0.6, o.y + o.height/2 + (Math.random()-0.5)*o.height*0.6, 1, { color: `hsla(${getRandomInt(240, 300)}, 85%, 85%, 0.60)`, shape: 'crystal_dust', size: 3.2 + Math.random() * 4.2, life: 45, speed: 0.16, gravity: 0, light: true, fadeRate: 0.03 }); } ctx.restore(); }); }
@@ -1557,7 +1395,7 @@
                 createParticles(canvas.width/2, canvas.height/2, 20, { color: `hsl(${level*35 % 360}, 90%, 70%)`, size: 16.0, life: 140, drag: 0.96, shape:'spark', light:true, angleSpread: Math.PI*2.2 });
                 console.log(`Level ${level} (${currentBiome?.name || 'Unknown'}) started.`);
             }
-            try { draw(); } catch(e) { console.error("Draw error during transition:", e); gameOver=true; }
+            try { draw(); } catch(e) { console.error("Draw error during transition:", e); triggerGameOver(); }
             applyScreenShake();
             requestAnimationFrame(gameLoop);
             return;
@@ -1585,10 +1423,7 @@
             update(timestamp);
         } catch(e) {
              console.error("!!! Critical error in update loop:", e);
-             gameOver = true;
-             gamePaused = true;
-             gameOverDisplay.textContent = "CHYBA HRY! Stiskněte CTRL+R.";
-             gameOverDisplay.style.display = 'block';
+             triggerGameOver();
               return;
          }
 

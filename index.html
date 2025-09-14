@@ -7,233 +7,86 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Our Secret Kingdom's Connection (Firebase) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firestore-compat.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
+        authDomain: "tom-fun.firebaseapp.com",
+        projectId: "tom-fun",
+        storageBucket: "tom-fun.appspot.com",
+        messagingSenderId: "710857129785",
+        appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
+        measurementId: "G-6MHP8FHQ87"
+      };
 
+      try {
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+      } catch (e) {
+        console.error("Firebase initialization failed:", e);
+        alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
+      }
+    </script>
+    <!-- End of Our Secret Connection -->
+
+    <!-- CSS -->
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Poppins', sans-serif;
-            color: #333;
-            line-height: 1.6;
-            background-image: url('IndexImages/backgroundindex.png');
-            background-size: cover;
-            background-position: center center;
-            background-attachment: fixed;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            align-items: center;
-            padding: 20px;
-            position: relative;
-            z-index: 1;
-        }
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.7);
-            z-index: -1;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            margin-top: 20px;
-            max-width: 800px;
-            width: 100%;
-            background-color: rgba(255, 255, 255, 0.6);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-            position: relative;
-        }
-        header h1 {
-            color: red;
-            font-weight: 700;
-            font-size: 3.5em;
-            margin-bottom: 5px;
-            position: relative;
-            display: inline-block;
-            padding-right: 60px;
-        }
-        .splash-text {
-            position: absolute;
-            bottom: 0px;
-            right: 30px;
-            font-size: 0.4em;
-            font-weight: 600;
-            color: #FFD700;
-            padding: 2px 8px;
-            border-radius: 4px;
-            transform: rotate(-15deg);
-            animation: splash-pulse 2s infinite alternate ease-in-out;
-            white-space: nowrap;
-            pointer-events: none;
-        }
-        @keyframes splash-pulse {
-            from { transform: rotate(-22deg) scale(1.1); }
-            to { transform: rotate(-16deg) scale(1.3); }
-        }
-        header p {
-            color: #444;
-            font-size: 1.1em;
-        }
-        .game-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
-            max-width: 1000px;
-            width: 100%;
-            flex-grow: 1;
-            justify-content: center;
-        }
-        .game-card {
-            background-color: #ffffff;
-            border-radius: 12px;
-            text-decoration: none;
-            color: #333;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, filter 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            text-align: center;
-            overflow: hidden;
-            border: 1px solid transparent;
-            opacity: 0;
-            transform: translateY(20px);
-            aspect-ratio: 1 / 1;
-        }
-        .game-card img {
-            display: block;
-            width: 100%;
-            height: 65%;
-            object-fit: cover;
-            transition: transform 0.3s ease, filter 0.3s ease;
-        }
-        .game-card .content {
-            padding: 15px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            flex-grow: 1;
-            height: 35%;
-            overflow: hidden;
-        }
-        .game-card:hover {
-            transform: translateY(-10px) scale(1.05);
-            box-shadow: 0 12px 35px rgba(232, 62, 140, 0.25);
-            border-color: #e83e8c;
-        }
-        .game-card:hover img {
-            transform: scale(1.03);
-            filter: brightness(1.05);
-        }
-        .game-card h2 {
-            margin-bottom: 5px;
-            color: #0056b3;
-            font-size: 1.2em;
-            font-weight: 600;
-        }
-        .game-card p {
-            color: #666;
-            font-size: 0.85em;
-            line-height: 1.3;
-        }
-        footer {
-            text-align: center;
-            margin-top: 50px;
-            padding: 15px;
-            color: #555;
-            font-size: 0.9em;
-            width: 100%;
-            max-width: 800px;
-            background-color: rgba(255, 255, 255, 0.6);
-            border-radius: 8px;
-        }
-        footer p {
-            color: #e83e8c;
-        }
-
-        #top-actions-container {
-            position: fixed;
-            top: 15px;
-            right: 20px;
-            z-index: 1001;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        #language-switcher-btn, #auth-action-btn, #welcome-user {
-            background-color: rgba(250, 250, 250, 0.65);
-            color: #333;
-            border: 1px solid rgba(0, 0, 0, 0.15);
-            padding: 7px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: 'Poppins', sans-serif;
-            font-weight: 500;
-            font-size: 0.9em;
-            transition: all 0.2s ease;
-            outline: none;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #language-switcher-btn:hover, #auth-action-btn:hover {
-            background-color: rgba(255, 255, 255, 0.85);
-            border-color: rgba(0, 0, 0, 0.25);
-            color: #000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        #language-switcher-btn .lang-current {
-            font-weight: 600;
-        }
-        #language-switcher-btn .lang-separator {
-            margin: 0 5px;
-            opacity: 0.6;
-        }
-        #language-switcher-btn .lang-target {
-            opacity: 0.7;
-        }
-         #welcome-user {
-            cursor: default;
-            background-color: transparent;
-            border: none;
-            box-shadow: none;
-            color: #e83e8c;
-            font-weight: 600;
-            display: none; 
-        }
-
-
-        @media (max-width: 768px) {
-             header h1 { font-size: 2.8em; padding-right: 40px; }
-             .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; }
-            .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-            #language-switcher-btn, #auth-action-btn, #welcome-user { padding: 6px 12px; font-size: 0.85em; }
-            #top-actions-container { top: 15px; right: 15px; gap: 8px;}
-        }
-        @media (max-width: 480px) {
-            body { padding: 10px; }
-            header h1 { font-size: 2.2em; padding-right: 35px; }
-            .splash-text { font-size: 0.3em; padding: 1px 5px; right: 2px; bottom: 3px; }
-            header p { font-size: 1em; }
-            .game-grid { grid-template-columns: 1fr; gap: 20px; max-width: 300px; }
-            .game-card .content { padding: 10px; }
-            .game-card h2 { font-size: 1.1em; }
-            .game-card p { font-size: 0.8em; }
-            #language-switcher-btn, #auth-action-btn, #welcome-user { padding: 5px 10px; font-size: 0.8em; }
-            #top-actions-container { top: 10px; right: 10px; gap: 6px;}
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; color: #333; line-height: 1.6; background-image: url('IndexImages/backgroundindex.png'); background-size: cover; background-position: center center; background-attachment: fixed; display: flex; flex-direction: column; min-height: 100vh; align-items: center; padding: 20px; position: relative; z-index: 1; }
+        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.7); z-index: -1; }
+        header { text-align: center; margin-bottom: 40px; margin-top: 20px; max-width: 800px; width: 100%; background-color: rgba(255, 255, 255, 0.6); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); position: relative; }
+        header h1 { color: red; font-weight: 700; font-size: 3.5em; margin-bottom: 5px; position: relative; display: inline-block; padding-right: 60px; }
+        .splash-text { position: absolute; bottom: 0px; right: 30px; font-size: 0.4em; font-weight: 600; color: #FFD700; padding: 2px 8px; border-radius: 4px; transform: rotate(-15deg); animation: splash-pulse 2s infinite alternate ease-in-out; white-space: nowrap; pointer-events: none; }
+        @keyframes splash-pulse { from { transform: rotate(-22deg) scale(1.1); } to { transform: rotate(-16deg) scale(1.3); } }
+        header p { color: #444; font-size: 1.1em; }
+        .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; max-width: 1000px; width: 100%; flex-grow: 1; justify-content: center; }
+        .game-card { background-color: #ffffff; border-radius: 12px; color: #333; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, filter 0.3s ease; display: flex; flex-direction: column; text-align: center; overflow: hidden; border: 1px solid transparent; opacity: 0; transform: translateY(20px); aspect-ratio: 1 / 1; position: relative; }
+        .game-card .game-link { display: flex; flex-direction: column; flex-grow: 1; text-decoration: none; color: inherit; height: 100%; }
+        .game-card img { display: block; width: 100%; height: 65%; object-fit: cover; transition: transform 0.3s ease, filter 0.3s ease; }
+        .game-card .content { padding: 15px; width: 100%; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; overflow: hidden; }
+        .game-card:hover { transform: translateY(-10px) scale(1.05); box-shadow: 0 12px 35px rgba(232, 62, 140, 0.25); border-color: #e83e8c; }
+        .game-card:hover img { transform: scale(1.03); filter: brightness(1.05); }
+        .game-card h2 { margin-bottom: 5px; color: #0056b3; font-size: 1.2em; font-weight: 600; }
+        .game-card p { color: #666; font-size: 0.85em; line-height: 1.3; }
+        .leaderboard-btn { position: absolute; top: 10px; right: 10px; background-color: rgba(240, 240, 240, 0.8); border: 1px solid rgba(221, 221, 221, 0.8); border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; line-height: 28px; text-align: center; transition: all 0.2s ease; z-index: 5; backdrop-filter: blur(2px); }
+        .leaderboard-btn:hover { background-color: #e83e8c; color: white; transform: scale(1.1); }
+        footer { text-align: center; margin-top: 50px; padding: 15px; color: #555; font-size: 0.9em; width: 100%; max-width: 800px; background-color: rgba(255, 255, 255, 0.6); border-radius: 8px; }
+        footer p { color: #e83e8c; }
+        #top-actions-container { position: fixed; top: 15px; right: 20px; z-index: 1001; display: flex; gap: 10px; align-items: center; }
+        #language-switcher-btn, #login-btn { background-color: rgba(250, 250, 250, 0.65); color: #333; border: 1px solid rgba(0, 0, 0, 0.15); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        #login-btn { color: red; font-weight: 600; }
+        #language-switcher-btn:hover, #login-btn:hover { background-color: rgba(255, 255, 255, 0.85); border-color: rgba(0, 0, 0, 0.25); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #login-btn:hover { color: #c00; }
+        #language-switcher-btn .lang-current { font-weight: 600; }
+        #language-switcher-btn .lang-separator { margin: 0 5px; opacity: 0.6; }
+        #language-switcher-btn .lang-target { opacity: 0.7; }
+        #login-modal, #leaderboard-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .modal-content { position: relative; background-color: #fefefe; padding: 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 500px; text-align: center; }
+        .modal-content h1 { color: red; margin-bottom: 25px; font-weight: 600; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #d90429; }
+        .input-group input { width: 100%; padding: 12px 15px; border-radius: 6px; border: 1px solid #ddd; font-family: 'Poppins', sans-serif; font-size: 1em; transition: border-color 0.3s ease; }
+        .input-group input:focus { outline: none; border-color: red; }
+        .action-button { width: 100%; padding: 12px; border: none; background-color: red; color: white; font-size: 1.1em; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background-color 0.3s ease; }
+        .action-button:hover { background-color: #c00; }
+        .error-message { color: red; margin-top: 15px; height: 20px; font-weight: 500; font-size: 0.9em; }
+        .close-btn { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-btn:hover, .close-btn:focus { color: black; text-decoration: none; }
+        .form-switch-text { margin-top: 20px; font-size: 0.9em; color: #d90429; }
+        .form-switch-text a { color: red; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .form-switch-text a:hover { text-decoration: underline; }
+        #register-view { display: none; }
+        #leaderboard-table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        #leaderboard-table th, #leaderboard-table td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        #leaderboard-table th { background-color: #f2f2f2; }
+        #leaderboard-table tr:hover { background-color: #f9f9f9; }
+        .delete-score-btn { background: #ff5c5c; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; line-height: 25px; font-size: 14px; }
+        .delete-score-btn:hover { background: #ff1c1c; }
+        @media (max-width: 768px) { header h1 { font-size: 2.8em; padding-right: 40px; } .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; } .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; } #language-switcher-btn, #login-btn { padding: 6px 12px; font-size: 0.85em; } #top-actions-container { top: 15px; right: 15px; gap: 8px;} }
+        @media (max-width: 480px) { body { padding: 10px; } header h1 { font-size: 2.2em; padding-right: 35px; } .splash-text { font-size: 0.3em; padding: 1px 5px; right: 2px; bottom: 3px; } header p { font-size: 1em; } .game-grid { grid-template-columns: 1fr; gap: 20px; max-width: 300px; } .game-card .content { padding: 10px; } .game-card h2 { font-size: 1.1em; } .game-card p { font-size: 0.8em; } #language-switcher-btn, #login-btn { padding: 5px 10px; font-size: 0.8em; } #top-actions-container { top: 10px; right: 10px; gap: 6px;} }
     </style>
 </head>
 <body>
@@ -241,8 +94,7 @@
         <button id="language-switcher-btn">
             <span class="lang-current">CS</span><span class="lang-separator">⇌</span><span class="lang-target">EN</span>
         </button>
-        <span id="welcome-user" data-translate-key="welcomeUser"></span>
-        <a href="login.php" id="auth-action-btn" data-translate-key="loginButtonText">Přihlásit se</a>
+        <a href="#" id="login-btn" data-translate-key="loginButtonText">Login</a>
     </div>
 
     <header>
@@ -251,34 +103,112 @@
     </header>
 
     <main class="game-grid">
-        <a href="bloonstdaitst.html" class="game-card">
-            <img src="IndexImages/blonkytm.png" alt="BlónkyTM Game Preview">
-            <div class="content">
-                <h2 data-translate-key="blonkyTitle">Blónky TM</h2>
-                <p data-translate-key="blonkyDesc">Předělání známé hry Bloons TD.</p>
-            </div>
-        </a>
-        <a href="KrumpTezic/KrumpTezic.html" class="game-card">
-            <img src="IndexImages/krumptezic.png" alt="KrumpTezic Game Preview">
-            <div class="content">
-                <h2 data-translate-key="krumptezicTitle">KrumpTezic</h2>
-                <p data-translate-key="krumptezicDesc">Zábavné těžení bloků z Minecraftu inspirováno hrou PickCrafter.</p>
-            </div>
-        </a>
-        <a href="PTAK 2/PTAK 2.html" class="game-card">
-            <img src="IndexImages/ptak2.png" alt="PTAK 2 Game Preview">
-            <div class="content">
-                <h2 data-translate-key="ptak2Title">PTAK 2</h2>
-                <p data-translate-key="ptak2DescLine1">Druhé vydání z ságy PTAK pro p. Kořínka,</p>
-                <p data-translate-key="ptak2DescLine2">dobrodružství ptáka, kočky a psa.</p>
-            </div>
-        </a>
+        <div class="game-card">
+            <a href="milan/MILAN.html" class="game-link">
+                <img src="milan/milanbg.png" alt="Milanovy klobásy Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="milanTitle">Milanovy klobásy</h2>
+                    <p data-translate-key="milanDesc">Připravujte výtečná jídla v očích prémiového kuchaře Milana.</p>
+                </div>
+            </a>
+            <button class="leaderboard-btn" data-game="milan" title="Leaderboard">🏆</button>
+        </div>
+        <div class="game-card">
+            <a href="bloonstdaitst.html" class="game-link">
+                <img src="IndexImages/blonkytm.png" alt="BlónkyTM Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="blonkyTitle">Blónky TM</h2>
+                    <p data-translate-key="blonkyDesc">Předělání známé hry Bloons TD.</p>
+                </div>
+            </a>
+        </div>
+        <div class="game-card">
+            <a href="KrumpTezic/KrumpTezic.html" class="game-link">
+                <img src="IndexImages/krumptezic.png" alt="KrumpTezic Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="krumptezicTitle">KrumpTezic</h2>
+                    <p data-translate-key="krumptezicDesc">Zábavné těžení bloků z Minecraftu inspirováno hrou PickCrafter.</p>
+                </div>
+            </a>
+            <button class="leaderboard-btn" data-game="krumptezic" title="Leaderboard">🏆</button>
+        </div>
+        <div class="game-card">
+            <a href="PTAK 2/PTAK 2.html" class="game-link">
+                <img src="IndexImages/ptak2.png" alt="PTAK 2 Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="ptak2Title">PTAK 2</h2>
+                    <p data-translate-key="ptak2DescLine1">Druhé vydání z ságy PTAK pro p. Kořínka,</p>
+                    <p data-translate-key="ptak2DescLine2">dobrodružství ptáka, kočky a psa.</p>
+                </div>
+            </a>
+            <button class="leaderboard-btn" data-game="ptak2" title="Leaderboard">🏆</button>
+        </div>
     </main>
+    
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div id="login-view">
+                <h1 data-translate-key="modalLoginTitle">Přihlásit se</h1>
+                <form id="login-form">
+                    <div class="input-group">
+                        <label for="login-username" data-translate-key="modalUsernameLabel">Uživatelské jméno</label>
+                        <input type="text" id="login-username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="login-password" data-translate-key="modalPasswordLabel">Heslo</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="action-button" data-translate-key="modalLoginButton">Přihlásit se</button>
+                    <div id="login-error-message" class="error-message"></div>
+                </form>
+                <p class="form-switch-text">
+                    <span data-translate-key="modalNoAccount">Nemáte účet?</span>
+                    <a id="show-register-link" data-translate-key="modalRegisterLink">Zaregistrujte se</a>
+                </p>
+            </div>
+            <div id="register-view">
+                <h1 data-translate-key="modalRegisterTitle">Registrace</h1>
+                <form id="register-form">
+                    <div class="input-group">
+                        <label for="register-username" data-translate-key="modalUsernameLabel">Uživatelské jméno</label>
+                        <input type="text" id="register-username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="register-password" data-translate-key="modalPasswordLabel">Heslo</label>
+                        <input type="password" id="register-password" required>
+                    </div>
+                     <div class="input-group">
+                        <label for="confirm-password" data-translate-key="modalConfirmPasswordLabel">Potvrďte heslo</label>
+                        <input type="password" id="confirm-password" required>
+                    </div>
+                    <button type="submit" class="action-button" data-translate-key="modalRegisterButton">Zaregistrovat</button>
+                    <div id="register-error-message" class="error-message"></div>
+                </form>
+                <p class="form-switch-text">
+                    <span data-translate-key="modalHaveAccount">Máte již účet?</span>
+                    <a id="show-login-link" data-translate-key="modalLoginLink">Přihlaste se</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="leaderboard-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1 id="leaderboard-title">Leaderboard</h1>
+            <table id="leaderboard-table">
+                <thead id="leaderboard-head"></thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+        </div>
+    </div>
 
     <footer>
         <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
     </footer>
 
+    <!-- JS -->
     <script type="text/javascript">
         const translations = {
             cs: {
@@ -290,10 +220,22 @@
                 ptak2Title: "PTAK 2",
                 ptak2DescLine1: "Druhé vydání z ságy PTAK pro p. Kořínka,",
                 ptak2DescLine2: "dobrodružství ptáka, kočky a psa.",
+                milanTitle: "Milanovy klobásy",
+                milanDesc: "Připravujte výtečná jídla v očích prémiového kuchaře Milana.",
                 footerText: "Vytvořil s ❤️ 90Tom",
                 loginButtonText: "Přihlásit se",
                 logoutButtonText: "Odhlásit se",
-                welcomeUser: "Vítej, {username}!"
+                modalLoginTitle: "Přihlásit se",
+                modalRegisterTitle: "Registrace",
+                modalUsernameLabel: "Uživatelské jméno",
+                modalPasswordLabel: "Heslo",
+                modalConfirmPasswordLabel: "Potvrďte heslo",
+                modalLoginButton: "Přihlásit se",
+                modalRegisterButton: "Zaregistrovat",
+                modalNoAccount: "Nemáte účet?",
+                modalRegisterLink: "Zaregistrujte se",
+                modalHaveAccount: "Máte již účet?",
+                modalLoginLink: "Přihlaste se",
             },
             en: {
                 welcomeMessage: "Welcome! Choose a game below and enjoy!",
@@ -304,14 +246,24 @@
                 ptak2Title: "PTAK 2",
                 ptak2DescLine1: "Second edition of the PTAK saga for Mr. Kořínek,",
                 ptak2DescLine2: "Adventures of a bird, a cat, and a dog.",
+                milanTitle: "Milan's Sausages",
+                milanDesc: "Prepare delicious meals in the eyes of the premium chef Milan.",
                 footerText: "Made with ❤️ by 90Tom",
                 loginButtonText: "Login",
                 logoutButtonText: "Logout",
-                welcomeUser: "Welcome, {username}!"
+                modalLoginTitle: "Login",
+                modalRegisterTitle: "Register",
+                modalUsernameLabel: "Username",
+                modalPasswordLabel: "Password",
+                modalConfirmPasswordLabel: "Confirm Password",
+                modalLoginButton: "Login",
+                modalRegisterButton: "Register",
+                modalNoAccount: "Don't have an account?",
+                modalRegisterLink: "Register here",
+                modalHaveAccount: "Already have an account?",
+                modalLoginLink: "Login here",
             }
         };
-
-        let currentLoggedInUser = null;
 
         function setLanguage(lang) {
             document.documentElement.lang = lang;
@@ -319,23 +271,9 @@
 
             document.querySelectorAll('[data-translate-key]').forEach(element => {
                 const key = element.getAttribute('data-translate-key');
-                let translationText = "";
                 if (translations[lang] && translations[lang][key]) {
-                    translationText = translations[lang][key];
+                    element.textContent = translations[lang][key];
                 }
-
-                if (key === 'welcomeUser' && currentLoggedInUser && translationText) {
-                     element.textContent = translationText.replace('{username}', currentLoggedInUser);
-                } else if (translationText && element.id !== 'auth-action-btn' && element.id !== 'welcome-user') {
-                    // Only update general translations if not the auth button or welcome message
-                    // as those are handled by updateAuthUI based on current language
-                    element.textContent = translationText;
-                } else if (key === 'loginButtonText' && !currentLoggedInUser && element.id === 'auth-action-btn') {
-                    element.textContent = translationText;
-                } else if (key === 'logoutButtonText' && currentLoggedInUser && element.id === 'auth-action-btn') {
-                    element.textContent = translationText;
-                }
-
             });
 
             const langSwitcherBtn = document.getElementById('language-switcher-btn');
@@ -350,48 +288,90 @@
                     targetLangSpan.textContent = 'EN';
                 }
             }
-             // After setting language, ensure auth UI texts are also updated for the new language
-            const authActionButton = document.getElementById('auth-action-btn');
-            const welcomeUserSpan = document.getElementById('welcome-user');
-            if (currentLoggedInUser) {
-                if (authActionButton) authActionButton.textContent = translations[lang]?.logoutButtonText || "Logout";
-                if (welcomeUserSpan) {
-                    const welcomeText = translations[lang]?.welcomeUser || "Welcome, {username}!";
-                    welcomeUserSpan.textContent = welcomeText.replace('{username}', currentLoggedInUser);
+        }
+        
+        async function deleteLeaderboardEntry(gameId, userToDelete) {
+            if (typeof db === 'undefined') { alert("Spojení s databází selhalo."); return; }
+            const gameData = {
+                milan: { key: "milan_leaderboard" },
+                krumptezic: { key: "krumptezic_leaderboard" },
+                ptak2: { key: "ptak2_leaderboard" },
+            };
+            const collectionName = gameData[gameId].key;
+
+            try {
+                const querySnapshot = await db.collection(collectionName).where('user', '==', userToDelete).get();
+                const batch = db.batch();
+                querySnapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                console.log(`Successfully deleted entry for ${userToDelete} from ${collectionName}`);
+                showLeaderboard(gameId); 
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+            }
+        }
+        
+        async function showLeaderboard(gameId) {
+            if (typeof db === 'undefined') { alert("Nelze se připojit k žebříčku. Zkontrolujte připojení nebo zkuste to znovu později."); return; }
+            
+            const leaderboardModal = document.getElementById('leaderboard-modal');
+            const titleEl = document.getElementById('leaderboard-title');
+            const headEl = document.getElementById('leaderboard-head');
+            const bodyEl = document.getElementById('leaderboard-body');
+            const isAdmin = sessionStorage.getItem('loggedInUser') === '90Tom';
+
+            const gameData = {
+                milan: { title: "Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
+                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
+                ptak2: { title: "PTAK 2", fields: ['Úroveň', 'Čas'], query: db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
+            };
+
+            const { title, fields, query } = gameData[gameId];
+            titleEl.textContent = `Žebříček: ${title}`;
+            
+            bodyEl.innerHTML = '<tr><td colspan="5">Načítání...</td></tr>';
+            leaderboardModal.style.display = 'flex';
+
+            try {
+                const querySnapshot = await query.limit(10).get();
+                const scores = querySnapshot.docs.map(doc => doc.data());
+
+                headEl.innerHTML = '';
+                bodyEl.innerHTML = '';
+                
+                let headers = '<th>#</th><th>Hráč</th>';
+                fields.forEach(field => headers += `<th>${field}</th>`);
+                if (isAdmin) headers += '<th>Akce</th>';
+                headEl.innerHTML = `<tr>${headers}</tr>`;
+
+                if (scores.length === 0) {
+                    const colspan = isAdmin ? fields.length + 3 : fields.length + 2;
+                    bodyEl.innerHTML = `<tr><td colspan="${colspan}">Zatím žádné výsledky!</td></tr>`;
+                } else {
+                    scores.forEach((score, index) => {
+                        let row = `<td>${index + 1}</td><td>${score.user}</td>`;
+                        if (gameId === 'milan') {
+                            row += `<td>${score.orders}</td><td>${score.time}s</td>`;
+                        } else if (gameId === 'krumptezic') {
+                            row += `<td>${Math.floor(score.blocks)}</td><td>${score.winTime ? score.winTime + 's' : '-'}</td>`;
+                        } else if (gameId === 'ptak2') {
+                             const timeInSeconds = (score.time / 1000).toFixed(2);
+                            row += `<td>${score.level}</td><td>${timeInSeconds}s</td>`;
+                        }
+                        if (isAdmin) {
+                            row += `<td><button class="delete-score-btn" data-game="${gameId}" data-user="${score.user}" title="Smazat">🗑️</button></td>`;
+                        }
+                        bodyEl.innerHTML += `<tr>${row}</tr>`;
+                    });
                 }
-            } else {
-                if (authActionButton) authActionButton.textContent = translations[lang]?.loginButtonText || "Login";
+            } catch (error) {
+                 console.error("Error fetching leaderboard:", error);
+                 bodyEl.innerHTML = '<tr><td colspan="4">Chyba při načítání žebříčku. Zkontrolujte, zda jsou v databázi nastaveny správné indexy.</td></tr>';
             }
         }
 
-        function updateAuthUI(isLoggedIn, username) {
-            const authActionButton = document.getElementById('auth-action-btn');
-            const welcomeUserSpan = document.getElementById('welcome-user');
-            const currentLang = document.documentElement.lang || 'cs';
-
-            currentLoggedInUser = username; 
-
-            if (isLoggedIn) {
-                authActionButton.href = 'logout.php';
-                authActionButton.textContent = translations[currentLang]?.logoutButtonText || "Logout";
-                // authActionButton.setAttribute('data-translate-key', 'logoutButtonText'); // Key is already set
-
-                if (welcomeUserSpan) {
-                    const welcomeText = translations[currentLang]?.welcomeUser || "Welcome, {username}!";
-                    welcomeUserSpan.textContent = welcomeText.replace('{username}', username);
-                    welcomeUserSpan.style.display = 'inline-flex';
-                }
-            } else {
-                authActionButton.href = 'login.php';
-                authActionButton.textContent = translations[currentLang]?.loginButtonText || "Login";
-                // authActionButton.setAttribute('data-translate-key', 'loginButtonText'); // Key is already set
-
-                if (welcomeUserSpan) {
-                    welcomeUserSpan.style.display = 'none';
-                    welcomeUserSpan.textContent = '';
-                }
-            }
-        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const cards = document.querySelectorAll('.game-card');
@@ -402,29 +382,140 @@
                     card.style.transform = 'translateY(0)';
                 }, 50);
             });
-
-            fetch('check_login.php')
-                .then(response => response.json())
-                .then(data => {
-                    updateAuthUI(data.loggedIn, data.username);
-                    let currentLang = localStorage.getItem('selectedLanguage') || 'cs';
-                    setLanguage(currentLang);
-                })
-                .catch(error => {
-                    console.error('Error checking login status:', error);
-                    updateAuthUI(false, null);
-                    let currentLang = localStorage.getItem('selectedLanguage') || 'cs';
-                    setLanguage(currentLang);
-                });
-
-
+            
             const langSwitcherBtn = document.getElementById('language-switcher-btn');
+            let currentLang = localStorage.getItem('selectedLanguage') || 'cs';
+            setLanguage(currentLang); 
+
             if (langSwitcherBtn) {
                 langSwitcherBtn.addEventListener('click', () => {
-                    let currentLang = (document.documentElement.lang === 'cs') ? 'en' : 'cs';
+                    currentLang = (document.documentElement.lang === 'cs') ? 'en' : 'cs';
                     setLanguage(currentLang);
                 });
             }
+            
+            const loginBtn = document.getElementById('login-btn');
+            const loginModal = document.getElementById('login-modal');
+            const leaderboardModal = document.getElementById('leaderboard-modal');
+            const allModals = document.querySelectorAll('.modal');
+            const loggedInUser = sessionStorage.getItem('loggedInUser');
+            
+            const loginView = document.getElementById('login-view');
+            const registerView = document.getElementById('register-view');
+            const showRegisterLink = document.getElementById('show-register-link');
+            const showLoginLink = document.getElementById('show-login-link');
+            
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            
+            showRegisterLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginView.style.display = 'none';
+                registerView.style.display = 'block';
+            });
+
+            showLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                registerView.style.display = 'none';
+                loginView.style.display = 'block';
+            });
+
+            if (loggedInUser) {
+                loginBtn.setAttribute('data-translate-key', 'logoutButtonText');
+                setLanguage(currentLang); 
+                loginBtn.href = "#"; 
+                loginBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    sessionStorage.removeItem('loggedInUser');
+                    window.location.reload();
+                });
+            } else {
+                loginBtn.setAttribute('data-translate-key', 'loginButtonText');
+                setLanguage(currentLang);
+                loginBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    loginView.style.display = 'block';
+                    registerView.style.display = 'none';
+                    loginModal.style.display = 'flex';
+                });
+            }
+            
+            document.querySelectorAll('.leaderboard-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    const gameId = e.currentTarget.dataset.game;
+                    showLeaderboard(gameId);
+                });
+            });
+            
+            leaderboardModal.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-score-btn')) {
+                    const userToDelete = e.target.dataset.user;
+                    const gameId = e.target.dataset.game;
+                    if(confirm(`Opravdu chcete smazat výsledek hráče ${userToDelete}?`)){
+                        deleteLeaderboardEntry(gameId, userToDelete);
+                    }
+                }
+            });
+
+            allModals.forEach(modal => {
+                const closeBtn = modal.querySelector('.close-btn');
+                if (closeBtn) {
+                    closeBtn.onclick = () => {
+                        modal.style.display = 'none';
+                    };
+                }
+            });
+            
+            window.onclick = (event) => {
+                if (event.target.classList.contains('modal')) {
+                    event.target.style.display = "none";
+                }
+            };
+            
+            loginForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const username = document.getElementById('login-username').value;
+                const password = document.getElementById('login-password').value;
+                const errorMessage = document.getElementById('login-error-message');
+                const users = JSON.parse(localStorage.getItem('users')) || {};
+
+                if (users[username] && users[username] === password) {
+                    sessionStorage.setItem('loggedInUser', username);
+                    window.location.reload();
+                } else {
+                    errorMessage.textContent = 'Nesprávné jméno nebo heslo.';
+                }
+            });
+            
+            registerForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const username = document.getElementById('register-username').value;
+                const password = document.getElementById('register-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+                const errorMessage = document.getElementById('register-error-message');
+
+                if (password !== confirmPassword) {
+                    errorMessage.textContent = 'Hesla se neshodují.';
+                    return;
+                }
+                
+                if (username.length < 3) {
+                    errorMessage.textContent = 'Uživatelské jméno musí mít alespoň 3 znaky.';
+                    return;
+                }
+
+                const users = JSON.parse(localStorage.getItem('users')) || {};
+
+                if (users[username]) {
+                    errorMessage.textContent = 'Uživatelské jméno je již obsazené.';
+                } else {
+                    users[username] = password;
+                    localStorage.setItem('users', JSON.stringify(users));
+                    sessionStorage.setItem('loggedInUser', username);
+                    window.location.reload();
+                }
+            });
         });
     </script>
 </body>
