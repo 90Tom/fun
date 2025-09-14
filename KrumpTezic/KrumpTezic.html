@@ -4,6 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>KrumpTezic</title>
+
+    <!-- Our Kingdom's Connection (Firebase) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
+        authDomain: "tom-fun.firebaseapp.com",
+        projectId: "tom-fun",
+        storageBucket: "tom-fun.appspot.com",
+        messagingSenderId: "710857129785",
+        appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
+        measurementId: "G-6MHP8FHQ87"
+      };
+      let db;
+      try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+      } catch (e) {
+        console.error("Firebase initialization failed:", e);
+      }
+    </script>
+    <!-- End of Connection -->
+
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background-color: skyblue; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; -webkit-tap-highlight-color: transparent; }
         #appContainer {
@@ -487,6 +511,7 @@
             
             if (!this.loadGame()) {
                 this.GameState.gameStartTime = Date.now();
+                 this.GameState.timeSpent = 0;
             }
             this.GameState.sessionStartTime = Date.now();
 
@@ -978,7 +1003,7 @@
             }
         },
 
-        attemptEnchantEquippedPickaxe: function() {
+                attemptEnchantEquippedPickaxe: function() {
             const equippedPickaxeData = this.Assets.PICKAXE_TYPES.find(p => p.IdName === this.GameState.equippedPickaxeId);
             if(equippedPickaxeData && equippedPickaxeData.NotEnchantable){
                 this.showFloatingText("Tento nástroj nelze očarovat!", this.DOM.miningAreaGrid, 'grey');
@@ -1924,42 +1949,39 @@
             minutes = minutes % 60;
             return `${hours > 0 ? hours + "h " : ""}${minutes > 0 ? minutes + "m " : ""}${seconds}s`;
         },
-        updateLeaderboard: function(isWin = false) {
+        updateLeaderboard: async function(isWin = false) {
             const user = sessionStorage.getItem('loggedInUser');
-            if (!user) return;
+            if (!user || typeof db === 'undefined') return;
 
-            const leaderboardKey = 'krumptezic_leaderboard';
-            let scores = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
-            const userIndex = scores.findIndex(s => s.user === user);
-            const sessionTime = Date.now() - this.GameState.sessionStartTime;
-            const totalTimeSpent = (this.GameState.timeSpent || 0) + sessionTime;
+            const leaderboardRef = db.collection('krumptezic_leaderboard');
+            const userScoreRef = leaderboardRef.doc(user);
+            const totalTimeSpent = (this.GameState.timeSpent || 0) + (Date.now() - this.GameState.sessionStartTime);
 
-            const currentScore = {
-                user: user,
-                blocks: Math.floor(this.GameState.maxBlokyEverAchieved),
-                timeSpent: (totalTimeSpent / 1000).toFixed(1),
-                winTime: null
-            };
-
-            if (userIndex > -1) {
-                const existingScore = scores[userIndex];
-                currentScore.blocks = Math.max(existingScore.blocks, currentScore.blocks);
-                currentScore.winTime = existingScore.winTime || null;
-                
-                if (isWin && (!currentScore.winTime || (totalTimeSpent / 1000) < parseFloat(currentScore.winTime))) {
-                    currentScore.winTime = (totalTimeSpent / 1000).toFixed(1);
+            try {
+                const doc = await userScoreRef.get();
+                if (doc.exists) {
+                    const existingScore = doc.data();
+                    const newScore = {
+                        blocks: Math.max(existingScore.blocks, Math.floor(this.GameState.maxBlokyEverAchieved)),
+                        timeSpent: (totalTimeSpent / 1000).toFixed(1),
+                        winTime: existingScore.winTime || null
+                    };
+                    if (isWin && (!newScore.winTime || (totalTimeSpent/1000) < parseFloat(newScore.winTime))) {
+                        newScore.winTime = (totalTimeSpent / 1000).toFixed(1);
+                    }
+                    await userScoreRef.update(newScore);
+                } else {
+                    await userScoreRef.set({
+                        user: user,
+                        blocks: Math.floor(this.GameState.maxBlokyEverAchieved),
+                        timeSpent: (totalTimeSpent / 1000).toFixed(1),
+                        winTime: isWin ? (totalTimeSpent / 1000).toFixed(1) : null,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
                 }
-                scores[userIndex] = currentScore;
-
-            } else {
-                 if (isWin) {
-                    currentScore.winTime = (totalTimeSpent / 1000).toFixed(1);
-                }
-                scores.push(currentScore);
+            } catch (error) {
+                console.error("Error updating leaderboard:", error);
             }
-
-            scores.sort((a, b) => b.blocks - a.blocks);
-            localStorage.setItem(leaderboardKey, JSON.stringify(scores.slice(0, 50)));
         },
 
         checkWinCondition: function() {
@@ -2006,19 +2028,18 @@
                     }
                 });
 
-                                if (totalBlocsFromPetsThisTick > 0) {
+                if (totalBlocsFromPetsThisTick > 0) {
                     this.GameState.blokyCount += totalBlocsFromPetsThisTick;
-                    this.GameState.totalBlokyMined += totalBlocsFromPetsThisTick; // <-- Add this line, my love
+                    this.GameState.totalBlokyMined += totalBlocsFromPetsThisTick;
                     this.updateBlokyLabel();
+                    this.updateStatsDisplay();
                     this.checkWinCondition();
                 }
 
                 if (Math.random() < 0.1 && totalBlocsFromPetsThisTick > 0) {
                     this.updateShopSections();
                 }
-
-                this.GameState.gameTime += GAME_TICK_INTERVAL_MS;
-
+                
                 this.GameState.ownedPets.forEach(petInstance => {
                     if (petInstance.IdName === "Cat5") {
                         const petDefinition = this.Assets.PET_TYPES.find(p => p.IdName === petInstance.IdName);
