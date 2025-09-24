@@ -1,5 +1,3 @@
-</body>
-</html>
 <!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -255,758 +253,798 @@
             <button id="play-again-btn"></button>
         </div>
     </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
     <script>
-        const gameWorld = document.getElementById('game-world');
-        const milan = document.getElementById('milan');
-        const river = document.getElementById('river');
-        const stall = document.getElementById('stall');
-        const stressBar = document.getElementById('stress-bar');
-        const timerDisplay = document.getElementById('timer');
-        const gameOverScreen = document.getElementById('game-over');
-        const outhouse = document.getElementById('outhouse');
-        const startScreen = document.getElementById('start-screen');
+    // Your Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
+        authDomain: "tom-fun.firebaseapp.com",
+        projectId: "tom-fun",
+        storageBucket: "tom-fun.appspot.com",
+        messagingSenderId: "710857129785",
+        appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
+        measurementId: "G-6MHP8FHQ87"
+    };
 
-        let heldItem = null, keys = {}, items = [], customers = [], seatingAreas = [], staticObjects = [];
-        let stress = 0, survivalTime = 0, gameRunning = false, controlsImpaired = false, isConsuming = false, baseStressRate = 0.045, ordersCompleted = 0;
-        let grill, trashCan, queueSlots = [], milanSwearCooldown = false;
-        let intoxicationLevel = 0, nicotineLevel = 0;
-        let customerSpawnInterval = 9000;
-        let maxQueueSize = 3;
-        const COOK_STATES = { RAW: 0, GOLDEN: 1, WELLDONE: 2, BURNT: 3 };
-        const COOK_TIMES = { SAUSAGE: 6.5, CHEESE: 5 };
-        const MILAN_SPEED = 400;
-        
-        let lastTime = 0;
-        let animationFrameId;
-        let riverLanes = { left: false, center: false, right: false };
+    // Initialize Firebase
+    let db;
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+    } catch (e) {
+        console.error("Firebase initialization failed:", e);
+    }
 
-        let currentLanguage = 'cs';
-        const translations = {
-            cs: {
-                title: "Milanovy klobásy",
-                subtitle: "Připravujte výtečná jídla v očích prémiového kuchaře Milana. Používejte klávesy WASD a E a před doručením jídla jej nezapomeňte vyložit na papírový tácek.",
-                startButton: "Vařit",//meowmeow
-                langButton: "English",
-                stressLabel: "Stres", timerLabel: "Přežíváš",
-                gameOverTitle: "KONEC HRY", gameOverReasonCollapse: "Totální nervové zhroucení!", gameOverReasonAlcohol: "Otrava alkoholem.", gameOverScore: "Přežil jsi", gameOverSeconds: "sekund.", ordersCompleted: "Dokončené objednávky", playAgain: "Znovu hrát",
-                milanSwears: ["Do p*či!", "Hajzlové!", "Už nemůžu!", "K*nda!", "Zm*di!", "P*ča!", "Do pr*ele!", "K*rva!", "To je den na h*vno!", "Sakra práce!", "Zblázním se z toho!"], 
-                milanRelief: ["K*rva!", "Do p*dele!", "Konečně chvilka klidu.", "Tohle jsem potřeboval.", "Ah, sladká úleva."], 
-                milanDrop: "Dopr*ele!",
-                withKetchup: "S kečupem.", withMustard: "S hořčicí.", withBoth: "S obojím.", withCranberries: "S brusinkama.", andBread: "A {count} chleba.",
-                nice_man: ["Dobrý den, prosil bych ", "Můžu poprosit o ", "Dobrý den, dal bych si ", "Zdravím, měl bych chuť na ", "Dobrý den, vypadá to skvěle. Dám si ", "Prosím vás, připravte mi "], 
-                nice_woman: ["Dobrý den, prosila bych ", "Můžu poprosit o ", "Dobrý den, dala bych si ", "Pěkný den, chtěla bych ochutnat ", "Vypadá to úžasně! Proсила bych ", "Můžete mi prosím udělat "], 
-                neutral_man: ["Dám si ", "Chtěl bych ", "Připravte mi ", "Chci ", "Dám si ", "Objednávám "], 
-                neutral_woman: ["Dám si ", "Chtěla bych ", "Připravte mi ", "Chci ", "Dám si ", "Objednávám "], 
-                rude: ["Hej, dělej, chci ", "No tak, bude to? Chci ", "Čekám na ", "Hni sebou, mám hlad na ", "Doufám, že to nebude trvat věčnost. Chci ", "Hej ty! Chci "],
-                customerCurses: ["Co to je za sra*ku?!", "Tohle si strč do pr*ele!", "Tohle se nedá žrát!", "Fuj, to je hnus!", "Čekal jsem kvalitu, ne tenhle bl*f!", "Zm*de!", "Si děláš k*zy?!", "Č*ráku!", "Dě*ko!", "P*čo!", "Jdi do h*jzlu!", "Ty dědku zas*anej!", "Tohle by nežral ani pes!", "Za tohle platit nebudu!"], 
-                customerImpatient: "Na tohle se ti můžu vys*at!", 
-                customerRudeComments: ["Nic moc teda.", "Čekal jsem víc.", "Už se nevrátím.", "Bylo to... jedlý.", "Hmm.", "No, aspoň jsem se najedl.", "Příště zkusím něco jiného.", "Za ty peníze nic extra."], 
-                outhouseCurses: ["Ta kadibudka je peklo!", "Hrůza, ten smrad!", "Strašně to pálí!", "Už sem nikdy nepudu!", "Potřebuju doktora, hned!", "Proboha, co to bylo?!", "Moje útroby hoří!", "To je biologická zbraň!", "Okamžitě dezinfekci!", "Nikdy víc!"],
-                sausage_adj: { singular: { [COOK_STATES.GOLDEN]: "zlatavou", [COOK_STATES.WELLDONE]: "propečenou" }, plural: { [COOK_STATES.GOLDEN]: "zlatavé", [COOK_STATES.WELLDONE]: "propečené" }, genitive: { [COOK_STATES.GOLDEN]: "zlatavých", [COOK_STATES.WELLDONE]: "propečených" } },
-                cheese_adj: { singular: { [COOK_STATES.GOLDEN]: "zlatavý", [COOK_STATES.WELLDONE]: "propečený" }, plural: { [COOK_STATES.GOLDEN]: "zlatavé", [COOK_STATES.WELLDONE]: "propečené" }, genitive: { [COOK_STATES.GOLDEN]: "zlatavých", [COOK_STATES.WELLDONE]: "propečených" } },
-                sausage_plural: { 1: "klobásu", 2: "klobásy", 5: "klobás" },
-                cheese_plural: { 1: "hermelín", 2: "hermelíny", 5: "hermelínů" },
-                numbers: { 1: "jednu", 2: "dvě", 3: "tři", 4: "čtyři", 5: "pět" },
-                numbers_male: { 1: "jeden", 2: "dva", 3: "tři", 4: "čtyři", 5: "pět" }
-            },
-            en: {
-                title: "Milan's Sausages",
-                subtitle: "Prepare delicious meals under the watchful eye of premium chef Milan. Use WASD and E keys, and don't forget to place the food on a paper plate before delivery.",
-                startButton: "Cook",
-                langButton: "Česky",
-                stressLabel: "Stress", timerLabel: "Surviving",
-                gameOverTitle: "GAME OVER", gameOverReasonCollapse: "Total mental breakdown!", gameOverReasonAlcohol: "Alcohol poisoning.", gameOverScore: "You survived", gameOverSeconds: "seconds.", ordersCompleted: "Orders Completed", playAgain: "Play Again",
-                milanSwears: ["F**k!", "A**holes!", "I can't take it!", "Son of a b**ch!", "D*mn it!", "This day sucks!", "For f**k's sake!", "I'm losing my mind!"], 
-                milanRelief: ["Ah, f**k it!", "Here we go...", "Finally, a moment of peace.", "I needed this.", "Ah, sweet relief."], 
-                milanDrop: "Oh, sh*t!",
-                withKetchup: "With ketchup.", withMustard: "With mustard.", withBoth: "With both.", withCranberries: "With cranberries.", andBread: "And {count} bread.",
-                nice_man: ["Hello, I would like ", "Could I please have ", "Hi, I'll take ", "Greetings, I'm in the mood for ", "Hello, that looks delicious. I'll have ", "Could you prepare me "], 
-                nice_woman: ["Hello, I would like ", "Could I please have ", "Hi, I'll take ", "Good day, I'd love to try ", "That looks amazing! I would like ", "Could you please make me "], 
-                neutral_man: ["I'll have ", "I want ", "Get me ", "One of those.", "I'll take the usual.", "Just give me "], 
-                neutral_woman: ["I'll have ", "I want ", "Get me ", "One of those.", "I'll take the usual.", "Just give me "], 
-                rude: ["Hey, hurry up, I want ", "Come on, will ya? I want ", "I'm waiting for ", "Move it, I'm starving for ", "I hope this doesn't take all day. I want ", "Hey you! I want "],
-                customerCurses: ["What is this crap?!", "You can shove this up your a**!", "This is inedible!", "Ugh, disgusting!", "I expected quality, not this garbage!", "You moron!", "You old fart!", "Even my dog wouldn't eat this!", "I'm not paying for this filth!"], 
-                customerImpatient: "I'm not waiting for this sh*t!", 
-                customerRudeComments: ["Not great.", "I expected more.", "I'm not coming back.", "It was... edible.", "Hmm.", "Well, at least it's food.", "I'll try something else next time.", "Not worth the money."], 
-                outhouseCurses: ["That outhouse is hell!", "Horrible, the stench!", "God, it burns!", "I'm never coming here again!", "I need a doctor, now!", "Oh god, what was that?!", "My insides are on fire!", "That's a biological weapon!", "I need a shower, immediately!", "Never again!"],
-                sausage_adj: { [COOK_STATES.GOLDEN]: "golden-brown", [COOK_STATES.WELLDONE]: "well-done" },
-                cheese_adj: { [COOK_STATES.GOLDEN]: "golden-brown", [COOK_STATES.WELLDONE]: "well-done" },
-                sausage_plural: { 1: "sausage", 2: "sausages" },
-                cheese_plural: { 1: "camembert", 2: "camemberts" },
-            }
-        };
+    const gameWorld = document.getElementById('game-world');
+    const milan = document.getElementById('milan');
+    const river = document.getElementById('river');
+    const stall = document.getElementById('stall');
+    const stressBar = document.getElementById('stress-bar');
+    const timerDisplay = document.getElementById('timer');
+    const gameOverScreen = document.getElementById('game-over');
+    const outhouse = document.getElementById('outhouse');
+    const startScreen = document.getElementById('start-screen');
 
-        function updateAllText() {
-            const t = translations[currentLanguage];
-            document.documentElement.lang = currentLanguage;
-            document.getElementById('start-screen').querySelector('h1').textContent = t.title;
-            document.getElementById('start-screen-subtitle').innerHTML = t.subtitle;
-            document.getElementById('start-btn').textContent = t.startButton;
-            document.getElementById('lang-switch-btn').textContent = t.langButton;
-            document.getElementById('stress-label').textContent = t.stressLabel;
-            document.getElementById('game-over-title').textContent = t.gameOverTitle;
-            document.getElementById('play-again-btn').textContent = t.playAgain;
+    let heldItem = null, keys = {}, items = [], customers = [], seatingAreas = [], staticObjects = [];
+    let stress = 0, survivalTime = 0, gameRunning = false, controlsImpaired = false, isConsuming = false, baseStressRate = 0.045, ordersCompleted = 0;
+    let grill, trashCan, queueSlots = [], milanSwearCooldown = false;
+    let intoxicationLevel = 0, nicotineLevel = 0;
+    let customerSpawnInterval = 9000;
+    let maxQueueSize = 3;
+    const COOK_STATES = { RAW: 0, GOLDEN: 1, WELLDONE: 2, BURNT: 3 };
+    const COOK_TIMES = { SAUSAGE: 6.5, CHEESE: 5 };
+    const MILAN_SPEED = 400;
+    
+    let lastTime = 0;
+    let animationFrameId;
+    let riverLanes = { left: false, center: false, right: false };
+
+    let currentLanguage = 'cs';
+    const translations = {
+        cs: {
+            title: "Milanovy klobásy",
+            subtitle: "Připravujte výtečná jídla v očích prémiového kuchaře Milana. Používejte klávesy WASD a E a před doručením jídla jej nezapomeňte vyložit na papírový tácek.",
+            startButton: "Vařit",//meowmeow
+            langButton: "English",
+            stressLabel: "Stres", timerLabel: "Přežíváš",
+            gameOverTitle: "KONEC HRY", gameOverReasonCollapse: "Totální nervové zhroucení!", gameOverReasonAlcohol: "Otrava alkoholem.", gameOverScore: "Přežil jsi", gameOverSeconds: "sekund.", ordersCompleted: "Dokončené objednávky", playAgain: "Znovu hrát",
+            milanSwears: ["Do p*či!", "Hajzlové!", "Už nemůžu!", "K*nda!", "Zm*di!", "P*ča!", "Do pr*ele!", "K*rva!", "To je den na h*vno!", "Sakra práce!", "Zblázním se z toho!"], 
+            milanRelief: ["K*rva!", "Do p*dele!", "Konečně chvilka klidu.", "Tohle jsem potřeboval.", "Ah, sladká úleva."], 
+            milanDrop: "Dopr*ele!",
+            withKetchup: "S kečupem.", withMustard: "S hořčicí.", withBoth: "S obojím.", withCranberries: "S brusinkama.", andBread: "A {count} chleba.",
+            nice_man: ["Dobrý den, prosil bych ", "Můžu poprosit o ", "Dobrý den, dal bych si ", "Zdravím, měl bych chuť na ", "Dobrý den, vypadá to skvěle. Dám si ", "Prosím vás, připravte mi "], 
+            nice_woman: ["Dobrý den, prosila bych ", "Můžu poprosit o ", "Dobrý den, dala bych si ", "Pěkný den, chtěla bych ochutnat ", "Vypadá to úžasně! Proсила bych ", "Můžete mi prosím udělat "], 
+            neutral_man: ["Dám si ", "Chtěl bych ", "Připravte mi ", "Chci ", "Dám si ", "Objednávám "], 
+            neutral_woman: ["Dám si ", "Chtěla bych ", "Připravte mi ", "Chci ", "Dám si ", "Objednávám "], 
+            rude: ["Hej, dělej, chci ", "No tak, bude to? Chci ", "Čekám na ", "Hni sebou, mám hlad na ", "Doufám, že to nebude trvat věčnost. Chci ", "Hej ty! Chci "],
+            customerCurses: ["Co to je za sra*ku?!", "Tohle si strč do pr*ele!", "Tohle se nedá žrát!", "Fuj, to je hnus!", "Čekal jsem kvalitu, ne tenhle bl*f!", "Zm*de!", "Si děláš k*zy?!", "Č*ráku!", "Dě*ko!", "P*čo!", "Jdi do h*jzlu!", "Ty dědku zas*anej!", "Tohle by nežral ani pes!", "Za tohle platit nebudu!"], 
+            customerImpatient: "Na tohle se ti můžu vys*at!", 
+            customerRudeComments: ["Nic moc teda.", "Čekal jsem víc.", "Už se nevrátím.", "Bylo to... jedlý.", "Hmm.", "No, aspoň jsem se najedl.", "Příště zkusím něco jiného.", "Za ty peníze nic extra."], 
+            outhouseCurses: ["Ta kadibudka je peklo!", "Hrůza, ten smrad!", "Strašně to pálí!", "Už sem nikdy nepudu!", "Potřebuju doktora, hned!", "Proboha, co to bylo?!", "Moje útroby hoří!", "To je biologická zbraň!", "Okamžitě dezinfekci!", "Nikdy víc!"],
+            sausage_adj: { singular: { [COOK_STATES.GOLDEN]: "zlatavou", [COOK_STATES.WELLDONE]: "propečenou" }, plural: { [COOK_STATES.GOLDEN]: "zlatavé", [COOK_STATES.WELLDONE]: "propečené" }, genitive: { [COOK_STATES.GOLDEN]: "zlatavých", [COOK_STATES.WELLDONE]: "propečených" } },
+            cheese_adj: { singular: { [COOK_STATES.GOLDEN]: "zlatavý", [COOK_STATES.WELLDONE]: "propečený" }, plural: { [COOK_STATES.GOLDEN]: "zlatavé", [COOK_STATES.WELLDONE]: "propečené" }, genitive: { [COOK_STATES.GOLDEN]: "zlatavých", [COOK_STATES.WELLDONE]: "propečených" } },
+            sausage_plural: { 1: "klobásu", 2: "klobásy", 5: "klobás" },
+            cheese_plural: { 1: "hermelín", 2: "hermelíny", 5: "hermelínů" },
+            numbers: { 1: "jednu", 2: "dvě", 3: "tři", 4: "čtyři", 5: "pět" },
+            numbers_male: { 1: "jeden", 2: "dva", 3: "tři", 4: "čtyři", 5: "pět" }
+        },
+        en: {
+            title: "Milan's Sausages",
+            subtitle: "Prepare delicious meals under the watchful eye of premium chef Milan. Use WASD and E keys, and don't forget to place the food on a paper plate before delivery.",
+            startButton: "Cook",
+            langButton: "Česky",
+            stressLabel: "Stress", timerLabel: "Surviving",
+            gameOverTitle: "GAME OVER", gameOverReasonCollapse: "Total mental breakdown!", gameOverReasonAlcohol: "Alcohol poisoning.", gameOverScore: "You survived", gameOverSeconds: "seconds.", ordersCompleted: "Orders Completed", playAgain: "Play Again",
+            milanSwears: ["F**k!", "A**holes!", "I can't take it!", "Son of a b**ch!", "D*mn it!", "This day sucks!", "For f**k's sake!", "I'm losing my mind!"], 
+            milanRelief: ["Ah, f**k it!", "Here we go...", "Finally, a moment of peace.", "I needed this.", "Ah, sweet relief."], 
+            milanDrop: "Oh, sh*t!",
+            withKetchup: "With ketchup.", withMustard: "With mustard.", withBoth: "With both.", withCranberries: "With cranberries.", andBread: "And {count} bread.",
+            nice_man: ["Hello, I would like ", "Could I please have ", "Hi, I'll take ", "Greetings, I'm in the mood for ", "Hello, that looks delicious. I'll have ", "Could you prepare me "], 
+            nice_woman: ["Hello, I would like ", "Could I please have ", "Hi, I'll take ", "Good day, I'd love to try ", "That looks amazing! I would like ", "Could you please make me "], 
+            neutral_man: ["I'll have ", "I want ", "Get me ", "One of those.", "I'll take the usual.", "Just give me "], 
+            neutral_woman: ["I'll have ", "I want ", "Get me ", "One of those.", "I'll take the usual.", "Just give me "], 
+            rude: ["Hey, hurry up, I want ", "Come on, will ya? I want ", "I'm waiting for ", "Move it, I'm starving for ", "I hope this doesn't take all day. I want ", "Hey you! I want "],
+            customerCurses: ["What is this crap?!", "You can shove this up your a**!", "This is inedible!", "Ugh, disgusting!", "I expected quality, not this garbage!", "You moron!", "You old fart!", "Even my dog wouldn't eat this!", "I'm not paying for this filth!"], 
+            customerImpatient: "I'm not waiting for this sh*t!", 
+            customerRudeComments: ["Not great.", "I expected more.", "I'm not coming back.", "It was... edible.", "Hmm.", "Well, at least it's food.", "I'll try something else next time.", "Not worth the money."], 
+            outhouseCurses: ["That outhouse is hell!", "Horrible, the stench!", "God, it burns!", "I'm never coming here again!", "I need a doctor, now!", "Oh god, what was that?!", "My insides are on fire!", "That's a biological weapon!", "I need a shower, immediately!", "Never again!"],
+            sausage_adj: { [COOK_STATES.GOLDEN]: "golden-brown", [COOK_STATES.WELLDONE]: "well-done" },
+            cheese_adj: { [COOK_STATES.GOLDEN]: "golden-brown", [COOK_STATES.WELLDONE]: "well-done" },
+            sausage_plural: { 1: "sausage", 2: "sausages" },
+            cheese_plural: { 1: "camembert", 2: "camemberts" },
         }
+    };
 
-        document.addEventListener('keydown', e => { if (gameRunning) keys[e.key.toLowerCase()] = true; });
-        document.addEventListener('keyup', e => {
-            if (!gameRunning) return;
-            const key = e.key.toLowerCase();
-            if (key === 'e') handleInteraction();
-            delete keys[key];
-        });
-        
-        function getDistance(e1,e2){const r1=e1.getBoundingClientRect(),r2=e2.getBoundingClientRect();return Math.sqrt(Math.pow(r1.left+r1.width/2-(r2.left+r2.width/2),2)+Math.pow(r1.top+r1.height/2-(r2.top+r2.height/2),2))}
+    function updateAllText() {
+        const t = translations[currentLanguage];
+        document.documentElement.lang = currentLanguage;
+        document.getElementById('start-screen').querySelector('h1').textContent = t.title;
+        document.getElementById('start-screen-subtitle').innerHTML = t.subtitle;
+        document.getElementById('start-btn').textContent = t.startButton;
+        document.getElementById('lang-switch-btn').textContent = t.langButton;
+        document.getElementById('stress-label').textContent = t.stressLabel;
+        document.getElementById('game-over-title').textContent = t.gameOverTitle;
+        document.getElementById('play-again-btn').textContent = t.playAgain;
+    }
 
-        function handleInteraction() {
-            if (!gameRunning || isConsuming) return;
-            if (heldItem) {
-                if (heldItem.type === 'plate' && heldItem.contents.length > 0) {
-                    let interactedWithSauce = false;
-                    staticObjects.forEach(obj => {
-                        if (obj.isSauce && getDistance(milan, obj.element) < 120) {
-                            const plate = heldItem;
-                            plate.contents.forEach(food => {
-                                if (obj.sauceType === 'ketchup' && food.type === 'sausage' && !plate.hasKetchup) { plate.hasKetchup = true; const s = document.createElement('div'); s.className = 'ketchup-splash'; food.element.appendChild(s); interactedWithSauce = true; }
-                                else if (obj.sauceType === 'mustard' && food.type === 'sausage' && !plate.hasMustard) { plate.hasMustard = true; const s = document.createElement('div'); s.className = 'mustard-splash'; food.element.appendChild(s); interactedWithSauce = true; }
-                                else if (obj.sauceType === 'cranberries' && food.type === 'cheese' && !plate.hasCranberries) { plate.hasCranberries = true; const s = document.createElement('div'); s.className = 'cranberries-splash'; food.element.appendChild(s); interactedWithSauce = true; }
-                            });
-                        }
-                    });
-                    if (interactedWithSauce) return;
+    document.addEventListener('keydown', e => { if (gameRunning) keys[e.key.toLowerCase()] = true; });
+    document.addEventListener('keyup', e => {
+        if (!gameRunning) return;
+        const key = e.key.toLowerCase();
+        if (key === 'e') handleInteraction();
+        delete keys[key];
+    });
+    
+    function getDistance(e1,e2){const r1=e1.getBoundingClientRect(),r2=e2.getBoundingClientRect();return Math.sqrt(Math.pow(r1.left+r1.width/2-(r2.left+r2.width/2),2)+Math.pow(r1.top+r1.height/2-(r2.top+r2.height/2),2))}
+
+    function handleInteraction() {
+        if (!gameRunning || isConsuming) return;
+        if (heldItem) {
+            if (heldItem.type === 'plate' && heldItem.contents.length > 0) {
+                let interactedWithSauce = false;
+                staticObjects.forEach(obj => {
+                    if (obj.isSauce && getDistance(milan, obj.element) < 120) {
+                        const plate = heldItem;
+                        plate.contents.forEach(food => {
+                            if (obj.sauceType === 'ketchup' && food.type === 'sausage' && !plate.hasKetchup) { plate.hasKetchup = true; const s = document.createElement('div'); s.className = 'ketchup-splash'; food.element.appendChild(s); interactedWithSauce = true; }
+                            else if (obj.sauceType === 'mustard' && food.type === 'sausage' && !plate.hasMustard) { plate.hasMustard = true; const s = document.createElement('div'); s.className = 'mustard-splash'; food.element.appendChild(s); interactedWithSauce = true; }
+                            else if (obj.sauceType === 'cranberries' && food.type === 'cheese' && !plate.hasCranberries) { plate.hasCranberries = true; const s = document.createElement('div'); s.className = 'cranberries-splash'; food.element.appendChild(s); interactedWithSauce = true; }
+                        });
+                    }
+                });
+                if (interactedWithSauce) return;
+            }
+            if (heldItem.type === 'plate' && heldItem.contents.length > 0) {
+                let closestCustomer = null, minDistance = 150;
+                customers.filter(c => c.state === 'waiting_in_queue').forEach(cust => {
+                    const dist = getDistance(milan, cust.figureElement);
+                    if (dist < minDistance) { minDistance = dist; closestCustomer = cust; }
+                });
+                if (closestCustomer) {
+                    if (checkOrder(heldItem, closestCustomer.order)) {
+                        ordersCompleted++;
+                        closestCustomer.state = 'walking_to_table';
+                        closestCustomer.speechBubble.classList.remove('visible');
+                        closestCustomer.waitTimerContainer.style.visibility = 'hidden';
+                        moveCustomerToTable(closestCustomer, heldItem);
+                    } else {
+                        updateStress(closestCustomer.personality === 'rude' ? 40 : 30);
+                        customerCusses(closestCustomer);
+                    }
+                    while (heldItem.element.firstChild) { heldItem.element.removeChild(heldItem.element.firstChild); }
+                    heldItem.element.remove();
+                    items.splice(items.indexOf(heldItem), 1);
+                    heldItem = null;
+                    return;
                 }
-                if (heldItem.type === 'plate' && heldItem.contents.length > 0) {
-                    let closestCustomer = null, minDistance = 150;
-                    customers.filter(c => c.state === 'waiting_in_queue').forEach(cust => {
-                        const dist = getDistance(milan, cust.figureElement);
-                        if (dist < minDistance) { minDistance = dist; closestCustomer = cust; }
-                    });
-                    if (closestCustomer) {
-                        if (checkOrder(heldItem, closestCustomer.order)) {
-                            ordersCompleted++;
-                            closestCustomer.state = 'walking_to_table';
-                            closestCustomer.speechBubble.classList.remove('visible');
-                            closestCustomer.waitTimerContainer.style.visibility = 'hidden';
-                            moveCustomerToTable(closestCustomer, heldItem);
+            }
+            let placedOnPlate = false;
+            if (['sausage', 'cheese', 'bread'].includes(heldItem.type)) {
+                items.filter(i => i.type === 'plate').forEach(plate => {
+                    if (!placedOnPlate && isOverlapping(heldItem.element, plate.element)) {
+                        if (heldItem.type === 'bread') {
+                            if (plate.breadCount < 4) { plate.breadCount = (plate.breadCount || 0) + 1; heldItem.element.style.top = (5 + plate.breadCount * 12) + 'px'; } else return;
+                        } else if (plate.contents.length < 2) {
+                            plate.contents.push(heldItem);
+                        } else return;
+                        if(heldItem.type !== 'bread') {
+                            heldItem.element.style.left = (plate.contents.length === 1 ? '5px' : '30px');
+                            heldItem.element.style.top = (heldItem.type === 'sausage' ? '25px' : '20px');
                         } else {
-                            updateStress(closestCustomer.personality === 'rude' ? 40 : 30);
-                            customerCusses(closestCustomer);
+                            heldItem.element.style.left = '5px';
                         }
-                        while (heldItem.element.firstChild) { heldItem.element.removeChild(heldItem.element.firstChild); }
-                        heldItem.element.remove();
+                        heldItem.onPlate = plate; placedOnPlate = true; heldItem.isHeld = false; heldItem.element.style.zIndex = 6;
+                        plate.element.appendChild(heldItem.element); 
                         items.splice(items.indexOf(heldItem), 1);
                         heldItem = null;
-                        return;
                     }
-                }
-                let placedOnPlate = false;
-                if (['sausage', 'cheese', 'bread'].includes(heldItem.type)) {
-                    items.filter(i => i.type === 'plate').forEach(plate => {
-                        if (!placedOnPlate && isOverlapping(heldItem.element, plate.element)) {
-                            if (heldItem.type === 'bread') {
-                                if (plate.breadCount < 4) { plate.breadCount = (plate.breadCount || 0) + 1; heldItem.element.style.top = (5 + plate.breadCount * 12) + 'px'; } else return;
-                            } else if (plate.contents.length < 2) {
-                                plate.contents.push(heldItem);
-                            } else return;
-                            if(heldItem.type !== 'bread') {
-                                heldItem.element.style.left = (plate.contents.length === 1 ? '5px' : '30px');
-                                heldItem.element.style.top = (heldItem.type === 'sausage' ? '25px' : '20px');
-                            } else {
-                                heldItem.element.style.left = '5px';
-                            }
-                            heldItem.onPlate = plate; placedOnPlate = true; heldItem.isHeld = false; heldItem.element.style.zIndex = 6;
-                            plate.element.appendChild(heldItem.element); 
-                            items.splice(items.indexOf(heldItem), 1);
-                            heldItem = null;
-                        }
-                    });
-                }
-                if (heldItem) { heldItem.isHeld = false; heldItem.element.style.zIndex = 5; heldItem = null; }
-            } else {
-                let closestItem = null, minDistance = 100;
-                items.sort((a, b) => (a.type === 'plate' && a.contents.length > 0) ? -1 : 1);
-                items.forEach(item => { 
-                    const distance = getDistance(milan, item.element); 
-                    if (distance < minDistance) { minDistance = distance; closestItem = item; } 
                 });
-                if (closestItem) {
-                    heldItem = closestItem; 
-                    heldItem.isHeld = true; 
-                    heldItem.element.style.zIndex = 11;
-                    return;
-                }
-                let closestStatic = null, minStaticDist = 120;
-                staticObjects.forEach(obj => { const dist = getDistance(milan, obj.element); if (dist < minStaticDist) { minStaticDist = dist; closestStatic = obj; } });
-                if (closestStatic) {
-                    if (closestStatic.isSupply) { const newItem = createItem(closestStatic.supplyType, milan.offsetLeft, milan.offsetTop); heldItem = newItem; heldItem.isHeld = true; heldItem.element.style.zIndex = 11; }
-                    else if (closestStatic.isRelief) { useStressRelief(closestStatic.reliefType); }
-                }
+            }
+            if (heldItem) { heldItem.isHeld = false; heldItem.element.style.zIndex = 5; heldItem = null; }
+        } else {
+            let closestItem = null, minDistance = 100;
+            items.sort((a, b) => (a.type === 'plate' && a.contents.length > 0) ? -1 : 1);
+            items.forEach(item => { 
+                const distance = getDistance(milan, item.element); 
+                if (distance < minDistance) { minDistance = distance; closestItem = item; } 
+            });
+            if (closestItem) {
+                heldItem = closestItem; 
+                heldItem.isHeld = true; 
+                heldItem.element.style.zIndex = 11;
+                return;
+            }
+            let closestStatic = null, minStaticDist = 120;
+            staticObjects.forEach(obj => { const dist = getDistance(milan, obj.element); if (dist < minStaticDist) { minStaticDist = dist; closestStatic = obj; } });
+            if (closestStatic) {
+                if (closestStatic.isSupply) { const newItem = createItem(closestStatic.supplyType, milan.offsetLeft, milan.offsetTop); heldItem = newItem; heldItem.isHeld = true; heldItem.element.style.zIndex = 11; }
+                else if (closestStatic.isRelief) { useStressRelief(closestStatic.reliefType); }
             }
         }
-        function isOverlapping(e1,e2){const r1=e1.getBoundingClientRect(),r2=e2.getBoundingClientRect();return!(r1.right<r2.left||r1.left>r2.right||r1.bottom<r2.top||r1.top>r2.bottom)}
-        function updateStress(c){stress+=c;if(stress<0)stress=0;if(stress>100)stress=100;stressBar.style.width=stress+'%';if(stress>=100)endGame(translations[currentLanguage].gameOverReasonCollapse)}
-        function createMilanBubble(t){const b=document.createElement('div');b.className='milan-bubble';b.textContent=t;b.style.left=milan.offsetLeft+milan.offsetWidth+'px';b.style.top=milan.offsetTop-20+'px';gameWorld.appendChild(b);setTimeout(()=>b.remove(),2000)}
-        
-        function startSmoking(isInitial = false) {
-            if (!isInitial) {
-                if (isConsuming) return;
-                updateStress(-15);
-                nicotineLevel += 40;
-                if (nicotineLevel > 100) nicotineLevel = 100;
+    }
+    function isOverlapping(e1,e2){const r1=e1.getBoundingClientRect(),r2=e2.getBoundingClientRect();return!(r1.right<r2.left||r1.left>r2.right||r1.bottom<r2.top||r1.top>r2.bottom)}
+    function updateStress(c){stress+=c;if(stress<0)stress=0;if(stress>100)stress=100;stressBar.style.width=stress+'%';if(stress>=100)endGame(translations[currentLanguage].gameOverReasonCollapse)}
+    function createMilanBubble(t){const b=document.createElement('div');b.className='milan-bubble';b.textContent=t;b.style.left=milan.offsetLeft+milan.offsetWidth+'px';b.style.top=milan.offsetTop-20+'px';gameWorld.appendChild(b);setTimeout(()=>b.remove(),2000)}
+    
+    function startSmoking(isInitial = false) {
+        if (!isInitial) {
+            if (isConsuming) return;
+            updateStress(-15);
+            nicotineLevel += 40;
+            if (nicotineLevel > 100) nicotineLevel = 100;
+        }
+        isConsuming = true;
+        const cig = document.createElement('div');
+        cig.className = 'cigarette-visual';
+        milan.appendChild(cig);
+        cig.style.left = (milan.offsetWidth - 20) + 'px';
+        cig.style.top = '25px';
+        cig.style.transform = 'rotate(-20deg)';
+        const smokeInterval = setInterval(() => {
+            if (!gameRunning || !cig.parentElement) return;
+            for(let i=0; i<3; i++) {
+                const smoke = document.createElement('div');
+                smoke.className = 'smoke';
+                const cigRect = cig.getBoundingClientRect();
+                smoke.style.left = cigRect.right - 10 + 'px';
+                smoke.style.top = cigRect.top + 'px';
+                smoke.style.animationDelay = `${Math.random() * 0.5}s`;
+                smoke.style.animationDuration = `${Math.random() * 1 + 2}s`
+                gameWorld.appendChild(smoke);
+                setTimeout(() => smoke.remove(), 3000);
             }
+        }, 500);
+        setTimeout(() => {
+            clearInterval(smokeInterval);
+            if (cig.parentElement) cig.remove();
+            isConsuming = false;
+        }, 5000);
+    }
+    
+    function useStressRelief(type) {
+        if (isConsuming || !gameRunning) return;
+        const t = translations[currentLanguage];
+        createMilanBubble(t.milanRelief[Math.floor(Math.random()*t.milanRelief.length)]);
+        if (type === 'vodka') {
             isConsuming = true;
-            const cig = document.createElement('div');
-            cig.className = 'cigarette-visual';
-            milan.appendChild(cig);
-            cig.style.left = (milan.offsetWidth - 20) + 'px';
-            cig.style.top = '25px';
-            cig.style.transform = 'rotate(-20deg)';
-            const smokeInterval = setInterval(() => {
-                if (!gameRunning || !cig.parentElement) return;
-                for(let i=0; i<3; i++) {
-                    const smoke = document.createElement('div');
-                    smoke.className = 'smoke';
-                    const cigRect = cig.getBoundingClientRect();
-                    smoke.style.left = cigRect.right - 10 + 'px';
-                    smoke.style.top = cigRect.top + 'px';
-                    smoke.style.animationDelay = `${Math.random() * 0.5}s`;
-                    smoke.style.animationDuration = `${Math.random() * 1 + 2}s`
-                    gameWorld.appendChild(smoke);
-                    setTimeout(() => smoke.remove(), 3000);
-                }
-            }, 500);
-            setTimeout(() => {
-                clearInterval(smokeInterval);
-                if (cig.parentElement) cig.remove();
-                isConsuming = false;
-            }, 5000);
-        }
-        
-        function useStressRelief(type) {
-            if (isConsuming || !gameRunning) return;
-            const t = translations[currentLanguage];
-            createMilanBubble(t.milanRelief[Math.floor(Math.random()*t.milanRelief.length)]);
-            if (type === 'vodka') {
-                isConsuming = true;
-                updateStress(-30); 
-                intoxicationLevel += 40;
-                if (intoxicationLevel > 100) intoxicationLevel = 100;
-                for (let i = 0; i < 15; i++) {
-                    const p = document.createElement('div');
-                    p.className = 'drunk-particle';
-                    p.style.left = Math.random() * window.innerWidth + 'px';
-                    p.style.top = Math.random() * window.innerHeight + 'px';
-                    p.style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 70%, 0.6)`;
-                    p.style.animationDelay = `${Math.random() * 0.5}s`;
-                    gameWorld.appendChild(p);
-                    setTimeout(() => p.remove(), 2000);
-                }
-                setTimeout(() => { isConsuming = false; }, 1500); 
-                if (intoxicationLevel > 95) endGame(translations[currentLanguage].gameOverReasonAlcohol);
-            } else if (type === 'cigarettes') {
-                startSmoking();
+            updateStress(-30); 
+            intoxicationLevel += 40;
+            if (intoxicationLevel > 100) intoxicationLevel = 100;
+            for (let i = 0; i < 15; i++) {
+                const p = document.createElement('div');
+                p.className = 'drunk-particle';
+                p.style.left = Math.random() * window.innerWidth + 'px';
+                p.style.top = Math.random() * window.innerHeight + 'px';
+                p.style.backgroundColor = `hsla(${Math.random() * 360}, 100%, 70%, 0.6)`;
+                p.style.animationDelay = `${Math.random() * 0.5}s`;
+                gameWorld.appendChild(p);
+                setTimeout(() => p.remove(), 2000);
             }
+            setTimeout(() => { isConsuming = false; }, 1500); 
+            if (intoxicationLevel > 95) endGame(translations[currentLanguage].gameOverReasonAlcohol);
+        } else if (type === 'cigarettes') {
+            startSmoking();
         }
+    }
 
-        function customerLeaves(cust, isAngry) {
-            if(cust.state === 'leaving') return;
-            cust.state = 'leaving';
-            if (cust.queueSlot) { cust.queueSlot.occupied = false; cust.queueSlot = null; }
-            if (cust.figureElement) {
-                cust.speechBubble.classList.remove('visible');
-                cust.waitTimerContainer.style.visibility = 'hidden';
-                if (!isAngry && cust.table && Math.random() < 0.35) {
-                    const rudeComments = translations[currentLanguage].customerRudeComments;
-                    cust.speechBubble.innerHTML = rudeComments[Math.floor(Math.random() * rudeComments.length)];
-                    cust.speechBubble.style.color = 'gray';
-                    cust.speechBubble.classList.add('visible');
-                    setTimeout(() => { if (cust.speechBubble) cust.speechBubble.classList.remove('visible'); }, 2500);
-                }
-                const fig = cust.figureElement;
-                fig.style.top = gameWorld.clientHeight + 50 + 'px';
-                fig.style.left = (Math.random() * (gameWorld.clientWidth / 2 - 100) + river.clientWidth + 50) + 'px';
-                setTimeout(() => { 
-                    if(fig.parentElement) fig.remove(); 
-                    const index = customers.indexOf(cust);
-                    if (index > -1) customers.splice(index, 1);
-                }, 3000);
-            } else {
+    function customerLeaves(cust, isAngry) {
+        if(cust.state === 'leaving') return;
+        cust.state = 'leaving';
+        if (cust.queueSlot) { cust.queueSlot.occupied = false; cust.queueSlot = null; }
+        if (cust.figureElement) {
+            cust.speechBubble.classList.remove('visible');
+            cust.waitTimerContainer.style.visibility = 'hidden';
+            if (!isAngry && cust.table && Math.random() < 0.35) {
+                const rudeComments = translations[currentLanguage].customerRudeComments;
+                cust.speechBubble.innerHTML = rudeComments[Math.floor(Math.random() * rudeComments.length)];
+                cust.speechBubble.style.color = 'gray';
+                cust.speechBubble.classList.add('visible');
+                setTimeout(() => { if (cust.speechBubble) cust.speechBubble.classList.remove('visible'); }, 2500);
+            }
+            const fig = cust.figureElement;
+            fig.style.top = gameWorld.clientHeight + 50 + 'px';
+            fig.style.left = (Math.random() * (gameWorld.clientWidth / 2 - 100) + river.clientWidth + 50) + 'px';
+            setTimeout(() => { 
+                if(fig.parentElement) fig.remove(); 
                 const index = customers.indexOf(cust);
                 if (index > -1) customers.splice(index, 1);
-            }
-        }
-        
-        function customerCusses(cust) {
-            const curses = translations[currentLanguage].customerCurses;
-            cust.speechBubble.innerHTML = curses[Math.floor(Math.random() * curses.length)];
-            cust.speechBubble.style.color = 'red'; cust.speechBubble.classList.add('visible');
-            setTimeout(() => { customerLeaves(cust, true); }, 2500);
-        }
-
-        function gameLoop(timestamp){
-            if (!gameRunning) return;
-            animationFrameId = requestAnimationFrame(gameLoop);
-            
-            if (!lastTime) lastTime = timestamp;
-            const deltaTime = (timestamp - lastTime) / 1000;
-            lastTime = timestamp;
-            
-            if (intoxicationLevel > 0) intoxicationLevel -= (1.5 * deltaTime); else intoxicationLevel = 0;
-            if (nicotineLevel > 0) nicotineLevel -= (3 * deltaTime); else nicotineLevel = 0;
-
-            const stressShake = stress > 70 ? (stress - 70) / 15 : 0;
-            const drunkShake = intoxicationLevel / 8;
-            const nicotineShake = nicotineLevel / 25;
-            const totalShake = stressShake + drunkShake + nicotineShake;
-            if (totalShake > 0) {
-                const sX = (Math.random() - 0.5) * totalShake;
-                const sY = (Math.random() - 0.5) * totalShake;
-                gameWorld.style.transform = `translate(${sX}px, ${sY}px)`;
-            } else {
-                gameWorld.style.transform = 'none';
-            }
-            const stressBlur = stress > 85 ? (stress - 85) / 10 : 0;
-            const drunkBlur = intoxicationLevel > 20 ? (intoxicationLevel - 20) / 10 : 0;
-            const nicotineBlur = nicotineLevel > 40 ? (nicotineLevel - 40) / 50 : 0;
-            const totalBlur = stressBlur + drunkBlur + nicotineBlur;
-            const drunkHue = intoxicationLevel > 30 ? (intoxicationLevel - 30) / 3 : 0;
-            const nicotineSaturation = 100 + (nicotineLevel > 20 ? (nicotineLevel - 20) / 2 : 0);
-            gameWorld.style.filter = `blur(${totalBlur}px) hue-rotate(${drunkHue}deg) saturate(${nicotineSaturation}%)`;
-            controlsImpaired = intoxicationLevel > 40;
-            if (controlsImpaired && heldItem && Math.random() < (intoxicationLevel / 500 * deltaTime)) {
-                createMilanBubble(translations[currentLanguage].milanDrop);
-                heldItem.isHeld = false;
-                heldItem.element.style.zIndex = 5;
-                heldItem = null;
-            }
-            customers.forEach(cust => {
-                if (cust.state === 'waiting_in_queue') {
-                    cust.waitTime += deltaTime; 
-                    const waitPercentage = (cust.waitTime / cust.maxWaitTime) * 100;
-                    cust.waitTimerBar.style.width = (100 - waitPercentage) + '%';
-                    if (waitPercentage < 40) cust.waitTimerBar.style.backgroundColor = '#32CD32';
-                    else if (waitPercentage < 75) cust.waitTimerBar.style.backgroundColor = '#FFD700';
-                    else cust.waitTimerBar.style.backgroundColor = '#DC143C';
-                    if (cust.waitTime >= cust.maxWaitTime) {
-                        updateStress(25);
-                        cust.speechBubble.innerHTML = translations[currentLanguage].customerImpatient;
-                        cust.speechBubble.style.color = 'orange';
-                        cust.speechBubble.classList.add('visible');
-                        customerLeaves(cust, true);
-                    }
-                }
-            });
-            updateStress((baseStressRate+customers.filter(c=>c.state==='waiting_in_queue').length*0.1)*deltaTime);
-            if(stress > 50 && !milanSwearCooldown) {
-                const swears = translations[currentLanguage].milanSwears;
-                createMilanBubble(swears[Math.floor(Math.random()*swears.length)]);
-                milanSwearCooldown = true;
-                setTimeout(() => { milanSwearCooldown = false }, 5000);
-            }
-            const slowDownFactor = 1 + (intoxicationLevel / 200) + (nicotineLevel / 400);
-            const currentSpeed = MILAN_SPEED / slowDownFactor;
-            let mX=0,mY=0;if(keys.w)mY-=1;if(keys.s)mY+=1;if(keys.a)mX-=1;if(keys.d)mX+=1;if(controlsImpaired)[mX,mY]=[-mY,mX];let cX=milan.offsetLeft+mX*currentSpeed*deltaTime,cY=milan.offsetTop+mY*currentSpeed*deltaTime;if(cX<0)cX=0;if(cX>gameWorld.clientWidth-milan.clientWidth)cX=gameWorld.clientWidth-milan.clientWidth;if(cY<0)cY=0;if(cY>gameWorld.clientHeight-milan.clientHeight)cY=gameWorld.clientHeight-milan.clientHeight;milan.style.left=cX+'px';milan.style.top=cY+'px';
-            if(heldItem){ heldItem.element.style.left=milan.offsetLeft+milan.clientWidth/2-heldItem.element.clientWidth/2+'px'; heldItem.element.style.top=milan.offsetTop-heldItem.element.clientHeight+'px'; }
-            items.forEach((item,index)=>{
-                if (item.onPlate) return;
-                if(!item.isHeld && ['sausage','cheese'].includes(item.type)){
-                    if(isOverlapping(item.element,grill)&&item.cookState<COOK_STATES.BURNT){
-                        item.cookTime += deltaTime;
-                        const tPS=item.type==='sausage'?COOK_TIMES.SAUSAGE:COOK_TIMES.CHEESE;
-                        const nS=Math.floor(item.cookTime/tPS);
-                        if(nS>item.cookState){ item.cookState=nS>3?3:nS; updateItemVisuals(item) }
-                        if(Math.random() > 0.98) createSmoke(item.element)
-                    }
-                }
-                if(!item.isHeld&&isOverlapping(item.element,trashCan)){
-                    while (item.element.firstChild) { item.element.removeChild(item.element.firstChild); }
-                    item.element.remove(); items.splice(index,1);
-                }
-            });
-        }
-        function updateItemVisuals(item){const t=item.type==='sausage'?'sausage':'cheese';item.element.className=`item ${t}`;switch(item.cookState){case COOK_STATES.RAW:item.element.classList.add(`raw-${t}`);break;case COOK_STATES.GOLDEN:item.element.classList.add(`golden-${t}`);break;case COOK_STATES.WELLDONE:item.element.classList.add(`welldone-${t}`);break;case COOK_STATES.BURNT:item.element.classList.add(`burnt-${t}`);break;}}
-        function checkOrder(plate, order) {
-            if ((plate.breadCount || 0) !== order.bread) return false;
-            if (order.ketchup !== plate.hasKetchup || order.mustard !== plate.hasMustard || order.cranberries !== plate.hasCranberries) return false;
-            const plateContents = plate.contents.map(i => ({ type: i.type, cookState: i.cookState })).sort((a, b) => a.type.localeCompare(b.type));
-            const orderItems = order.items.sort((a, b) => a.type.localeCompare(b.type));
-            if (plateContents.length !== orderItems.length) return false;
-            for (let i = 0; i < orderItems.length; i++) {
-                if (plateContents[i].type !== orderItems[i].type || plateContents[i].cookState !== orderItems[i].cookState) return false;
-            }
-            return true;
-        }
-        
-        function createPoopParticle(x, y) { const p = document.createElement('div'); p.className = 'poop-particle'; p.style.left = x + (Math.random() * 20 - 10) + 'px'; p.style.top = y + 60 + (Math.random() * 10 - 5) + 'px'; gameWorld.appendChild(p); setTimeout(() => p.remove(), 2500); }
-        function createDirtParticle(x, y) { const p = document.createElement('div'); p.className = 'dirt-particle'; p.style.left = x + 10 + (Math.random() * 20 - 10) + 'px'; p.style.top = y + 65 + (Math.random() * 10 - 5) + 'px'; p.style.animationDelay = `${Math.random() * 0.2}s`; gameWorld.appendChild(p); setTimeout(() => p.remove(), 800); }
-        function createSmoke(el){ const smoke = document.createElement('div'); smoke.className = 'smoke'; const rect = el.getBoundingClientRect(); smoke.style.left = rect.left + Math.random() * rect.width + 'px'; smoke.style.top = rect.top + 'px'; smoke.style.animationDelay = `${Math.random() * 0.5}s`; smoke.style.animationDuration = `${Math.random() * 1 + 2}s`; gameWorld.appendChild(smoke); setTimeout(() => smoke.remove(), 3000); }
-
-        function moveCustomerToTable(cust, plate) {
-            const eT = seatingAreas.find(sa => !sa.occupied);
-            if (eT) {
-                eT.occupied = true; cust.table = eT;
-                const fig = cust.figureElement, tR = eT.element.querySelector('.table').getBoundingClientRect();
-                const bench = eT.element.querySelector(Math.random() > 0.5 ? '.bench.top' : '.bench.bottom');
-                const bR = bench.getBoundingClientRect();
-                fig.style.left = bR.left + 50 + 'px'; fig.style.top = bR.top - 50 + 'px';
-                const tablePlate = plate.element.cloneNode(true);
-                tablePlate.style.position = 'absolute'; tablePlate.style.left = tR.left + 30 + 'px'; tablePlate.style.top = tR.top - 10 + 'px'; tablePlate.style.zIndex = 5;
-                gameWorld.appendChild(tablePlate);
-
-                setTimeout(() => {
-                    tablePlate.remove();
-                    if (Math.random() < 0.4) { sendCustomerToOuthouse(cust); } 
-                    else { if (cust.table) cust.table.occupied = false; customerLeaves(cust, false); }
-                }, 15000);
-            } else { customerLeaves(cust, true); }
-        }
-        
-        function sendCustomerToOuthouse(cust) {
-            cust.state = 'walking_to_outhouse'; const fig = cust.figureElement;
-            const outhouseRect = outhouse.getBoundingClientRect();
-            fig.style.left = outhouseRect.left + 'px'; fig.style.top = outhouseRect.top + outhouseRect.height + 'px';
-            setTimeout(() => {
-                cust.state = 'using_outhouse'; fig.style.display = 'none'; outhouse.classList.add('shake');
-                setTimeout(() => {
-                    outhouse.classList.remove('shake'); fig.style.display = 'block'; customerLeavesOuthouse(cust);
-                }, 3000);
             }, 3000);
+        } else {
+            const index = customers.indexOf(cust);
+            if (index > -1) customers.splice(index, 1);
         }
+    }
+    
+    function customerCusses(cust) {
+        const curses = translations[currentLanguage].customerCurses;
+        cust.speechBubble.innerHTML = curses[Math.floor(Math.random() * curses.length)];
+        cust.speechBubble.style.color = 'red'; cust.speechBubble.classList.add('visible');
+        setTimeout(() => { customerLeaves(cust, true); }, 2500);
+    }
+
+    function gameLoop(timestamp){
+        if (!gameRunning) return;
+        animationFrameId = requestAnimationFrame(gameLoop);
         
-        function customerLeavesOuthouse(cust) {
-            cust.state = 'leaving_in_distress'; 
-            const fig = cust.figureElement;
-            const curses = translations[currentLanguage].outhouseCurses;
-            cust.speechBubble.innerHTML = curses[Math.floor(Math.random() * curses.length)];
-            cust.speechBubble.style.color = 'brown'; cust.speechBubble.classList.add('visible');
-            const particleInterval = setInterval(() => {
-                if (cust.state !== 'leaving_in_distress' || !fig.parentElement) {
-                    clearInterval(particleInterval);
-                    return;
-                }
-                createPoopParticle(fig.offsetLeft, fig.offsetTop);
-                createDirtParticle(fig.offsetLeft, fig.offsetTop);
-                createDirtParticle(fig.offsetLeft, fig.offsetTop);
-                createDirtParticle(fig.offsetLeft, fig.offsetTop);
-            }, 100);
-            if (cust.table) cust.table.occupied = false;
-            fig.style.transition = 'left 2.5s linear, top 2.5s linear';
-            customerLeaves(cust, false);
-            setTimeout(() => { 
-                clearInterval(particleInterval); 
-                fig.style.transition = 'left 3s ease-in-out, top 3s ease-in-out'; 
-            }, 2600);
-        }
-
-        function createItem(type,x,y){const el=document.createElement('div');el.classList.add('item',type);if(type==='sausage')el.classList.add('raw-sausage');if(type==='cheese')el.classList.add('raw-cheese');el.style.left=x+'px';el.style.top=y+'px';const itemObj={element:el,type:type,isHeld:!1};if(['sausage','cheese'].includes(type)){itemObj.cookTime=0;itemObj.cookState=COOK_STATES.RAW;itemObj.onPlate=null}if(type==='plate'){itemObj.contents=[];itemObj.hasKetchup=!1;itemObj.hasMustard=!1;itemObj.hasCranberries=!1;itemObj.breadCount=0}items.push(itemObj);gameWorld.appendChild(el);return itemObj}
+        if (!lastTime) lastTime = timestamp;
+        const deltaTime = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
         
-        const hairColorPool = [
-            '#3d2d1b', '#3d2d1b', '#111', '#111', '#e0b452', '#e0b452', '#e0b452', 
-            '#c7864f', '#c7864f', '#dddddd', 
-            '#af3333', '#4169e1' 
-        ];
-        function getRandomHairColor() {
-            return hairColorPool[Math.floor(Math.random() * hairColorPool.length)];
+        if (intoxicationLevel > 0) intoxicationLevel -= (1.5 * deltaTime); else intoxicationLevel = 0;
+        if (nicotineLevel > 0) nicotineLevel -= (3 * deltaTime); else nicotineLevel = 0;
+
+        const stressShake = stress > 70 ? (stress - 70) / 15 : 0;
+        const drunkShake = intoxicationLevel / 8;
+        const nicotineShake = nicotineLevel / 25;
+        const totalShake = stressShake + drunkShake + nicotineShake;
+        if (totalShake > 0) {
+            const sX = (Math.random() - 0.5) * totalShake;
+            const sY = (Math.random() - 0.5) * totalShake;
+            gameWorld.style.transform = `translate(${sX}px, ${sY}px)`;
+        } else {
+            gameWorld.style.transform = 'none';
         }
-
-        function createCustomer() {
-            const occupiedSlots = queueSlots.filter(s => s.occupied).length;
-            if (occupiedSlots >= maxQueueSize) return;
-            const availableSlot = queueSlots.find(s => !s.occupied);
-            if (!availableSlot) return;
-            
-            const g = Math.random() > 0.5 ? 'man' : 'woman';
-            const f = document.createElement('div');
-            f.className = `customer-figure ${g}`;
-
-            if (Math.random() < 0.15) { f.classList.add('obese'); }
-
-            const hairRoll = Math.random();
-            let hairHTML = '';
-            if ((g === 'woman' && hairRoll > 0.02) || (g === 'man' && hairRoll > 0.15)) {
-                const availableStyles = (g === 'woman') ? ['style1', 'style2', 'style4'] : ['style1', 'style2', 'style4'];
-                const hairStyle = availableStyles[Math.floor(Math.random() * availableStyles.length)];
-                const hairColor = getRandomHairColor();
-                hairHTML = `<div class="hair ${hairStyle}" style="color: ${hairColor}"></div>`;
-            }
-
-            let genderSpecificHTML = '';
-            const clothingColor = ['#DC143C', '#008000', '#0000CD', '#FF69B4', '#FFA500'][Math.floor(Math.random()*5)];
-
-            if (g === 'woman') {
-                if (Math.random() < 0.3) { f.classList.add('curvy'); }
-                
-                const boobsRoll = Math.random();
-                let boobsClass = 'boobs-medium';
-                if (boobsRoll < 0.33) boobsClass = 'boobs-small';
-                else if (boobsRoll > 0.66) boobsClass = 'boobs-large';
-                
-                let clothingHTML = '';
-                if (Math.random() < 0.2) { 
-                    clothingHTML = `<div class="one-piece-suit" style="background-color: ${clothingColor}"></div>`;
-                } else {
-                    const bikiniTopStyles = ['style-triangle', 'style-bandeau', 'style-circles-connected', 'style-balls'];
-                    const bikiniTopClass = bikiniTopStyles[Math.floor(Math.random() * bikiniTopStyles.length)];
-                    
-                    const bikiniBottomStyles = ['style-a', 'style-b', 'style-thong'];
-                    const bikiniBottomClass = bikiniBottomStyles[Math.floor(Math.random() * bikiniBottomStyles.length)];
-                    
-                    clothingHTML = `
-                        <div class="bikini-top ${bikiniTopClass}" style="background-color: ${clothingColor}; border-color: ${clothingColor}"></div>
-                        <div class="bikini-bottom ${bikiniBottomClass}" style="background-color: ${clothingColor}"></div>
-                    `;
+        const stressBlur = stress > 85 ? (stress - 85) / 10 : 0;
+        const drunkBlur = intoxicationLevel > 20 ? (intoxicationLevel - 20) / 10 : 0;
+        const nicotineBlur = nicotineLevel > 40 ? (nicotineLevel - 40) / 50 : 0;
+        const totalBlur = stressBlur + drunkBlur + nicotineBlur;
+        const drunkHue = intoxicationLevel > 30 ? (intoxicationLevel - 30) / 3 : 0;
+        const nicotineSaturation = 100 + (nicotineLevel > 20 ? (nicotineLevel - 20) / 2 : 0);
+        gameWorld.style.filter = `blur(${totalBlur}px) hue-rotate(${drunkHue}deg) saturate(${nicotineSaturation}%)`;
+        controlsImpaired = intoxicationLevel > 40;
+        if (controlsImpaired && heldItem && Math.random() < (intoxicationLevel / 500 * deltaTime)) {
+            createMilanBubble(translations[currentLanguage].milanDrop);
+            heldItem.isHeld = false;
+            heldItem.element.style.zIndex = 5;
+            heldItem = null;
+        }
+        customers.forEach(cust => {
+            if (cust.state === 'waiting_in_queue') {
+                cust.waitTime += deltaTime; 
+                const waitPercentage = (cust.waitTime / cust.maxWaitTime) * 100;
+                cust.waitTimerBar.style.width = (100 - waitPercentage) + '%';
+                if (waitPercentage < 40) cust.waitTimerBar.style.backgroundColor = '#32CD32';
+                else if (waitPercentage < 75) cust.waitTimerBar.style.backgroundColor = '#FFD700';
+                else cust.waitTimerBar.style.backgroundColor = '#DC143C';
+                if (cust.waitTime >= cust.maxWaitTime) {
+                    updateStress(25);
+                    cust.speechBubble.innerHTML = translations[currentLanguage].customerImpatient;
+                    cust.speechBubble.style.color = 'orange';
+                    cust.speechBubble.classList.add('visible');
+                    customerLeaves(cust, true);
                 }
-
-                genderSpecificHTML = `
-                    <div class="torso ${boobsClass}"></div>
-                    <div class="arm left"></div><div class="arm right"></div>
-                    ${clothingHTML}
-                    <div class="leg left"></div><div class="leg right"></div>`;
-
-            } else { // Man
-                const shortsStyles = ['style-a', 'style-boardshorts', 'style-speedo'];
-                const shortsClass = shortsStyles[Math.floor(Math.random() * shortsStyles.length)];
-                genderSpecificHTML = `
-                    <div class="torso"></div>
-                    <div class="arm left"></div><div class="arm right"></div>
-                    <div class="shorts ${shortsClass}" style="background-color: ${clothingColor}"></div>
-                    <div class="leg left"></div><div class="leg right"></div>`;
             }
+        });
+        updateStress((baseStressRate+customers.filter(c=>c.state==='waiting_in_queue').length*0.1)*deltaTime);
+        if(stress > 50 && !milanSwearCooldown) {
+            const swears = translations[currentLanguage].milanSwears;
+            createMilanBubble(swears[Math.floor(Math.random()*swears.length)]);
+            milanSwearCooldown = true;
+            setTimeout(() => { milanSwearCooldown = false }, 5000);
+        }
+        const slowDownFactor = 1 + (intoxicationLevel / 200) + (nicotineLevel / 400);
+        const currentSpeed = MILAN_SPEED / slowDownFactor;
+        let mX=0,mY=0;if(keys.w)mY-=1;if(keys.s)mY+=1;if(keys.a)mX-=1;if(keys.d)mX+=1;if(controlsImpaired)[mX,mY]=[-mY,mX];let cX=milan.offsetLeft+mX*currentSpeed*deltaTime,cY=milan.offsetTop+mY*currentSpeed*deltaTime;if(cX<0)cX=0;if(cX>gameWorld.clientWidth-milan.clientWidth)cX=gameWorld.clientWidth-milan.clientWidth;if(cY<0)cY=0;if(cY>gameWorld.clientHeight-milan.clientHeight)cY=gameWorld.clientHeight-milan.clientHeight;milan.style.left=cX+'px';milan.style.top=cY+'px';
+        if(heldItem){ heldItem.element.style.left=milan.offsetLeft+milan.clientWidth/2-heldItem.element.clientWidth/2+'px'; heldItem.element.style.top=milan.offsetTop-heldItem.element.clientHeight+'px'; }
+        items.forEach((item,index)=>{
+            if (item.onPlate) return;
+            if(!item.isHeld && ['sausage','cheese'].includes(item.type)){
+                if(isOverlapping(item.element,grill)&&item.cookState<COOK_STATES.BURNT){
+                    item.cookTime += deltaTime;
+                    const tPS=item.type==='sausage'?COOK_TIMES.SAUSAGE:COOK_TIMES.CHEESE;
+                    const nS=Math.floor(item.cookTime/tPS);
+                    if(nS>item.cookState){ item.cookState=nS>3?3:nS; updateItemVisuals(item) }
+                    if(Math.random() > 0.98) createSmoke(item.element)
+                }
+            }
+            if(!item.isHeld&&isOverlapping(item.element,trashCan)){
+                while (item.element.firstChild) { item.element.removeChild(item.element.firstChild); }
+                item.element.remove(); items.splice(index,1);
+            }
+        });
+    }
+    function updateItemVisuals(item){const t=item.type==='sausage'?'sausage':'cheese';item.element.className=`item ${t}`;switch(item.cookState){case COOK_STATES.RAW:item.element.classList.add(`raw-${t}`);break;case COOK_STATES.GOLDEN:item.element.classList.add(`golden-${t}`);break;case COOK_STATES.WELLDONE:item.element.classList.add(`welldone-${t}`);break;case COOK_STATES.BURNT:item.element.classList.add(`burnt-${t}`);break;}}
+    function checkOrder(plate, order) {
+        if ((plate.breadCount || 0) !== order.bread) return false;
+        if (order.ketchup !== plate.hasKetchup || order.mustard !== plate.hasMustard || order.cranberries !== plate.hasCranberries) return false;
+        const plateContents = plate.contents.map(i => ({ type: i.type, cookState: i.cookState })).sort((a, b) => a.type.localeCompare(b.type));
+        const orderItems = order.items.sort((a, b) => a.type.localeCompare(b.type));
+        if (plateContents.length !== orderItems.length) return false;
+        for (let i = 0; i < orderItems.length; i++) {
+            if (plateContents[i].type !== orderItems[i].type || plateContents[i].cookState !== orderItems[i].cookState) return false;
+        }
+        return true;
+    }
+    
+    function createPoopParticle(x, y) { const p = document.createElement('div'); p.className = 'poop-particle'; p.style.left = x + (Math.random() * 20 - 10) + 'px'; p.style.top = y + 60 + (Math.random() * 10 - 5) + 'px'; gameWorld.appendChild(p); setTimeout(() => p.remove(), 2500); }
+    function createDirtParticle(x, y) { const p = document.createElement('div'); p.className = 'dirt-particle'; p.style.left = x + 10 + (Math.random() * 20 - 10) + 'px'; p.style.top = y + 65 + (Math.random() * 10 - 5) + 'px'; p.style.animationDelay = `${Math.random() * 0.2}s`; gameWorld.appendChild(p); setTimeout(() => p.remove(), 800); }
+    function createSmoke(el){ const smoke = document.createElement('div'); smoke.className = 'smoke'; const rect = el.getBoundingClientRect(); smoke.style.left = rect.left + Math.random() * rect.width + 'px'; smoke.style.top = rect.top + 'px'; smoke.style.animationDelay = `${Math.random() * 0.5}s`; smoke.style.animationDuration = `${Math.random() * 1 + 2}s`; gameWorld.appendChild(smoke); setTimeout(() => smoke.remove(), 3000); }
 
-            f.innerHTML = `
-                <div class="head">
-                    ${hairHTML}
-                    <div class="face"><div class="eye left"></div><div class="eye right"></div><div class="mouth"></div></div>
-                </div>
-                ${genderSpecificHTML}
-                <div class="wait-timer-container"><div class="wait-timer-bar"></div></div>`;
-
-            Array.from(f.children).forEach(child => { if(child.classList.contains('arm') || child.classList.contains('leg')) { child.style.backgroundColor = '#FFDAB9'; } });
-            gameWorld.appendChild(f);
-            
-            f.style.top = gameWorld.clientHeight + 50 + 'px'; f.style.left = (Math.random() * (gameWorld.clientWidth / 2 - 100) + river.clientWidth + 50) + 'px';
-            
-            const o = generateOrder(); const b = document.createElement('div'); b.className = 'speech-bubble'; b.innerHTML = formatOrder(o, g);
-            f.appendChild(b);
-            const timerContainer = f.querySelector('.wait-timer-container');
-            const timerBar = f.querySelector('.wait-timer-bar');
-            const c = { figureElement: f, speechBubble: b, order: o, state: 'walking_to_queue', waitTime: 0, angry: !1, queueSlot: null, personality: o.personality, waitTimerContainer: timerContainer, waitTimerBar: timerBar, maxWaitTime: 90 + (o.personality === 'nice' ? 40 : (o.personality === 'rude' ? -40 : 0)) };
-            customers.push(c);
+    function moveCustomerToTable(cust, plate) {
+        const eT = seatingAreas.find(sa => !sa.occupied);
+        if (eT) {
+            eT.occupied = true; cust.table = eT;
+            const fig = cust.figureElement, tR = eT.element.querySelector('.table').getBoundingClientRect();
+            const bench = eT.element.querySelector(Math.random() > 0.5 ? '.bench.top' : '.bench.bottom');
+            const bR = bench.getBoundingClientRect();
+            fig.style.left = bR.left + 50 + 'px'; fig.style.top = bR.top - 50 + 'px';
+            const tablePlate = plate.element.cloneNode(true);
+            tablePlate.style.position = 'absolute'; tablePlate.style.left = tR.left + 30 + 'px'; tablePlate.style.top = tR.top - 10 + 'px'; tablePlate.style.zIndex = 5;
+            gameWorld.appendChild(tablePlate);
 
             setTimeout(() => {
-                const availableSlot = queueSlots.find(s => !s.occupied);
-                if (availableSlot) {
-                    availableSlot.occupied = true;
-                    c.queueSlot = availableSlot;
-                    f.style.left = availableSlot.x + 'px'; f.style.top = availableSlot.y + 'px';
-                    setTimeout(() => { c.state = 'waiting_in_queue'; c.speechBubble.classList.add('visible'); c.waitTimerContainer.style.visibility = 'visible'; }, 3000);
-                }
-            }, 100);
-        }
-
-        function generateOrder() { const order = { items: [], ketchup: false, mustard: false, cranberries: false, bread: 0, personality: 'neutral' }; const p = Math.random(); if (p < 0.25) order.personality = 'rude'; else if (p < 0.6) order.personality = 'nice'; if (survivalTime < 45) { order.items.push({type: Math.random() > 0.5 ? 'sausage' : 'cheese', cookState: COOK_STATES.GOLDEN}); return order; } const mainItemCount = (survivalTime > 90 && Math.random() > 0.5) ? 2 : 1; for (let i = 0; i < mainItemCount; i++) { const item = { type: Math.random() > 0.5 ? 'sausage' : 'cheese', cookState: [COOK_STATES.GOLDEN, COOK_STATES.WELLDONE][Math.floor(Math.random() * 2)] }; if(i > 0 && item.type === 'cheese' && order.items.type === 'cheese') { item.type = 'sausage'; } order.items.push(item); } if (order.items.some(i => i.type === 'sausage')) { const s = Math.random(); if (s < 0.33) order.ketchup = true; else if (s < 0.66) order.mustard = true; else { order.ketchup = true; order.mustard = true; } } if (order.items.some(i => i.type === 'cheese')) { if (Math.random() > 0.5) order.cranberries = true; } order.bread = survivalTime > 45 ? Math.floor(Math.random() * 5) : Math.floor(Math.random() * 3); return order; }
-        
-        function formatOrder(order, gender) {
-            const t = translations[currentLanguage];
-            let text = "";
-            switch(order.personality) {
-                case 'nice': text = (gender === 'woman' ? t.nice_woman : t.nice_man)[Math.floor(Math.random()*t.nice_man.length)]; break;
-                case 'rude': text = t.rude[Math.floor(Math.random()*t.rude.length)]; break;
-                default: text = (gender === 'woman' ? t.neutral_woman : t.neutral_man)[Math.floor(Math.random()*t.neutral_man.length)];
+                tablePlate.remove();
+                if (Math.random() < 0.4) { sendCustomerToOuthouse(cust); } 
+                else { if (cust.table) cust.table.occupied = false; customerLeaves(cust, false); }
+            }, 15000);
+        } else { customerLeaves(cust, true); }
+    }
+    
+    function sendCustomerToOuthouse(cust) {
+        cust.state = 'walking_to_outhouse'; const fig = cust.figureElement;
+        const outhouseRect = outhouse.getBoundingClientRect();
+        fig.style.left = outhouseRect.left + 'px'; fig.style.top = outhouseRect.top + outhouseRect.height + 'px';
+        setTimeout(() => {
+            cust.state = 'using_outhouse'; fig.style.display = 'none'; outhouse.classList.add('shake');
+            setTimeout(() => {
+                outhouse.classList.remove('shake'); fig.style.display = 'block'; customerLeavesOuthouse(cust);
+            }, 3000);
+        }, 3000);
+    }
+    
+    function customerLeavesOuthouse(cust) {
+        cust.state = 'leaving_in_distress'; 
+        const fig = cust.figureElement;
+        const curses = translations[currentLanguage].outhouseCurses;
+        cust.speechBubble.innerHTML = curses[Math.floor(Math.random() * curses.length)];
+        cust.speechBubble.style.color = 'brown'; cust.speechBubble.classList.add('visible');
+        const particleInterval = setInterval(() => {
+            if (cust.state !== 'leaving_in_distress' || !fig.parentElement) {
+                clearInterval(particleInterval);
+                return;
             }
-            const itemCounts = order.items.reduce((acc, item) => {
-                const key = `${item.type}-${item.cookState}`;
-                acc[key] = (acc[key] || 0) + 1;
-                return acc;
-            }, {});
-            const itemStrings = Object.entries(itemCounts).map(([key, count]) => {
-                const [type, cookState] = key.split('-');
-                if (currentLanguage === 'cs') {
-                    const adjKey = count === 1 ? 'singular' : (count >= 2 && count <= 4 ? 'plural' : 'genitive');
-                    const adj = type === 'sausage' ? t.sausage_adj[adjKey][cookState] : t.cheese_adj[adjKey][cookState];
-                    const nounKey = count === 1 ? 1 : (count >= 2 && count <= 4 ? 2 : 5);
-                    const noun = type === 'sausage' ? t.sausage_plural[nounKey] : t.cheese_plural[nounKey];
-                    const num = type === 'sausage' ? t.numbers[count] : t.numbers_male[count];
-                    if (count === 1) return `${adj} ${noun}`;
-                    return `${num} ${adj} ${noun}`;
-                } else {
-                    const adj = type === 'sausage' ? t.sausage_adj[cookState] : t.cheese_adj[cookState];
-                    const nounKey = count === 1 ? 1 : 2;
-                    const noun = type === 'sausage' ? t.sausage_plural[nounKey] : t.cheese_plural[nounKey];
-                    if (count === 1) return `a ${adj} ${noun}`;
-                    return `${count} ${adj} ${noun}`;
-                }
-            });
-            text += itemStrings.join(currentLanguage === 'cs' ? ' a ' : ' and ') + ". ";
-            if (order.ketchup && order.mustard) text += t.withBoth + ' '; else if (order.ketchup) text += t.withKetchup + ' '; else if (order.mustard) text += t.withMustard + ' ';
-            if (order.cranberries) text += t.withCranberries + ' ';
-            if (order.bread > 0) text += t.andBread.replace('{count}', order.bread);
-            return text;
+            createPoopParticle(fig.offsetLeft, fig.offsetTop);
+            createDirtParticle(fig.offsetLeft, fig.offsetTop);
+            createDirtParticle(fig.offsetLeft, fig.offsetTop);
+            createDirtParticle(fig.offsetLeft, fig.offsetTop);
+        }, 100);
+        if (cust.table) cust.table.occupied = false;
+        fig.style.transition = 'left 2.5s linear, top 2.5s linear';
+        customerLeaves(cust, false);
+        setTimeout(() => { 
+            clearInterval(particleInterval); 
+            fig.style.transition = 'left 3s ease-in-out, top 3s ease-in-out'; 
+        }, 2600);
+    }
+
+    function createItem(type,x,y){const el=document.createElement('div');el.classList.add('item',type);if(type==='sausage')el.classList.add('raw-sausage');if(type==='cheese')el.classList.add('raw-cheese');el.style.left=x+'px';el.style.top=y+'px';const itemObj={element:el,type:type,isHeld:!1};if(['sausage','cheese'].includes(type)){itemObj.cookTime=0;itemObj.cookState=COOK_STATES.RAW;itemObj.onPlate=null}if(type==='plate'){itemObj.contents=[];itemObj.hasKetchup=!1;itemObj.hasMustard=!1;itemObj.hasCranberries=!1;itemObj.breadCount=0}items.push(itemObj);gameWorld.appendChild(el);return itemObj}
+    
+    const hairColorPool = [
+        '#3d2d1b', '#3d2d1b', '#111', '#111', '#e0b452', '#e0b452', '#e0b452', 
+        '#c7864f', '#c7864f', '#dddddd', 
+        '#af3333', '#4169e1' 
+    ];
+    function getRandomHairColor() {
+        return hairColorPool[Math.floor(Math.random() * hairColorPool.length)];
+    }
+
+    function createCustomer() {
+        const occupiedSlots = queueSlots.filter(s => s.occupied).length;
+        if (occupiedSlots >= maxQueueSize) return;
+        const availableSlot = queueSlots.find(s => !s.occupied);
+        if (!availableSlot) return;
+        
+        const g = Math.random() > 0.5 ? 'man' : 'woman';
+        const f = document.createElement('div');
+        f.className = `customer-figure ${g}`;
+
+        if (Math.random() < 0.15) { f.classList.add('obese'); }
+
+        const hairRoll = Math.random();
+        let hairHTML = '';
+        if ((g === 'woman' && hairRoll > 0.02) || (g === 'man' && hairRoll > 0.15)) {
+            const availableStyles = (g === 'woman') ? ['style1', 'style2', 'style4'] : ['style1', 'style2', 'style4'];
+            const hairStyle = availableStyles[Math.floor(Math.random() * availableStyles.length)];
+            const hairColor = getRandomHairColor();
+            hairHTML = `<div class="hair ${hairStyle}" style="color: ${hairColor}"></div>`;
         }
 
-        function createStaticObject(config){ const o=document.createElement('div'); o.className='static-object'; o.style.left=config.x+'px'; o.style.top=config.y+'px'; o.style.width=(config.w||0)+'px'; o.style.height=(config.h||0)+'px'; if(config.visuals){config.visuals.forEach(vis=>{const e=document.createElement('div'); e.className=vis.class; e.style.left=(vis.x||0)+'px'; e.style.top=(vis.y||0)+'px'; if(vis.rot)e.style.transform=`rotate(${vis.rot}deg)`; if(vis.html)e.innerHTML=vis.html; o.appendChild(e)})} stall.appendChild(o); staticObjects.push({element:o,...config}); }
-        function createSupplyTable(config) { const container = document.createElement('div'); container.className = 'supply-table-container'; container.style.left = config.x + 'px'; container.style.top = config.y + 'px'; container.style.width = config.w + 'px'; container.style.height = config.h + 20 + 'px'; const top = document.createElement('div'); top.className = 'supply-table-top'; top.style.width = config.w + 'px'; top.style.height = config.h + 'px'; container.appendChild(top); const legPositions = [{top: config.h-3, left: 3}, {top: config.h-3, right: 3}, {top: 0, left: 3, zIndex: 0}, {top: 0, right: 3, zIndex: 0}]; legPositions.forEach(pos => { const leg = document.createElement('div'); leg.className = 'supply-table-leg'; leg.style.top = pos.top + 'px'; if (pos.left !== undefined) leg.style.left = pos.left + 'px'; if (pos.right !== undefined) leg.style.right = pos.right + 'px'; if (pos.zIndex !== undefined) leg.style.zIndex = 0; container.appendChild(leg); }); stall.appendChild(container); }
-        function createSilverTable(config) { const container = document.createElement('div'); container.className = 'silver-table-container'; container.style.left = config.x + 'px'; container.style.top = config.y + 'px'; container.style.width = config.w + 'px'; container.style.height = config.h + 20 + 'px'; const top = document.createElement('div'); top.className = 'silver-table-top'; top.style.width = config.w + 'px'; top.style.height = config.h + 'px'; container.appendChild(top); const legPositions = [{top: config.h-3, left: 3}, {top: 0, left: 3, zIndex: 0}, {top: config.h-3, right: 3}, {top: 0, right: 3, zIndex: 0}]; legPositions.forEach(pos => { const leg = document.createElement('div'); leg.className = 'silver-table-leg'; leg.style.top = pos.top + 'px'; if (pos.left !== undefined) leg.style.left = pos.left + 'px'; if (pos.right !== undefined) leg.style.right = pos.right + 'px'; if (pos.zIndex !== undefined) leg.style.zIndex = 0; container.appendChild(leg); }); stall.appendChild(container); }
-        
-        function createDecorativeVessel() {
-            if (!gameRunning) return;
+        let genderSpecificHTML = '';
+        const clothingColor = ['#DC143C', '#008000', '#0000CD', '#FF69B4', '#FFA500'][Math.floor(Math.random()*5)];
 
-            const spawnRoll = Math.random();
-            let choice, lane;
-
-            if (spawnRoll < 0.70) { 
-                choice = { type: 'kayak', speedMin: 10, speedMax: 15, width: 50 };
-                lane = Math.random() < 0.5 ? 'left' : 'right';
-                if (riverLanes[lane]) { lane = lane === 'left' ? 'right' : 'left'; }
-            } else if (spawnRoll < 0.90) {
-                choice = { type: 'raft', speedMin: 18, speedMax: 25, width: 70 };
-                lane = Math.random() < 0.5 ? 'left' : 'right';
-                 if (riverLanes[lane]) { lane = lane === 'left' ? 'right' : 'left'; }
+        if (g === 'woman') {
+            if (Math.random() < 0.3) { f.classList.add('curvy'); }
+            
+            const boobsRoll = Math.random();
+            let boobsClass = 'boobs-medium';
+            if (boobsRoll < 0.33) boobsClass = 'boobs-small';
+            else if (boobsRoll > 0.66) boobsClass = 'boobs-large';
+            
+            let clothingHTML = '';
+            if (Math.random() < 0.2) { 
+                clothingHTML = `<div class="one-piece-suit" style="background-color: ${clothingColor}"></div>`;
             } else {
-                choice = { type: 'big-ship', speedMin: 25, speedMax: 35, width: 100 };
-                lane = 'center';
-            }
-
-            if (riverLanes[lane]) return; 
-
-            riverLanes[lane] = true;
-
-            const v = document.createElement('div');
-            v.className = `deco-vessel ${choice.type}`;
-            
-            let contentHTML = '';
-            if(choice.type === 'kayak') {
-                v.classList.add(['red', 'green', 'blue'][Math.floor(Math.random() * 3)]);
-                const numPeople = Math.floor(Math.random() * 3) + 2;
-                const baseHeight = 100; const extraHeightPerPerson = 40;
-                v.style.height = baseHeight + (numPeople - 1) * extraHeightPerPerson + 'px';
-                let peopleHTML = '';
-                for (let i = 0; i < numPeople; i++) {
-                    peopleHTML += `<div class="kayak-person" style="top: ${30 + i * 35}px; left: 15px;"></div>`;
-                }
-                contentHTML = `<div class="kayak-body">${peopleHTML}</div>`;
-            } else if (choice.type === 'raft') {
-                contentHTML = `<div class="raft-person"></div>`;
-            }
-            
-            if (lane === 'left') v.style.left = '10px';
-            else if (lane === 'center') v.style.left = (river.clientWidth / 2) - (choice.width / 2) + 'px';
-            else if (lane === 'right') v.style.left = (river.clientWidth - choice.width - 10) + 'px';
-
-            v.innerHTML = contentHTML;
-            v.style.top = gameWorld.clientHeight + 50 + 'px';
-            
-            const duration = Math.random() * (choice.speedMax - choice.speedMin) + choice.speedMin;
-            v.style.transitionDuration = `${duration}s`;
-            
-            river.appendChild(v);
-            setTimeout(() => { v.style.top = -250 + 'px'; }, 100);
-            setTimeout(() => { 
-                if(v.parentElement) v.remove();
-                riverLanes[lane] = false;
-            }, (duration * 1000) + 1000);
-        }
-
-        function scheduleNextCustomer() { const nextSpawn = () => { if (gameRunning) { createCustomer(); setTimeout(nextSpawn, customerSpawnInterval); } }; nextSpawn(); }
-        
-        function startGame(){
-            startScreen.style.display = 'none';
-            gameRunning = true;
-            updateAllText();
-
-            grill = document.getElementById('grill'); trashCan = document.getElementById('trash-can');
-            grill.style.left='20px'; grill.style.top='20px';
-            trashCan.style.left=stall.offsetWidth-70+'px'; trashCan.style.top=`${stall.offsetHeight-100}px`;
-            const stallRect = stall.getBoundingClientRect();
-            queueSlots = [ { x: stallRect.left + 150, y: stallRect.bottom + 20, occupied: false }, { x: stallRect.left + 250, y: stallRect.bottom + 20, occupied: false }, { x: stallRect.left + 350, y: stallRect.bottom + 20, occupied: false }, ];
-            
-            const treeData=[{x:350,y:20,s:1.1,type:'deciduous'},{x:950,y:30,s:1,type:'pine'},{x:480,y:850,s:0.9,type:'deciduous'},{x:330,y:500,s:1.2,type:'pine'},{x:600,y:20,s:1,type:'deciduous'},{x:1250,y:90,s:1.3,type:'deciduous'},{x:1150,y:800,s:1,type:'pine'},{x:1450,y:180,s:0.8,type:'pine'},{x:1380,y:790,s:1.1,type:'deciduous'},{x:1520,y:60,s:1.2,type:'deciduous'},{x:1600,y:620,s:1,type:'pine'},{x:1050,y:40,s:1.1,type:'deciduous'},{x:1180,y:820,s:0.9,type:'deciduous'},{x:1820,y:450,s:1.2,type:'pine'},{x:830,y:820,s:0.9,type:'pine'},{x:900,y:850,s:1.2,type:'deciduous'},{x:1850,y:80,s:1,type:'pine'},{x:1800,y:800,s:0.8,type:'deciduous'},{x:850,y:50,s:1.1,type:'pine'},{x:600,y:800,s:1,type:'deciduous'},{x:1000,y:790,s:0.9,type:'pine'}];
-            treeData.forEach(d => { d.y += 120; });
-            treeData.forEach(d=>{ const t=document.createElement('div'); t.className=`tree ${d.type}`; const crownStyle = `transform: scale(${d.s}); ${d.type === 'deciduous' ? 'background-color:hsl(120, 60%, ' + (Math.random()*15+25) + '%)' : ''}`; t.innerHTML=`<div class="trunk" style="height:${(d.type === 'pine' ? 120 : 80)*d.s}px;width:${(d.type === 'pine' ? 15 : 20)*d.s}px;"></div><div class="crown" style="${crownStyle}"></div>`; t.style.left=d.x+'px'; t.style.top=d.y+'px'; gameWorld.insertBefore(t,stall) });
-            for(let i=0;i<50;i++){const s=document.createElement('div');s.className='stone';const z=Math.random()*50+20;s.style.width=z+'px';s.style.height=z*(Math.random()*.4+.8)+'px';s.style.left=Math.random() > 0.5 ? river.clientWidth+5+Math.random()*20+'px' : Math.random() * (gameWorld.clientWidth - river.clientWidth - z) + river.clientWidth + 'px'; s.style.top=Math.random()*(gameWorld.clientHeight-z)+'px'; s.style.backgroundColor = `hsl(0, 0%, ${Math.random()*20+40}%)`; gameWorld.appendChild(s);}
-            for(let i=0; i<30; i++) { const g = document.createElement('div'); g.className='grass-patch'; const z = Math.random()*80+40; g.style.width=z+'px'; g.style.height=z*(Math.random()*.5+.5)+'px'; g.style.left = Math.random() * (gameWorld.clientWidth - river.clientWidth - z) + river.clientWidth + 'px'; g.style.top = Math.random()*(gameWorld.clientHeight-z)+'px'; g.style.transform = `rotate(${Math.random()*180}deg)`; gameWorld.appendChild(g); }
-            for(let i=0; i<25; i++) { const f = document.createElement('div'); f.className='flower'; const flowerColor = ['#ffc0cb', '#ffffff', '#e6e6fa', '#add8e6'][Math.floor(Math.random()*4)]; f.innerHTML = `<div class="flower-petal p1" style="background-color:${flowerColor}"></div><div class="flower-petal p2" style="background-color:${flowerColor}"></div><div class="flower-petal p3" style="background-color:${flowerColor}"></div><div class="flower-petal p4" style="background-color:${flowerColor}"></div><div class="flower-center"></div>`; f.style.left = Math.random() * (gameWorld.clientWidth - river.clientWidth - 20) + river.clientWidth + 'px'; f.style.top = Math.random()*(gameWorld.clientHeight-20)+'px'; gameWorld.appendChild(f); }
-            for(let i=0;i<40;i++){const w=document.createElement('div');w.className='wave';w.style.left=Math.random()*(river.clientWidth-10)+'px';w.style.animationDelay=Math.random()*5+'s';river.appendChild(w);}
-            for(let i=0;i<3;i++){for(let j=0;j<2;j++){const a=document.createElement('div');a.className='seating-area';a.innerHTML=`<div class="table"></div><div class="bench top"></div><div class="bench bottom"></div>`;a.style.right=(80+j*220)+'px';a.style.top=(100+i*180)+'px';gameWorld.appendChild(a);seatingAreas.push({element:a,occupied:!1});}}
-            const outhouseRect = outhouse.getBoundingClientRect();
-            for (let i = 0; i < 5; i++) { const stain = document.createElement('div'); stain.className = 'poop-stain'; const size = Math.random() * 25 + 10; stain.style.width = size + 'px'; stain.style.height = size * (Math.random() * 0.5 + 0.7) + 'px'; stain.style.borderRadius = `${Math.random()*50}% ${Math.random()*50}% ${Math.random()*50}% ${Math.random()*50}%`; stain.style.left = outhouseRect.left - 20 + (Math.random() * (outhouseRect.width + 40)) + 'px'; stain.style.top = outhouseRect.bottom - 20 + (Math.random() * 40) + 'px'; gameWorld.insertBefore(stain, outhouse); }
-            for (let i = 0; i < 30; i++) { const p = document.createElement('div'); p.className='path-stone'; const s = Math.random() * 15 + 10; p.style.width=s+'px'; p.style.height=s*0.7+'px'; p.style.transform=`rotate(${Math.random()*180}deg)`; p.style.left=outhouse.offsetLeft - 60 + Math.random() * 80 + 'px'; p.style.top=outhouse.offsetTop + 120 + Math.random() * 100 + 'px'; gameWorld.insertBefore(p, stall); }
-            for (let i = 0; i < 60; i++) { const p = document.createElement('div'); p.className='path-stone'; const s = Math.random() * 25 + 15; p.style.width=s+'px'; p.style.height=s*(Math.random()*0.3 + 0.6)+'px'; p.style.transform=`rotate(${Math.random()*180}deg)`; p.style.left=stallRect.left + stallRect.width/2 - 125 + Math.random() * 250 + 'px'; p.style.top=stallRect.bottom + Math.random() * (window.innerHeight - stallRect.bottom - s) + 'px'; gameWorld.insertBefore(p, stall); }
-            createSupplyTable({x:280,y:90,w:100,h:40}); createStaticObject({x:290,y:80,w:80,h:50,isSupply:true,supplyType:'sausage',visuals:[{class:'sausage-stack-item',x:0,y:0,rot:10},{class:'sausage-stack-item',x:5,y:10,rot:-5},{class:'sausage-stack-item',x:-5,y:20,rot:5}]});
-            createSupplyTable({x:410,y:90,w:100,h:40}); createStaticObject({x:430,y:75,w:50,h:50,isSupply:true,supplyType:'cheese',visuals:[{class:'cheese-stack-item',x:0,y:0},{class:'cheese-stack-item',x:8,y:8},{class:'cheese-stack-item',x:-4,y:16}]});
-            createSupplyTable({x:360, y:300, w:100, h:40}); createStaticObject({x:380,y:285,w:60,h:50,isSupply:true,supplyType:'bread',visuals:[{class:'bread-stack-item',x:0,y:0},{class:'bread-stack-item',x:20,y:5},{class:'bread-stack-item',x:5,y:20}]});
-            createSupplyTable({x:stall.offsetWidth-140, y:stall.offsetHeight-240, w:100, h:60}); createStaticObject({x:stall.offsetWidth-130,y:stall.offsetHeight-270,w:60,h:80,isSupply:true,supplyType:'plate',visuals:[{class:'plate-stack-item',x:0,y:0},{class:'plate-stack-item',x:0,y:4},{class:'plate-stack-item',x:0,y:8}]});
-            createSilverTable({x:stall.offsetWidth-165,y:100,w:120,h:40}); createStaticObject({x:stall.offsetWidth-155,y:90,w:20,h:40,isSauce:true,sauceType:'ketchup',visuals:[{class:'ketchup-bottle'}]});
-            createStaticObject({x:stall.offsetWidth-120,y:90,w:20,h:40,isSauce:true,sauceType:'mustard',visuals:[{class:'mustard-bottle'}]});
-            createStaticObject({x:stall.offsetWidth-80,y:105,w:28,h:20,isSauce:true,sauceType:'cranberries',visuals:[{class:'cranberries-pot'}]});
-            createSupplyTable({x: 20, y: 320, w: 80, h: 30});
-            createStaticObject({x:25,y:280,w:30,h:75,isRelief:true,reliefType:'vodka',visuals:[{class:'vodka-bottle',html:'<div class="vodka-label">VODKA</div>'}]});
-            createStaticObject({x:65,y:295,w:35,h:45,isRelief:true,reliefType:'cigarettes',visuals:[{class:'cigarettes-box'}]});
-            
-            const chair = document.createElement('div'); chair.className = 'chair';
-            chair.innerHTML = '<div class="back"></div><div class="seat"></div><div class="leg front-left"></div><div class="leg front-right"></div><div class="leg back-left"></div><div class="leg back-right"></div>';
-            
-            chair.style.left = '20px'; 
-            chair.style.top = (stall.offsetHeight - 90) + 'px';
-            stall.appendChild(chair);
-
-            milan.style.left = stall.offsetLeft + chair.offsetLeft + (chair.offsetWidth / 2) - (milan.offsetWidth / 2) - 365 + 'px';
-            milan.style.top = stall.offsetTop + chair.offsetTop + (chair.offsetHeight / 2) - (milan.offsetHeight / 2) - 223 + 'px';
-            startSmoking(true);
-
-            setInterval(()=>{
-                if(!gameRunning) return;
-                survivalTime += 1;
-                const t = translations[currentLanguage];
-                timerDisplay.textContent=`${t.timerLabel}: ${Math.floor(survivalTime)}s`;
-                if(Math.floor(survivalTime) > 0 && Math.floor(survivalTime) % 12 === 0) { if(customerSpawnInterval > 4000) customerSpawnInterval -= 600; baseStressRate += 0.012; }
-            },1000);
-            setInterval(() => { if(gameRunning) createDecorativeVessel(); }, 4000);
-            
-            scheduleNextCustomer();
-            animationFrameId = requestAnimationFrame(gameLoop);
-        }
-
-        function endGame(reason) {
-            gameRunning=false;
-            cancelAnimationFrame(animationFrameId);
-            
-            const user = sessionStorage.getItem('loggedInUser');
-            if (user) {
-                const leaderboardKey = 'milan_leaderboard';
-                let scores = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
-                const userIndex = scores.findIndex(s => s.user === user);
-
-                const currentScore = {
-                    user: user,
-                    orders: ordersCompleted,
-                    time: Math.floor(survivalTime)
-                };
-
-                if (userIndex > -1) {
-                    const existingScore = scores[userIndex];
-                    if (currentScore.orders > existingScore.orders || (currentScore.orders === existingScore.orders && currentScore.time > existingScore.time)) {
-                        scores[userIndex] = currentScore;
-                    }
-                } else {
-                    scores.push(currentScore);
-                }
+                const bikiniTopStyles = ['style-triangle', 'style-bandeau', 'style-circles-connected', 'style-balls'];
+                const bikiniTopClass = bikiniTopStyles[Math.floor(Math.random() * bikiniTopStyles.length)];
                 
-                scores.sort((a, b) => b.orders - a.orders || b.time - a.time);
-                localStorage.setItem(leaderboardKey, JSON.stringify(scores.slice(0, 50)));
+                const bikiniBottomStyles = ['style-a', 'style-b', 'style-thong'];
+                const bikiniBottomClass = bikiniBottomStyles[Math.floor(Math.random() * bikiniBottomStyles.length)];
+                
+                clothingHTML = `
+                    <div class="bikini-top ${bikiniTopClass}" style="background-color: ${clothingColor}; border-color: ${clothingColor}"></div>
+                    <div class="bikini-bottom ${bikiniBottomClass}" style="background-color: ${clothingColor}"></div>
+                `;
             }
 
-            const t = translations[currentLanguage];
-            document.getElementById('end-reason').textContent = reason;
-            document.getElementById('end-score').textContent = `${t.gameOverScore} ${Math.floor(survivalTime)} ${t.gameOverSeconds}`;
-            document.getElementById('end-orders').textContent = `${t.ordersCompleted}: ${ordersCompleted}`;
-            gameOverScreen.style.display='flex'; 
+            genderSpecificHTML = `
+                <div class="torso ${boobsClass}"></div>
+                <div class="arm left"></div><div class="arm right"></div>
+                ${clothingHTML}
+                <div class="leg left"></div><div class="leg right"></div>`;
+
+        } else { // Man
+            const shortsStyles = ['style-a', 'style-boardshorts', 'style-speedo'];
+            const shortsClass = shortsStyles[Math.floor(Math.random() * shortsStyles.length)];
+            genderSpecificHTML = `
+                <div class="torso"></div>
+                <div class="arm left"></div><div class="arm right"></div>
+                <div class="shorts ${shortsClass}" style="background-color: ${clothingColor}"></div>
+                <div class="leg left"></div><div class="leg right"></div>`;
         }
 
-        window.onload = () => {
-            document.getElementById('start-btn').addEventListener('click', startGame);
-            document.getElementById('lang-switch-btn').addEventListener('click', () => { currentLanguage = currentLanguage === 'cs' ? 'en' : 'cs'; updateAllText(); });
-            document.getElementById('play-again-btn').addEventListener('click', () => window.location.reload());
-            updateAllText();
-        };
+        f.innerHTML = `
+            <div class="head">
+                ${hairHTML}
+                <div class="face"><div class="eye left"></div><div class="eye right"></div><div class="mouth"></div></div>
+            </div>
+            ${genderSpecificHTML}
+            <div class="wait-timer-container"><div class="wait-timer-bar"></div></div>`;
+
+        Array.from(f.children).forEach(child => { if(child.classList.contains('arm') || child.classList.contains('leg')) { child.style.backgroundColor = '#FFDAB9'; } });
+        gameWorld.appendChild(f);
+        
+        f.style.top = gameWorld.clientHeight + 50 + 'px'; f.style.left = (Math.random() * (gameWorld.clientWidth / 2 - 100) + river.clientWidth + 50) + 'px';
+        
+        const o = generateOrder(); const b = document.createElement('div'); b.className = 'speech-bubble'; b.innerHTML = formatOrder(o, g);
+        f.appendChild(b);
+        const timerContainer = f.querySelector('.wait-timer-container');
+        const timerBar = f.querySelector('.wait-timer-bar');
+        const c = { figureElement: f, speechBubble: b, order: o, state: 'walking_to_queue', waitTime: 0, angry: !1, queueSlot: null, personality: o.personality, waitTimerContainer: timerContainer, waitTimerBar: timerBar, maxWaitTime: 90 + (o.personality === 'nice' ? 40 : (o.personality === 'rude' ? -40 : 0)) };
+        customers.push(c);
+
+        setTimeout(() => {
+            const availableSlot = queueSlots.find(s => !s.occupied);
+            if (availableSlot) {
+                availableSlot.occupied = true;
+                c.queueSlot = availableSlot;
+                f.style.left = availableSlot.x + 'px'; f.style.top = availableSlot.y + 'px';
+                setTimeout(() => { c.state = 'waiting_in_queue'; c.speechBubble.classList.add('visible'); c.waitTimerContainer.style.visibility = 'visible'; }, 3000);
+            }
+        }, 100);
+    }
+
+    function generateOrder() { const order = { items: [], ketchup: false, mustard: false, cranberries: false, bread: 0, personality: 'neutral' }; const p = Math.random(); if (p < 0.25) order.personality = 'rude'; else if (p < 0.6) order.personality = 'nice'; if (survivalTime < 45) { order.items.push({type: Math.random() > 0.5 ? 'sausage' : 'cheese', cookState: COOK_STATES.GOLDEN}); return order; } const mainItemCount = (survivalTime > 90 && Math.random() > 0.5) ? 2 : 1; for (let i = 0; i < mainItemCount; i++) { const item = { type: Math.random() > 0.5 ? 'sausage' : 'cheese', cookState: [COOK_STATES.GOLDEN, COOK_STATES.WELLDONE][Math.floor(Math.random() * 2)] }; if(i > 0 && item.type === 'cheese' && order.items.type === 'cheese') { item.type = 'sausage'; } order.items.push(item); } if (order.items.some(i => i.type === 'sausage')) { const s = Math.random(); if (s < 0.33) order.ketchup = true; else if (s < 0.66) order.mustard = true; else { order.ketchup = true; order.mustard = true; } } if (order.items.some(i => i.type === 'cheese')) { if (Math.random() > 0.5) order.cranberries = true; } order.bread = survivalTime > 45 ? Math.floor(Math.random() * 5) : Math.floor(Math.random() * 3); return order; }
+    
+    function formatOrder(order, gender) {
+        const t = translations[currentLanguage];
+        let text = "";
+        switch(order.personality) {
+            case 'nice': text = (gender === 'woman' ? t.nice_woman : t.nice_man)[Math.floor(Math.random()*t.nice_man.length)]; break;
+            case 'rude': text = t.rude[Math.floor(Math.random()*t.rude.length)]; break;
+            default: text = (gender === 'woman' ? t.neutral_woman : t.neutral_man)[Math.floor(Math.random()*t.neutral_man.length)];
+        }
+        const itemCounts = order.items.reduce((acc, item) => {
+            const key = `${item.type}-${item.cookState}`;
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+        const itemStrings = Object.entries(itemCounts).map(([key, count]) => {
+            const [type, cookState] = key.split('-');
+            if (currentLanguage === 'cs') {
+                const adjKey = count === 1 ? 'singular' : (count >= 2 && count <= 4 ? 'plural' : 'genitive');
+                const adj = type === 'sausage' ? t.sausage_adj[adjKey][cookState] : t.cheese_adj[adjKey][cookState];
+                const nounKey = count === 1 ? 1 : (count >= 2 && count <= 4 ? 2 : 5);
+                const noun = type === 'sausage' ? t.sausage_plural[nounKey] : t.cheese_plural[nounKey];
+                const num = type === 'sausage' ? t.numbers[count] : t.numbers_male[count];
+                if (count === 1) return `${adj} ${noun}`;
+                return `${num} ${adj} ${noun}`;
+            } else {
+                const adj = type === 'sausage' ? t.sausage_adj[cookState] : t.cheese_adj[cookState];
+                const nounKey = count === 1 ? 1 : 2;
+                const noun = type === 'sausage' ? t.sausage_plural[nounKey] : t.cheese_plural[nounKey];
+                if (count === 1) return `a ${adj} ${noun}`;
+                return `${count} ${adj} ${noun}`;
+            }
+        });
+        text += itemStrings.join(currentLanguage === 'cs' ? ' a ' : ' and ') + ". ";
+        if (order.ketchup && order.mustard) text += t.withBoth + ' '; else if (order.ketchup) text += t.withKetchup + ' '; else if (order.mustard) text += t.withMustard + ' ';
+        if (order.cranberries) text += t.withCranberries + ' ';
+        if (order.bread > 0) text += t.andBread.replace('{count}', order.bread);
+        return text;
+    }
+
+    function createStaticObject(config){ const o=document.createElement('div'); o.className='static-object'; o.style.left=config.x+'px'; o.style.top=config.y+'px'; o.style.width=(config.w||0)+'px'; o.style.height=(config.h||0)+'px'; if(config.visuals){config.visuals.forEach(vis=>{const e=document.createElement('div'); e.className=vis.class; e.style.left=(vis.x||0)+'px'; e.style.top=(vis.y||0)+'px'; if(vis.rot)e.style.transform=`rotate(${vis.rot}deg)`; if(vis.html)e.innerHTML=vis.html; o.appendChild(e)})} stall.appendChild(o); staticObjects.push({element:o,...config}); }
+    function createSupplyTable(config) { const container = document.createElement('div'); container.className = 'supply-table-container'; container.style.left = config.x + 'px'; container.style.top = config.y + 'px'; container.style.width = config.w + 'px'; container.style.height = config.h + 20 + 'px'; const top = document.createElement('div'); top.className = 'supply-table-top'; top.style.width = config.w + 'px'; top.style.height = config.h + 'px'; container.appendChild(top); const legPositions = [{top: config.h-3, left: 3}, {top: config.h-3, right: 3}, {top: 0, left: 3, zIndex: 0}, {top: 0, right: 3, zIndex: 0}]; legPositions.forEach(pos => { const leg = document.createElement('div'); leg.className = 'supply-table-leg'; leg.style.top = pos.top + 'px'; if (pos.left !== undefined) leg.style.left = pos.left + 'px'; if (pos.right !== undefined) leg.style.right = pos.right + 'px'; if (pos.zIndex !== undefined) leg.style.zIndex = 0; container.appendChild(leg); }); stall.appendChild(container); }
+    function createSilverTable(config) { const container = document.createElement('div'); container.className = 'silver-table-container'; container.style.left = config.x + 'px'; container.style.top = config.y + 'px'; container.style.width = config.w + 'px'; container.style.height = config.h + 20 + 'px'; const top = document.createElement('div'); top.className = 'silver-table-top'; top.style.width = config.w + 'px'; top.style.height = config.h + 'px'; container.appendChild(top); const legPositions = [{top: config.h-3, left: 3}, {top: 0, left: 3, zIndex: 0}, {top: config.h-3, right: 3}, {top: 0, right: 3, zIndex: 0}]; legPositions.forEach(pos => { const leg = document.createElement('div'); leg.className = 'silver-table-leg'; leg.style.top = pos.top + 'px'; if (pos.left !== undefined) leg.style.left = pos.left + 'px'; if (pos.right !== undefined) leg.style.right = pos.right + 'px'; if (pos.zIndex !== undefined) leg.style.zIndex = 0; container.appendChild(leg); }); stall.appendChild(container); }
+    
+    function createDecorativeVessel() {
+        if (!gameRunning) return;
+
+        const spawnRoll = Math.random();
+        let choice, lane;
+
+        if (spawnRoll < 0.70) { 
+            choice = { type: 'kayak', speedMin: 10, speedMax: 15, width: 50 };
+            lane = Math.random() < 0.5 ? 'left' : 'right';
+            if (riverLanes[lane]) { lane = lane === 'left' ? 'right' : 'left'; }
+        } else if (spawnRoll < 0.90) {
+            choice = { type: 'raft', speedMin: 18, speedMax: 25, width: 70 };
+            lane = Math.random() < 0.5 ? 'left' : 'right';
+             if (riverLanes[lane]) { lane = lane === 'left' ? 'right' : 'left'; }
+        } else {
+            choice = { type: 'big-ship', speedMin: 25, speedMax: 35, width: 100 };
+            lane = 'center';
+        }
+
+        if (riverLanes[lane]) return; 
+
+        riverLanes[lane] = true;
+
+        const v = document.createElement('div');
+        v.className = `deco-vessel ${choice.type}`;
+        
+        let contentHTML = '';
+        if(choice.type === 'kayak') {
+            v.classList.add(['red', 'green', 'blue'][Math.floor(Math.random() * 3)]);
+            const numPeople = Math.floor(Math.random() * 3) + 2;
+            const baseHeight = 100; const extraHeightPerPerson = 40;
+            v.style.height = baseHeight + (numPeople - 1) * extraHeightPerPerson + 'px';
+            let peopleHTML = '';
+            for (let i = 0; i < numPeople; i++) {
+                peopleHTML += `<div class="kayak-person" style="top: ${30 + i * 35}px; left: 15px;"></div>`;
+            }
+            contentHTML = `<div class="kayak-body">${peopleHTML}</div>`;
+        } else if (choice.type === 'raft') {
+            contentHTML = `<div class="raft-person"></div>`;
+        }
+        
+        if (lane === 'left') v.style.left = '10px';
+        else if (lane === 'center') v.style.left = (river.clientWidth / 2) - (choice.width / 2) + 'px';
+        else if (lane === 'right') v.style.left = (river.clientWidth - choice.width - 10) + 'px';
+
+        v.innerHTML = contentHTML;
+        v.style.top = gameWorld.clientHeight + 50 + 'px';
+        
+        const duration = Math.random() * (choice.speedMax - choice.speedMin) + choice.speedMin;
+        v.style.transitionDuration = `${duration}s`;
+        
+        river.appendChild(v);
+        setTimeout(() => { v.style.top = -250 + 'px'; }, 100);
+        setTimeout(() => { 
+            if(v.parentElement) v.remove();
+            riverLanes[lane] = false;
+        }, (duration * 1000) + 1000);
+    }
+
+    function scheduleNextCustomer() { const nextSpawn = () => { if (gameRunning) { createCustomer(); setTimeout(nextSpawn, customerSpawnInterval); } }; nextSpawn(); }
+    
+    function startGame(){
+        startScreen.style.display = 'none';
+        gameRunning = true;
+        updateAllText();
+
+        grill = document.getElementById('grill'); trashCan = document.getElementById('trash-can');
+        grill.style.left='20px'; grill.style.top='20px';
+        trashCan.style.left=stall.offsetWidth-70+'px'; trashCan.style.top=`${stall.offsetHeight-100}px`;
+        const stallRect = stall.getBoundingClientRect();
+        queueSlots = [ { x: stallRect.left + 150, y: stallRect.bottom + 20, occupied: false }, { x: stallRect.left + 250, y: stallRect.bottom + 20, occupied: false }, { x: stallRect.left + 350, y: stallRect.bottom + 20, occupied: false }, ];
+        
+        const treeData=[{x:350,y:20,s:1.1,type:'deciduous'},{x:950,y:30,s:1,type:'pine'},{x:480,y:850,s:0.9,type:'deciduous'},{x:330,y:500,s:1.2,type:'pine'},{x:600,y:20,s:1,type:'deciduous'},{x:1250,y:90,s:1.3,type:'deciduous'},{x:1150,y:800,s:1,type:'pine'},{x:1450,y:180,s:0.8,type:'pine'},{x:1380,y:790,s:1.1,type:'deciduous'},{x:1520,y:60,s:1.2,type:'deciduous'},{x:1600,y:620,s:1,type:'pine'},{x:1050,y:40,s:1.1,type:'deciduous'},{x:1180,y:820,s:0.9,type:'deciduous'},{x:1820,y:450,s:1.2,type:'pine'},{x:830,y:820,s:0.9,type:'pine'},{x:900,y:850,s:1.2,type:'deciduous'},{x:1850,y:80,s:1,type:'pine'},{x:1800,y:800,s:0.8,type:'deciduous'},{x:850,y:50,s:1.1,type:'pine'},{x:600,y:800,s:1,type:'deciduous'},{x:1000,y:790,s:0.9,type:'pine'}];
+        treeData.forEach(d => { d.y += 120; });
+        treeData.forEach(d=>{ const t=document.createElement('div'); t.className=`tree ${d.type}`; const crownStyle = `transform: scale(${d.s}); ${d.type === 'deciduous' ? 'background-color:hsl(120, 60%, ' + (Math.random()*15+25) + '%)' : ''}`; t.innerHTML=`<div class="trunk" style="height:${(d.type === 'pine' ? 120 : 80)*d.s}px;width:${(d.type === 'pine' ? 15 : 20)*d.s}px;"></div><div class="crown" style="${crownStyle}"></div>`; t.style.left=d.x+'px'; t.style.top=d.y+'px'; gameWorld.insertBefore(t,stall) });
+        for(let i=0;i<50;i++){const s=document.createElement('div');s.className='stone';const z=Math.random()*50+20;s.style.width=z+'px';s.style.height=z*(Math.random()*.4+.8)+'px';s.style.left=Math.random() > 0.5 ? river.clientWidth+5+Math.random()*20+'px' : Math.random() * (gameWorld.clientWidth - river.clientWidth - z) + river.clientWidth + 'px'; s.style.top=Math.random()*(gameWorld.clientHeight-z)+'px'; s.style.backgroundColor = `hsl(0, 0%, ${Math.random()*20+40}%)`; gameWorld.appendChild(s);}
+        for(let i=0; i<30; i++) { const g = document.createElement('div'); g.className='grass-patch'; const z = Math.random()*80+40; g.style.width=z+'px'; g.style.height=z*(Math.random()*.5+.5)+'px'; g.style.left = Math.random() * (gameWorld.clientWidth - river.clientWidth - z) + river.clientWidth + 'px'; g.style.top = Math.random()*(gameWorld.clientHeight-z)+'px'; g.style.transform = `rotate(${Math.random()*180}deg)`; gameWorld.appendChild(g); }
+        for(let i=0; i<25; i++) { const f = document.createElement('div'); f.className='flower'; const flowerColor = ['#ffc0cb', '#ffffff', '#e6e6fa', '#add8e6'][Math.floor(Math.random()*4)]; f.innerHTML = `<div class="flower-petal p1" style="background-color:${flowerColor}"></div><div class="flower-petal p2" style="background-color:${flowerColor}"></div><div class="flower-petal p3" style="background-color:${flowerColor}"></div><div class="flower-petal p4" style="background-color:${flowerColor}"></div><div class="flower-center"></div>`; f.style.left = Math.random() * (gameWorld.clientWidth - river.clientWidth - 20) + river.clientWidth + 'px'; f.style.top = Math.random()*(gameWorld.clientHeight-20)+'px'; gameWorld.appendChild(f); }
+        for(let i=0;i<40;i++){const w=document.createElement('div');w.className='wave';w.style.left=Math.random()*(river.clientWidth-10)+'px';w.style.animationDelay=Math.random()*5+'s';river.appendChild(w);}
+        for(let i=0;i<3;i++){for(let j=0;j<2;j++){const a=document.createElement('div');a.className='seating-area';a.innerHTML=`<div class="table"></div><div class="bench top"></div><div class="bench bottom"></div>`;a.style.right=(80+j*220)+'px';a.style.top=(100+i*180)+'px';gameWorld.appendChild(a);seatingAreas.push({element:a,occupied:!1});}}
+        const outhouseRect = outhouse.getBoundingClientRect();
+        for (let i = 0; i < 5; i++) { const stain = document.createElement('div'); stain.className = 'poop-stain'; const size = Math.random() * 25 + 10; stain.style.width = size + 'px'; stain.style.height = size * (Math.random() * 0.5 + 0.7) + 'px'; stain.style.borderRadius = `${Math.random()*50}% ${Math.random()*50}% ${Math.random()*50}% ${Math.random()*50}%`; stain.style.left = outhouseRect.left - 20 + (Math.random() * (outhouseRect.width + 40)) + 'px'; stain.style.top = outhouseRect.bottom - 20 + (Math.random() * 40) + 'px'; gameWorld.insertBefore(stain, outhouse); }
+        for (let i = 0; i < 30; i++) { const p = document.createElement('div'); p.className='path-stone'; const s = Math.random() * 15 + 10; p.style.width=s+'px'; p.style.height=s*0.7+'px'; p.style.transform=`rotate(${Math.random()*180}deg)`; p.style.left=outhouse.offsetLeft - 60 + Math.random() * 80 + 'px'; p.style.top=outhouse.offsetTop + 120 + Math.random() * 100 + 'px'; gameWorld.insertBefore(p, stall); }
+        for (let i = 0; i < 60; i++) { const p = document.createElement('div'); p.className='path-stone'; const s = Math.random() * 25 + 15; p.style.width=s+'px'; p.style.height=s*(Math.random()*0.3 + 0.6)+'px'; p.style.transform=`rotate(${Math.random()*180}deg)`; p.style.left=stallRect.left + stallRect.width/2 - 125 + Math.random() * 250 + 'px'; p.style.top=stallRect.bottom + Math.random() * (window.innerHeight - stallRect.bottom - s) + 'px'; gameWorld.insertBefore(p, stall); }
+        createSupplyTable({x:280,y:90,w:100,h:40}); createStaticObject({x:290,y:80,w:80,h:50,isSupply:true,supplyType:'sausage',visuals:[{class:'sausage-stack-item',x:0,y:0,rot:10},{class:'sausage-stack-item',x:5,y:10,rot:-5},{class:'sausage-stack-item',x:-5,y:20,rot:5}]});
+        createSupplyTable({x:410,y:90,w:100,h:40}); createStaticObject({x:430,y:75,w:50,h:50,isSupply:true,supplyType:'cheese',visuals:[{class:'cheese-stack-item',x:0,y:0},{class:'cheese-stack-item',x:8,y:8},{class:'cheese-stack-item',x:-4,y:16}]});
+        createSupplyTable({x:360, y:300, w:100, h:40}); createStaticObject({x:380,y:285,w:60,h:50,isSupply:true,supplyType:'bread',visuals:[{class:'bread-stack-item',x:0,y:0},{class:'bread-stack-item',x:20,y:5},{class:'bread-stack-item',x:5,y:20}]});
+        createSupplyTable({x:stall.offsetWidth-140, y:stall.offsetHeight-240, w:100, h:60}); createStaticObject({x:stall.offsetWidth-130,y:stall.offsetHeight-270,w:60,h:80,isSupply:true,supplyType:'plate',visuals:[{class:'plate-stack-item',x:0,y:0},{class:'plate-stack-item',x:0,y:4},{class:'plate-stack-item',x:0,y:8}]});
+        createSilverTable({x:stall.offsetWidth-165,y:100,w:120,h:40}); createStaticObject({x:stall.offsetWidth-155,y:90,w:20,h:40,isSauce:true,sauceType:'ketchup',visuals:[{class:'ketchup-bottle'}]});
+        createStaticObject({x:stall.offsetWidth-120,y:90,w:20,h:40,isSauce:true,sauceType:'mustard',visuals:[{class:'mustard-bottle'}]});
+        createStaticObject({x:stall.offsetWidth-80,y:105,w:28,h:20,isSauce:true,sauceType:'cranberries',visuals:[{class:'cranberries-pot'}]});
+        createSupplyTable({x: 20, y: 320, w: 80, h: 30});
+        createStaticObject({x:25,y:280,w:30,h:75,isRelief:true,reliefType:'vodka',visuals:[{class:'vodka-bottle',html:'<div class="vodka-label">VODKA</div>'}]});
+        createStaticObject({x:65,y:295,w:35,h:45,isRelief:true,reliefType:'cigarettes',visuals:[{class:'cigarettes-box'}]});
+        
+        const chair = document.createElement('div'); chair.className = 'chair';
+        chair.innerHTML = '<div class="back"></div><div class="seat"></div><div class="leg front-left"></div><div class="leg front-right"></div><div class="leg back-left"></div><div class="leg back-right"></div>';
+        
+        chair.style.left = '20px'; 
+        chair.style.top = (stall.offsetHeight - 90) + 'px';
+        stall.appendChild(chair);
+
+        milan.style.left = stall.offsetLeft + chair.offsetLeft + (chair.offsetWidth / 2) - (milan.offsetWidth / 2) - 365 + 'px';
+        milan.style.top = stall.offsetTop + chair.offsetTop + (chair.offsetHeight / 2) - (milan.offsetHeight / 2) - 223 + 'px';
+        startSmoking(true);
+
+        setInterval(()=>{
+            if(!gameRunning) return;
+            survivalTime += 1;
+            const t = translations[currentLanguage];
+            timerDisplay.textContent=`${t.timerLabel}: ${Math.floor(survivalTime)}s`;
+            if(Math.floor(survivalTime) > 0 && Math.floor(survivalTime) % 12 === 0) { if(customerSpawnInterval > 4000) customerSpawnInterval -= 600; baseStressRate += 0.012; }
+        },1000);
+        setInterval(() => { if(gameRunning) createDecorativeVessel(); }, 4000);
+        
+        scheduleNextCustomer();
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+    
+    async function saveScoreToLeaderboard() {
+        const user = sessionStorage.getItem('loggedInUser');
+        if (!user || typeof db === 'undefined') {
+            console.log("User not logged in or DB not available. Cannot save score.");
+            return;
+        }
+
+        const leaderboardRef = db.collection('milan_leaderboard');
+        const userScoreRef = leaderboardRef.doc(user);
+
+        try {
+            const doc = await userScoreRef.get();
+            const currentScore = {
+                user: user,
+                orders: ordersCompleted,
+                time: Math.floor(survivalTime),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (doc.exists) {
+                const existingScore = doc.data();
+                if (currentScore.orders > existingScore.orders || (currentScore.orders === existingScore.orders && currentScore.time > existingScore.time)) {
+                    await userScoreRef.set(currentScore);
+                    console.log("New high score saved for user:", user);
+                } else {
+                    console.log("Existing score is better. Not updating.");
+                }
+            } else {
+                await userScoreRef.set(currentScore);
+                console.log("New user score saved:", user);
+            }
+        } catch (error) {
+            console.error("Error saving score to leaderboard: ", error);
+        }
+    }
+
+    function endGame(reason) {
+        gameRunning = false;
+        cancelAnimationFrame(animationFrameId);
+        
+        saveScoreToLeaderboard();
+
+        const t = translations[currentLanguage];
+        document.getElementById('end-reason').textContent = reason;
+        document.getElementById('end-score').textContent = `${t.gameOverScore} ${Math.floor(survivalTime)} ${t.gameOverSeconds}`;
+        document.getElementById('end-orders').textContent = `${t.ordersCompleted}: ${ordersCompleted}`;
+        gameOverScreen.style.display='flex'; 
+    }
+
+    window.onload = () => {
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('lang-switch-btn').addEventListener('click', () => { currentLanguage = currentLanguage === 'cs' ? 'en' : 'cs'; updateAllText(); });
+        document.getElementById('play-again-btn').addEventListener('click', () => window.location.reload());
+        updateAllText();
+    };
     </script>
+</body>
+</html>
