@@ -103,7 +103,7 @@
         #language-switcher-btn .lang-current { font-weight: 600; }
         #language-switcher-btn .lang-separator { margin: 0 5px; opacity: 0.6; }
         #language-switcher-btn .lang-target { opacity: 0.7; }
-        #login-modal, #leaderboard-modal, #profile-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
         .modal-content { position: relative; background-color: var(--modal-bg); color: var(--text-color); padding: 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 500px; text-align: center; transition: all 0.3s ease; }
         .modal-content h1 { color: red; margin-bottom: 25px; font-weight: 600; }
         .input-group { margin-bottom: 20px; text-align: left; }
@@ -125,11 +125,12 @@
         #leaderboard-table tr:hover { background-color: var(--table-row-hover); }
         .delete-score-btn { background: #ff5c5c; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; line-height: 25px; font-size: 14px; }
         .delete-score-btn:hover { background: #ff1c1c; }
-        #profile-modal .pfp-display { display: flex; justify-content: center; align-items: center; width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 20px auto; border: 4px solid var(--card-border); overflow: hidden; }
+        .pfp-display { display: flex; justify-content: center; align-items: center; width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 20px auto; border: 4px solid var(--card-border); overflow: hidden; }
+        .pfp-display img { width: 100%; height: 100%; object-fit: cover; }
         .initials { font-weight: bold; color: white; }
-        #profile-modal .initials { font-size: 50px; }
+        .pfp-display .initials { font-size: 50px; }
         .chat-message .initials { font-size: 16px; }
-        #profile-info p { margin-bottom: 10px; }
+        #profile-info p, #user-view-info p { margin-bottom: 10px; }
         .pfp-choices { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--input-border); }
         .pfp-choices h3 { font-size: 1em; margin-bottom: 10px; color: var(--text-color-light); }
         .avatar-grid, .color-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 15px; }
@@ -148,9 +149,19 @@
         .chat-message { display: flex; align-items: center; margin-bottom: 15px; }
         .pfp-container { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; overflow: hidden; }
         .pfp-container img { width: 100%; height: 100%; object-fit: cover; }
-        .chat-message .message-content { display: flex; flex-direction: column; }
-        .chat-message .message-author { font-weight: 600; color: var(--card-h2-color); }
+        .chat-message .message-content { display: flex; flex-direction: column; flex-grow: 1; }
+        .chat-message .message-author { font-weight: 600; color: var(--card-h2-color); cursor: pointer; }
         .chat-message .message-text { word-break: break-word; }
+        .message-deleted { color: var(--text-color-light); font-style: italic; }
+        .message-meta { display: flex; justify-content: space-between; align-items: center; }
+        .delete-msg-btn { background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 14px; margin-left: 10px; }
+        .delete-msg-btn:hover { color: red; }
+        .achievements-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--input-border); }
+        .achievements-section h3 { font-size: 1.2em; margin-bottom: 10px; }
+        .achievement { display: flex; align-items: center; margin-bottom: 10px; text-align: left; }
+        .achievement img { width: 50px; height: 50px; margin-right: 15px; }
+        .achievement-info h4 { margin: 0; font-size: 1em; }
+        .achievement-info p { margin: 0; font-size: 0.85em; color: var(--text-color-light); }
 
         body.dark-mode #login-btn, body.dark-mode #profile-btn { color: #ff4d4d; }
         body.dark-mode #login-btn:hover, body.dark-mode #profile-btn:hover { color: #ff8a8a; }
@@ -309,6 +320,19 @@
         </div>
     </div>
 
+    <div id="user-view-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1 id="user-view-title">Profil hráče</h1>
+            <div class="pfp-display" id="user-view-pfp-container"></div>
+            <div id="user-view-info"></div>
+            <div class="achievements-section">
+                <h3>Odznaky</h3>
+                <div id="user-view-achievements"></div>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
     </footer>
@@ -373,11 +397,29 @@
         let currentTheme = localStorage.getItem('selectedTheme') || 'light';
         let currentUserData = null;
 
-        const pfpColors = ["#f44336", "#e91e63", "#9c27b0", "#673ab7", "#3f51b5", "#2196f3", "#00bcd4", "#4caf50", "#8bc34a", "#ffeb3b", "#ff9800", "#ff5722", "#795548", "#607d8b"];
+        const pfpColors = ["#f44336", "#9c27b0", "#3f51b5", "#009688", "#4caf50", "#ffeb3b", "#ff9800", "#795548", "#607d8b"];
         const presetAvatars = [
-            '/pfps/cat.png', 
-            '/pfps/dog.png'
+            'pfps/cat.png', 
+            'pfps/dog.png'
         ];
+
+        const ACHIEVEMENTS_LIST = {
+            'milan_first_game': {
+                name: 'Začínající kuchař',
+                desc: 'Odehrál první hru Milanovy klobásy.',
+                icon: 'https://i.ibb.co/6yV2Z8j/milan-ach.png'
+            },
+            'krump_first_game': {
+                name: 'První krumpáč',
+                desc: 'Odehrál první hru KrumpTezic.',
+                icon: 'https://i.ibb.co/F83Wp2P/krump-ach.png'
+            },
+            'ptak_first_game': {
+                name: 'Vzlétnutí',
+                desc: 'Odehrál první hru PTAK 2.',
+                icon: 'https://i.ibb.co/d2x9sVd/ptak-ach.png'
+            }
+        };
 
         let selectedAvatarUrl = null;
         let selectedColor = null;
@@ -403,6 +445,7 @@
         
         function renderPfp(container, pfpData) {
             container.innerHTML = '';
+            container.style.backgroundColor = 'transparent';
             if (pfpData.photoURL) {
                 const img = document.createElement('img');
                 img.src = pfpData.photoURL;
@@ -547,20 +590,84 @@
             
             const pfpContainer = document.createElement('div');
             pfpContainer.className = 'pfp-container';
+            pfpContainer.onclick = () => showUserProfile(msg.userId);
             renderPfp(pfpContainer, { ...msg });
+
+            const deleteBtn = (currentUserData && currentUserData.displayName === '90Tom') ? 
+                `<button class="delete-msg-btn" onclick="deleteChatMessage('${msg.id}')">🗑️</button>` : '';
             
             messageElement.innerHTML = `
                 ${pfpContainer.outerHTML}
                 <div class="message-content">
-                    <span class="message-author">${msg.displayName || 'Anonym'}</span>
-                    <span class="message-text">${msg.text}</span>
+                    <div class="message-meta">
+                        <span class="message-author" onclick="showUserProfile('${msg.userId}')">${msg.displayName || 'Anonym'}</span>
+                        ${deleteBtn}
+                    </div>
+                    <span class="message-text ${msg.deleted ? 'message-deleted' : ''}">
+                        ${msg.deleted ? '[tato zpráva byla smazána]' : msg.text}
+                    </span>
                 </div>
             `;
             messagesContainer.appendChild(messageElement);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        async function showProfile() {
+        async function deleteChatMessage(msgId) {
+            if (currentUserData.displayName !== '90Tom') return;
+            if (confirm('Opravdu smazat tuto zprávu?')) {
+                await db.collection('chat').doc(msgId).update({
+                    text: '',
+                    deleted: true
+                });
+            }
+        }
+        
+        async function showUserProfile(userId) {
+            const modal = document.getElementById('user-view-modal');
+            const pfpContainer = document.getElementById('user-view-pfp-container');
+            const infoContainer = document.getElementById('user-view-info');
+            const achievementsContainer = document.getElementById('user-view-achievements');
+
+            infoContainer.innerHTML = 'Načítání...';
+            achievementsContainer.innerHTML = '';
+            modal.style.display = 'flex';
+
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (!userDoc.exists) {
+                infoContainer.innerHTML = 'Uživatel nenalezen.';
+                return;
+            }
+            const userData = userDoc.data();
+            
+            renderPfp(pfpContainer, userData);
+            infoContainer.innerHTML = `
+                <p><strong>Jméno:</strong> ${userData.displayName}</p>
+                <p><strong>XP:</strong> ${userData.xp}</p>
+            `;
+            
+            const achievementsSnapshot = await db.collection('users').doc(userId).collection('achievements').get();
+            if (achievementsSnapshot.empty) {
+                achievementsContainer.innerHTML = '<p>Zatím žádné odznaky.</p>';
+            } else {
+                achievementsSnapshot.forEach(doc => {
+                    const achievementId = doc.id;
+                    const achievementData = ACHIEVEMENTS_LIST[achievementId];
+                    if (achievementData) {
+                        const div = document.createElement('div');
+                        div.className = 'achievement';
+                        div.innerHTML = `
+                            <img src="${achievementData.icon}" alt="${achievementData.name}">
+                            <div class="achievement-info">
+                                <h4>${achievementData.name}</h4>
+                                <p>${achievementData.desc}</p>
+                            </div>
+                        `;
+                        achievementsContainer.appendChild(div);
+                    }
+                });
+            }
+        }
+
+        async function showMyProfile() {
             if (!currentUserData) return;
 
             const profileModal = document.getElementById('profile-modal');
@@ -634,7 +741,7 @@
             try {
                 await db.collection('users').doc(user.uid).update(updates);
                 
-                const authPhotoURL = selectedAvatarUrl ? selectedAvatarUrl : '';
+                const authPhotoURL = selectedAvatarUrl ? 'custom' : '';
                 if (user.photoURL !== authPhotoURL) {
                     await user.updateProfile({ photoURL: authPhotoURL });
                 }
@@ -729,7 +836,7 @@
                 }
             });
 
-            profileBtn.addEventListener('click', showProfile);
+            profileBtn.addEventListener('click', showMyProfile);
             document.getElementById('save-profile-btn').addEventListener('click', saveProfileChanges);
 
             chatToggleBtn.addEventListener('click', () => chatPopup.classList.add('open'));
@@ -846,7 +953,8 @@
                         text: text,
                         userId: user.uid,
                         displayName: currentUserData.displayName,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        deleted: false
                     };
 
                     if (currentUserData.photoURL) {
@@ -866,7 +974,7 @@
                 
                 messagesContainer.innerHTML = '';
                 snapshot.forEach(doc => {
-                    displayChatMessage(doc.data());
+                    displayChatMessage({ id: doc.id, ...doc.data() });
                 });
 
                 if(shouldScroll){
