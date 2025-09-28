@@ -163,7 +163,7 @@
         .dm-list-item:hover, .public-chat-btn:hover { background-color: var(--table-row-hover); }
         .dm-list-item .pfp-container { margin-right: 15px; }
         .dm-info { display: flex; flex-direction: column; }
-        .dm-info-name { font-weight: bold; }
+        .dm-info-name { font-weight: bold; color: var(--text-color); }
         .dm-info-lastmsg { font-size: 0.9em; color: var(--text-color-light); }
         .achievements-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--input-border); }
         .achievements-section h3 { font-size: 1.2em; margin-bottom: 10px; }
@@ -418,7 +418,7 @@
         let currentTheme = localStorage.getItem('selectedTheme') || 'light';
         let currentUserData = null;
         let activeChatListener = null;
-        let currentChatMode = 'dm-list'; // 'dm-list', 'public', or 'dm-chat'
+        let currentChatMode = 'dm-list'; // 'dm-list', 'public', or 'dm'
         let currentDmPartnerId = null;
 
         const pfpColors = ["#f44336", "#9c27b0", "#3f51b5", "#009688", "#4caf50", "#ffeb3b", "#ff9800", "#795548", "#607d8b"];
@@ -582,19 +582,22 @@
             messageElement.className = 'chat-message';
             const pfpContainer = document.createElement('div');
             pfpContainer.className = 'pfp-container';
-            if(currentChatMode !== 'public-chat'){
+            if (currentChatMode !== 'public') {
                 pfpContainer.style.cursor = 'default';
             } else {
                 pfpContainer.onclick = () => showUserProfile(msg.userId);
             }
             renderPfp(pfpContainer, { ...msg });
+
+            const authorStyle = (!msg.photoURL && msg.pfpColor) ? `style="color: ${msg.pfpColor}"` : '';
             const deleteBtn = (currentUserData && currentUserData.displayName === '90Tom' && currentChatMode === 'public') ? 
                 `<button class="delete-msg-btn" onclick="deleteChatMessage('${msg.id}')">🗑️</button>` : '';
+            
             messageElement.innerHTML = `
                 ${pfpContainer.outerHTML}
                 <div class="message-content">
                     <div class="message-meta">
-                        <span class="message-author" ${currentChatMode === 'public' ? `onclick="showUserProfile('${msg.userId}')"` : ''}>${msg.displayName || 'Anonym'}</span>
+                        <span class="message-author" ${authorStyle} ${currentChatMode === 'public' ? `onclick="showUserProfile('${msg.userId}')"` : ''}>${msg.displayName || 'Anonym'}</span>
                         ${deleteBtn}
                     </div>
                     <span class="message-text ${msg.deleted ? 'message-deleted' : ''}">
@@ -632,7 +635,8 @@
             const userData = userDoc.data();
             
             renderPfp(pfpContainer, userData);
-            infoContainer.innerHTML = `<p><strong>Jméno:</strong> ${userData.displayName}</p><p><strong>XP:</strong> ${userData.xp}</p>`;
+            const nameStyle = (!userData.photoURL && userData.pfpColor) ? `style="color: ${userData.pfpColor}; font-weight: bold;"` : 'style="font-weight: bold;"';
+            infoContainer.innerHTML = `<p><strong>Jméno:</strong> <span ${nameStyle}>${userData.displayName}</span></p><p><strong>XP:</strong> ${userData.xp}</p>`;
             
             if (auth.currentUser && auth.currentUser.uid !== userId) {
                 sendDmBtn.style.display = 'block';
@@ -666,7 +670,8 @@
             const avatarGrid = document.getElementById('avatar-grid-choices');
             const colorGrid = document.getElementById('color-grid-choices');
             renderPfp(pfpContainer, currentUserData);
-            profileInfo.innerHTML = `<p><strong>Jméno:</strong> ${currentUserData.displayName}</p><p><strong>Email:</strong> ${currentUserData.email}</p><p><strong>XP:</strong> ${currentUserData.xp}</p>`;
+            const nameStyle = (!currentUserData.photoURL && currentUserData.pfpColor) ? `style="color: ${currentUserData.pfpColor}; font-weight: bold;"` : 'style="font-weight: bold;"';
+            profileInfo.innerHTML = `<p><strong>Jméno:</strong> <span ${nameStyle}>${currentUserData.displayName}</span></p><p><strong>Email:</strong> ${currentUserData.email}</p><p><strong>XP:</strong> ${currentUserData.xp}</p>`;
             avatarGrid.innerHTML = '';
             presetAvatars.forEach(url => {
                 const img = document.createElement('img');
@@ -798,7 +803,8 @@
                     
                     const info = document.createElement('div');
                     info.className = 'dm-info';
-                    info.innerHTML = `<span class="dm-info-name">${partnerData.displayName}</span><span class="dm-info-lastmsg">${convo.lastMessage || ''}</span>`;
+                    const nameStyle = (!partnerData.photoURL && partnerData.pfpColor) ? `style="color: ${partnerData.pfpColor}"` : '';
+                    info.innerHTML = `<span class="dm-info-name" ${nameStyle}>${partnerData.displayName}</span><span class="dm-info-lastmsg">${convo.lastMessage || ''}</span>`;
                     
                     item.appendChild(pfp);
                     item.appendChild(info);
