@@ -1571,6 +1571,7 @@
                     this.x = data.customX;
                     this.y = data.customY;
                     this.life = data.duration;
+                    this.hitsLeft = this.pileSize;
                     this.rotation = Math.random() * Math.PI*2;
                 } else {
                     const barrelLength = (tower.iconSize + tower.upgradeTier*2.5) * (tower.type === 'GlueGunner' ? 1.3 : (tower.type === 'BombTower' ? 1.2 : 1));
@@ -1844,96 +1845,142 @@
             ]
         ];
 
-
-        // Define the waves for each level manually
+        // *** NEW WAVE SYSTEM ***
+        // Each wave is an array of "groups".
+        // Each group has:
+        // - type: The balloon to spawn.
+        // - count: How many to spawn in this group.
+        // - interval: The time (frames) between each balloon IN THIS GROUP.
+        // - delay: An optional time (frames) to wait BEFORE this group starts spawning.
         const gameLevels = [
              // Level 1: Rovina (5 Waves) - Short, focused intro
              {   pathId: 0, theme:'grassland', name: "Rovina", startMoney: 250, startLives: 150,
                  waves: [
-                    { spawns: Array(40).fill('Red'), interval: 40 }, // Wave 1: Adjusted interval
-                    { spawns: [...Array(30).fill('Red'), ...Array(20).fill('Blue')], interval: 30 }, // Wave 2: Adjusted interval
-                    { spawns: [...Array(25).fill('Blue'), ...Array(35).fill('Green')], interval: 20 }, // Wave 3: More greens, faster
-                    { spawns: [...Array(20).fill('Green'), ...Array(30).fill('Yellow'), ...Array(10).fill('Pink'), ...Array(5).fill('CamoRed')], interval: 18 }, // Wave 4: Earlier Pinks/Camos
-                    { spawns: [...Array(20).fill('Yellow'), ...Array(30).fill('Pink'), ...Array(15).fill('Black'), ...Array(15).fill('White'), ...Array(5).fill('Lead')], interval: 15 }, // Wave 5: Dense mix, leads
+                    { spawns: [ { type: 'Red', count: 20, interval: 45, delay: 0 } ]},
+                    { spawns: [
+                        { type: 'Red', count: 15, interval: 30, delay: 0 },
+                        { type: 'Blue', count: 10, interval: 40, delay: 120 }
+                    ]},
+                    { spawns: [
+                        { type: 'Blue', count: 20, interval: 25, delay: 0 },
+                        { type: 'Green', count: 15, interval: 35, delay: 0 }
+                    ]},
+                    { spawns: [
+                        { type: 'Green', count: 15, interval: 20, delay: 0 },
+                        { type: 'Yellow', count: 10, interval: 30, delay: 0 },
+                        { type: 'CamoRed', count: 5, interval: 60, delay: 180 }
+                    ]},
+                    { spawns: [
+                        { type: 'Pink', count: 20, interval: 20, delay: 0 },
+                        { type: 'Black', count: 8, interval: 50, delay: 120 },
+                        { type: 'White', count: 8, interval: 50, delay: 0 },
+                        { type: 'Lead', count: 4, interval: 80, delay: 240 }
+                    ]},
                  ]
             },
              // Level 2: Les (8 Waves) - Introduce Camo/Lead/Regrow
             {   pathId: 2, theme:'forest', name: "Les", startMoney: 350, startLives: 100,
                  waves: [
-                    { spawns: [...Array(30).fill('Blue'), ...Array(10).fill('Green')], interval: 35 }, // Wave 1: Easier start
-                    { spawns: [...Array(25).fill('Green'), ...Array(15).fill('Yellow')], interval: 30 }, // Wave 2: Easier start
-                    { spawns: [...Array(25).fill('Yellow'), ...Array(20).fill('Pink'), ...Array(8).fill('CamoGreen')], interval: 20 }, // Wave 3
-                    { spawns: [...Array(15).fill('Black'), ...Array(15).fill('White'), ...Array(30).fill('Pink')], interval: 18 }, // Wave 4
-                    { spawns: [...Array(15).fill('Lead'), ...Array(35).fill('Yellow')], interval: 20 }, // Wave 5
-                    { spawns: [...Array(25).fill('Zebra'), ...Array(20).fill('White'), ...Array(20).fill('Black')], interval: 18 }, // Wave 6
-                    { spawns: [...Array(15).fill('RegrowYellow'), ...Array(35).fill('Pink')], interval: 15 }, // Wave 7
-                    { spawns: [...Array(20).fill('Rainbow'), ...Array(15).fill('Lead')], interval: 25 }, // Wave 8
+                    { spawns: [
+                        { type: 'Blue', count: 25, interval: 30, delay: 0 },
+                        { type: 'Green', count: 5, interval: 50, delay: 60 }
+                    ]},
+                    { spawns: [
+                        { type: 'Green', count: 20, interval: 25, delay: 0 },
+                        { type: 'Yellow', count: 10, interval: 40, delay: 120 }
+                    ]},
+                    { spawns: [
+                        { type: 'Yellow', count: 25, interval: 22, delay: 0 },
+                        { type: 'CamoGreen', count: 10, interval: 40, delay: 300 }
+                    ]},
+                    { spawns: [
+                        { type: 'Pink', count: 15, interval: 20, delay: 0 },
+                        { type: 'Black', count: 10, interval: 35, delay: 100 },
+                        { type: 'White', count: 10, interval: 35, delay: 0 }
+                    ]},
+                    { spawns: [
+                        { type: 'Lead', count: 8, interval: 70, delay: 0 },
+                        { type: 'Yellow', count: 30, interval: 15, delay: 120 }
+                    ]},
+                    { spawns: [
+                        { type: 'Zebra', count: 15, interval: 40, delay: 0 },
+                        { type: 'White', count: 20, interval: 18, delay: 180 },
+                        { type: 'Black', count: 20, interval: 18, delay: 0 }
+                    ]},
+                    { spawns: [
+                        { type: 'RegrowYellow', count: 20, interval: 30, delay: 0 },
+                        { type: 'Pink', count: 30, interval: 15, delay: 240 }
+                    ]},
+                    { spawns: [
+                        { type: 'Rainbow', count: 10, interval: 50, delay: 0 },
+                        { type: 'Lead', count: 10, interval: 40, delay: 120 },
+                        { type: 'Rainbow', count: 10, interval: 30, delay: 300 }
+                    ]},
                  ]
             },
              // Level 3: Poušť (12 Waves) - More complex mixes, Rainbows/Zebras
             {   pathId: 1, theme:'sand', name: "Poušť", startMoney: 300, startLives: 120,
                  waves: [
-                     { spawns: [...Array(40).fill('Green'), ...Array(30).fill('Yellow')], interval: 18 }, // Wave 1
-                     { spawns: [...Array(60).fill('Yellow'), ...Array(20).fill('Pink')], interval: 15 }, // Wave 2
-                     { spawns: [...Array(25).fill('Pink'), ...Array(20).fill('Black'), ...Array(20).fill('White')], interval: 16 }, // Wave 3
-                     { spawns: [...Array(18).fill('Lead'), ...Array(30).fill('Yellow'), ...Array(15).fill('CamoBlue')], interval: 18 }, // Wave 4
-                     { spawns: [...Array(50).fill('Zebra')], interval: 20 }, // Wave 5
-                     { spawns: [...Array(20).fill('Lead'), ...Array(20).fill('RegrowGreen')], interval: 14 }, // Wave 6
-                     { spawns: [...Array(40).fill('Rainbow')], interval: 16 }, // Wave 7
-                     { spawns: [...Array(25).fill('Black'), ...Array(25).fill('White'), ...Array(25).fill('Lead')], interval: 12 }, // Wave 8
-                     { spawns: [...Array(60).fill('Zebra'), ...Array(15).fill('CamoPink')], interval: 18 }, // Wave 9
-                     { spawns: [...Array(15).fill('Ceramic')], interval: 35 }, // Wave 10
-                     { spawns: [...Array(50).fill('Rainbow'), ...Array(25).fill('RegrowYellow')], interval: 15 }, // Wave 11
-                     { spawns: [...Array(25).fill('Ceramic'), ...Array(25).fill('Rainbow')], interval: 22 }, // Wave 12
+                     { spawns: [ { type: 'Green', count: 30, interval: 25, delay: 0 }, { type: 'Yellow', count: 20, interval: 35, delay: 60 } ]},
+                     { spawns: [ { type: 'Yellow', count: 40, interval: 18, delay: 0 }, { type: 'Pink', count: 20, interval: 25, delay: 120 } ]},
+                     { spawns: [ { type: 'Pink', count: 15, interval: 15, delay: 0 }, { type: 'Black', count: 15, interval: 30, delay: 90 }, { type: 'White', count: 15, interval: 30, delay: 0 } ]},
+                     { spawns: [ { type: 'Lead', count: 12, interval: 50, delay: 0 }, { type: 'CamoBlue', count: 20, interval: 20, delay: 240 } ]},
+                     { spawns: [ { type: 'Zebra', count: 35, interval: 28, delay: 0 } ]},
+                     { spawns: [ { type: 'Lead', count: 10, interval: 20, delay: 0 }, { type: 'RegrowGreen', count: 30, interval: 15, delay: 60 } ]},
+                     { spawns: [ { type: 'Rainbow', count: 25, interval: 25, delay: 0 } ]},
+                     { spawns: [ { type: 'Black', count: 20, interval: 15, delay: 0 }, { type: 'White', count: 20, interval: 15, delay: 0 }, { type: 'Lead', count: 10, interval: 40, delay: 180 } ]},
+                     { spawns: [ { type: 'Zebra', count: 40, interval: 20, delay: 0 }, { type: 'CamoPink', count: 20, interval: 15, delay: 300 } ]},
+                     { spawns: [ { type: 'Ceramic', count: 8, interval: 80, delay: 0 } ]},
+                     { spawns: [ { type: 'Rainbow', count: 30, interval: 15, delay: 0 }, { type: 'RegrowYellow', count: 40, interval: 12, delay: 120 } ]},
+                     { spawns: [ { type: 'Ceramic', count: 15, interval: 45, delay: 0 }, { type: 'Rainbow', count: 20, interval: 20, delay: 120 } ]},
                  ]
             },
             // Level 4: Ledová tundra (15 Waves) - Ceramics, MOABs, tougher modifiers
             {   pathId: 3, theme:'ice', name: "Ledová tundra", startMoney: 400, startLives: 80,
                 waves: [
-                    { spawns: [...Array(30).fill('Pink'), ...Array(20).fill('Black'), ...Array(20).fill('White')], interval: 15 }, // Wave 1
-                    { spawns: [...Array(25).fill('Lead'), ...Array(50).fill('Yellow')], interval: 16 }, // Wave 2
-                    { spawns: [...Array(35).fill('Zebra'), ...Array(15).fill('CamoWhite')], interval: 14 }, // Wave 3
-                    { spawns: [...Array(60).fill('Rainbow')], interval: 13 }, // Wave 4
-                    { spawns: [...Array(30).fill('Ceramic')], interval: 28 }, // Wave 5
-                    { spawns: [...Array(20).fill('RegrowZebra'), ...Array(30).fill('Lead')], interval: 18 }, // Wave 6
-                    { spawns: [...Array(70).fill('Rainbow'), ...Array(10).fill('CamoRainbow')], interval: 11 }, // Wave 7
-                    { spawns: [...Array(35).fill('Ceramic'), ...Array(15).fill('CamoLead')], interval: 22 }, // Wave 8
-                    { spawns: ['MOAB', ...Array(35).fill('Ceramic')], interval: 18 }, // Wave 9
-                    { spawns: [...Array(120).fill('Zebra')], interval: 7 }, // Wave 10
-                    { spawns: [...Array(6).fill('MOAB')], interval: 70 }, // Wave 11
-                    { spawns: [...Array(45).fill('Ceramic'), ...Array(20).fill('RegrowRainbow')], interval: 14 }, // Wave 12
-                    { spawns: [...Array(20).fill('CamoCeramic')], interval: 28 }, // Wave 13
-                    { spawns: ['MOAB', 'MOAB', ...Array(60).fill('Rainbow')], interval: 16 }, // Wave 14
-                    { spawns: ['BFB', ...Array(10).fill('MOAB')], interval: 40 }, // Wave 15
+                    { spawns: [ { type: 'Pink', count: 20, interval: 15, delay: 0 }, { type: 'Black', count: 20, interval: 20, delay: 60 }, { type: 'White', count: 20, interval: 20, delay: 0 } ]},
+                    { spawns: [ { type: 'Lead', count: 20, interval: 30, delay: 0 }, { type: 'Yellow', count: 40, interval: 12, delay: 120 } ]},
+                    { spawns: [ { type: 'Zebra', count: 30, interval: 20, delay: 0 }, { type: 'CamoWhite', count: 15, interval: 30, delay: 240 } ]},
+                    { spawns: [ { type: 'Rainbow', count: 50, interval: 15, delay: 0 } ]},
+                    { spawns: [ { type: 'Ceramic', count: 20, interval: 40, delay: 0 } ]},
+                    { spawns: [ { type: 'RegrowZebra', count: 25, interval: 25, delay: 0 }, { type: 'Lead', count: 15, interval: 30, delay: 120 } ]},
+                    { spawns: [ { type: 'Rainbow', count: 60, interval: 10, delay: 0 }, { type: 'CamoRainbow', count: 10, interval: 20, delay: 180 } ]},
+                    { spawns: [ { type: 'Ceramic', count: 30, interval: 25, delay: 0 }, { type: 'CamoLead', count: 10, interval: 40, delay: 300 } ]},
+                    { spawns: [ { type: 'MOAB', count: 1, interval: 1, delay: 0 }, { type: 'Ceramic', count: 15, interval: 30, delay: 240 } ]},
+                    { spawns: [ { type: 'Zebra', count: 100, interval: 8, delay: 0 } ]},
+                    { spawns: [ { type: 'MOAB', count: 4, interval: 180, delay: 0 } ]},
+                    { spawns: [ { type: 'Ceramic', count: 25, interval: 20, delay: 0 }, { type: 'RegrowRainbow', count: 30, interval: 15, delay: 180 } ]},
+                    { spawns: [ { type: 'CamoCeramic', count: 20, interval: 35, delay: 0 } ]},
+                    { spawns: [ { type: 'MOAB', count: 2, interval: 120, delay: 0 }, { type: 'Rainbow', count: 50, interval: 10, delay: 300 } ]},
+                    { spawns: [ { type: 'BFB', count: 1, interval: 1, delay: 0 }, { type: 'MOAB', count: 4, interval: 100, delay: 400 } ]},
                 ]
             },
             // Level 5: Sopka (20 Waves) - BFBs, ZOMGs, high density
             {   pathId: 4, theme:'lava', name: "Sopka", startMoney: 500, startLives: 60,
                 waves: [
-                    { spawns: [...Array(30).fill('Lead'), ...Array(30).fill('Black'), ...Array(30).fill('White')], interval: 12 }, // Wave 1
-                    { spawns: [...Array(40).fill('Zebra'), ...Array(40).fill('Rainbow')], interval: 10 }, // Wave 2
-                    { spawns: [...Array(35).fill('Ceramic')], interval: 18 }, // Wave 3
-                    { spawns: [...Array(15).fill('CamoRainbow'), ...Array(15).fill('RegrowRainbow')], interval: 14 }, // Wave 4
-                    { spawns: ['MOAB', ...Array(30).fill('Ceramic')], interval: 22 }, // Wave 5
-                    { spawns: [...Array(100).fill('Rainbow'), ...Array(20).fill('Lead')], interval: 8 }, // Wave 6
-                    { spawns: [...Array(50).fill('Ceramic'), ...Array(15).fill('CamoZebra')], interval: 16 }, // Wave 7
-                    { spawns: [...Array(4).fill('MOAB'), ...Array(40).fill('Rainbow')], interval: 20 }, // Wave 8
-                    { spawns: [...Array(20).fill('RegrowCeramic')], interval: 22 }, // Wave 9
-                    { spawns: ['BFB', ...Array(25).fill('Ceramic')], interval: 28 }, // Wave 10
-                    { spawns: [...Array(60).fill('Ceramic')], interval: 10 }, // Wave 11
-                    { spawns: [...Array(10).fill('MOAB')], interval: 35 }, // Wave 12
-                    { spawns: [...Array(35).fill('CamoCeramic')], interval: 18 }, // Wave 13
-                    { spawns: [...Array(3).fill('BFB')], interval: 80 }, // Wave 14
-                    { spawns: ['MOAB','MOAB','MOAB','MOAB','MOAB', ...Array(120).fill('Pink')], interval: 8 }, // Wave 15
-                    { spawns: [...Array(30).fill('RegrowCeramic'), ...Array(30).fill('CamoRainbow')], interval: 12 }, // Wave 16
-                    { spawns: ['BFB', 'MOAB', 'MOAB', 'MOAB', 'MOAB'], interval: 45 }, // Wave 17
-                    { spawns: ['ZOMG', ...Array(10).fill('MOAB')], interval: 30 }, // Wave 18
-                    { spawns: [...Array(5).fill('BFB')], interval: 50 }, // Wave 19
-                    { spawns: ['ZOMG', ...Array(15).fill('MOAB'), ...Array(60).fill('Ceramic')], interval: 12 }, // Wave 20
+                    { spawns: [ { type: 'Lead', count: 25, interval: 15, delay: 0 }, { type: 'Black', count: 25, interval: 15, delay: 0 }, { type: 'White', count: 25, interval: 15, delay: 0 } ]},
+                    { spawns: [ { type: 'Zebra', count: 35, interval: 12, delay: 0 }, { type: 'Rainbow', count: 35, interval: 12, delay: 0 } ]},
+                    { spawns: [ { type: 'Ceramic', count: 30, interval: 20, delay: 0 } ]},
+                    { spawns: [ { type: 'CamoRainbow', count: 20, interval: 20, delay: 0 }, { type: 'RegrowRainbow', count: 20, interval: 20, delay: 0 } ]},
+                    { spawns: [ { type: 'MOAB', count: 1, interval: 1, delay: 0 }, { type: 'Ceramic', count: 25, interval: 25, delay: 180 } ]},
+                    { spawns: [ { type: 'Rainbow', count: 80, interval: 8, delay: 0 }, { type: 'Lead', count: 20, interval: 15, delay: 120 } ]},
+                    { spawns: [ { type: 'Ceramic', count: 40, interval: 18, delay: 0 }, { type: 'CamoZebra', count: 20, interval: 15, delay: 300 } ]},
+                    { spawns: [ { type: 'MOAB', count: 3, interval: 150, delay: 0 }, { type: 'Rainbow', count: 40, interval: 10, delay: 120 } ]},
+                    { spawns: [ { type: 'RegrowCeramic', count: 25, interval: 28, delay: 0 } ]},
+                    { spawns: [ { type: 'BFB', count: 1, interval: 1, delay: 0 }, { type: 'Ceramic', count: 20, interval: 20, delay: 300 } ]},
+                    { spawns: [ { type: 'Ceramic', count: 50, interval: 12, delay: 0 } ]},
+                    { spawns: [ { type: 'MOAB', count: 8, interval: 80, delay: 0 } ]},
+                    { spawns: [ { type: 'CamoCeramic', count: 30, interval: 20, delay: 0 } ]},
+                    { spawns: [ { type: 'BFB', count: 2, interval: 300, delay: 0 } ]},
+                    { spawns: [ { type: 'Pink', count: 150, interval: 5, delay: 0 }, { type: 'MOAB', count: 5, interval: 100, delay: 120 } ]},
+                    { spawns: [ { type: 'RegrowCeramic', count: 25, interval: 18, delay: 0 }, { type: 'CamoRainbow', count: 40, interval: 12, delay: 120 } ]},
+                    { spawns: [ { type: 'BFB', count: 1, interval: 1, delay: 0 }, { type: 'MOAB', count: 6, interval: 90, delay: 240 } ]},
+                    { spawns: [ { type: 'ZOMG', count: 1, interval: 1, delay: 0 } ]},
+                    { spawns: [ { type: 'BFB', count: 4, interval: 180, delay: 0 } ]},
+                    { spawns: [ { type: 'ZOMG', count: 1, interval: 1, delay: 0 }, { type: 'MOAB', count: 10, interval: 60, delay: 450 }, { type: 'Ceramic', count: 40, interval: 15, delay: 240 } ]},
                 ]
             },
         ];
-
 
         let waveSpawnEvents = [];
         let waveFrameCounter = 0;
@@ -2126,19 +2173,30 @@
             }
 
             const waveData = currentLevelData.waves[currentWaveNumber];
-             if(!waveData || !waveData.spawns || !Array.isArray(waveData.spawns)) {
-                 waveSpawnEvents = [];
+            if (!waveData || !waveData.spawns || !Array.isArray(waveData.spawns)) {
+                waveSpawnEvents = [];
             } else {
-                let time = 0;
-                for(const balloonType of waveData.spawns){
-                    waveSpawnEvents.push({ type: balloonType, spawnFrame: time});
-                    time += waveData.interval;
+                let currentFrame = 0;
+                // Process the new wave structure
+                for (const group of waveData.spawns) {
+                    // Add the delay for this group
+                    currentFrame += group.delay || 0;
+
+                    // Schedule each balloon in the group
+                    for (let i = 0; i < group.count; i++) {
+                        waveSpawnEvents.push({
+                            type: group.type,
+                            spawnFrame: currentFrame
+                        });
+                        currentFrame += group.interval;
+                    }
                 }
             }
             totalWavesDisplay.textContent = currentLevelData.waves.length;
             waveDisplay.textContent = currentWaveNumber + 1;
             updateUI();
         }
+
 
         function startNextWave() {
             if (waveInProgress || !currentLevelData || currentWaveNumber >= currentLevelData.waves.length) {
