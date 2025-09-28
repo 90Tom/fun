@@ -8,12 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    <!-- UPDATED FIREBASE SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-
     <script>
       const firebaseConfig = {
         apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
@@ -25,19 +22,17 @@
         measurementId: "G-6MHP8FHQ87"
       };
 
-      let db, auth, storage;
+      let db, auth;
       try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         auth = firebase.auth();
-        storage = firebase.storage();
       } catch (e) {
         console.error("Firebase initialization failed:", e);
         alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
       }
     </script>
 
-    <!-- CSS -->
     <style>
         :root {
             --body-bg-overlay: rgba(255, 255, 255, 0.7);
@@ -57,8 +52,6 @@
             --button-hover-bg: rgba(255, 255, 255, 0.85);
             --button-hover-border: rgba(0, 0, 0, 0.25);
             --card-border: transparent;
-            --xp-bar-bg: #e0e0e0;
-            --xp-bar-fill: #ffd700;
         }
 
         body.dark-mode {
@@ -79,8 +72,6 @@
             --button-hover-bg: rgba(60, 60, 60, 0.8);
             --button-hover-border: rgba(255, 255, 255, 0.2);
             --card-border: rgba(255, 255, 255, 0.1);
-            --xp-bar-bg: #444;
-            --xp-bar-fill: #f9a825;
         }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -102,17 +93,17 @@
         .game-card p { color: var(--text-color-light); font-size: 0.85em; line-height: 1.3; }
         .leaderboard-btn { position: absolute; top: 10px; right: 10px; background-color: rgba(240, 240, 240, 0.8); border: 1px solid rgba(221, 221, 221, 0.8); border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; line-height: 28px; text-align: center; transition: all 0.2s ease; z-index: 5; backdrop-filter: blur(2px); }
         .leaderboard-btn:hover { background-color: #e83e8c; color: white; transform: scale(1.1); }
-        footer { text-align: center; margin-top: 50px; padding: 15px; font-size: 0.9em; width: 100%; max-width: 800px; background-color: var(--footer-bg); border-radius: 8px; transition: all 0.3s ease; }
+        footer { text-align: center; margin-top: 50px; padding: 15px; color: var(--text-color-light); font-size: 0.9em; width: 100%; max-width: 800px; background-color: var(--footer-bg); border-radius: 8px; transition: all 0.3s ease; }
         footer p { color: red; }
         #top-actions-container { position: fixed; top: 15px; right: 20px; z-index: 1001; display: flex; gap: 10px; align-items: center; }
-        #chat-btn, #theme-switcher-btn, #language-switcher-btn, #login-btn { background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--button-border); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-        #login-btn { color: red; font-weight: 600; }
-        #chat-btn:hover, #theme-switcher-btn:hover, #language-switcher-btn:hover, #login-btn:hover { background-color: var(--button-hover-bg); border-color: var(--button-hover-border); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        #login-btn:hover { color: #c00; }
+        #theme-switcher-btn, #language-switcher-btn, #login-btn, #profile-btn { background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--button-border); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        #login-btn, #profile-btn { color: red; font-weight: 600; }
+        #theme-switcher-btn:hover, #language-switcher-btn:hover, #login-btn:hover, #profile-btn:hover { background-color: var(--button-hover-bg); border-color: var(--button-hover-border); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #login-btn:hover, #profile-btn:hover { color: #c00; }
         #language-switcher-btn .lang-current { font-weight: 600; }
         #language-switcher-btn .lang-separator { margin: 0 5px; opacity: 0.6; }
         #language-switcher-btn .lang-target { opacity: 0.7; }
-        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        #login-modal, #leaderboard-modal, #profile-modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
         .modal-content { position: relative; background-color: var(--modal-bg); color: var(--text-color); padding: 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 500px; text-align: center; transition: all 0.3s ease; }
         .modal-content h1 { color: red; margin-bottom: 25px; font-weight: 600; }
         .input-group { margin-bottom: 20px; text-align: left; }
@@ -134,39 +125,29 @@
         #leaderboard-table tr:hover { background-color: var(--table-row-hover); }
         .delete-score-btn { background: #ff5c5c; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; line-height: 25px; font-size: 14px; }
         .delete-score-btn:hover { background: #ff1c1c; }
-        
-        /* NEW PROFILE & CHAT STYLES */
-        #profile-modal .modal-content { max-width: 600px; }
-        .profile-header { display: flex; align-items: center; margin-bottom: 30px; }
-        #profile-pic-container { position: relative; }
-        #profile-pic { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid red; }
-        #upload-pic-label { position: absolute; bottom: 0; right: 0; background: #fff; border-radius: 50%; padding: 5px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        #upload-pic-label:hover { background: #f0f0f0; }
-        #upload-pic-icon { width: 24px; height: 24px; }
-        #upload-pic-input { display: none; }
-        .profile-info { margin-left: 25px; text-align: left; }
-        #profile-name { font-size: 2em; font-weight: 700; color: red; margin: 0; }
-        #profile-level { font-size: 1.2em; font-weight: 500; }
-        .xp-bar-container { width: 100%; height: 20px; background-color: var(--xp-bar-bg); border-radius: 10px; overflow: hidden; margin-top: 8px; }
-        #xp-bar-fill { width: 0%; height: 100%; background-color: var(--xp-bar-fill); border-radius: 10px; transition: width 0.5s ease; }
-        #xp-text { font-size: 0.9em; text-align: right; }
-        .achievements-section { margin-top: 20px; }
-        .achievements-section h2 { border-bottom: 2px solid red; padding-bottom: 5px; margin-bottom: 15px; text-align: left;}
-        #achievements-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 15px; }
-        .achievement { text-align: center; }
-        .achievement img { width: 60px; height: 60px; border-radius: 50%; background: #eee; }
-        .achievement p { font-size: 0.8em; margin-top: 5px; }
+        #profile-modal .profile-picture-container { display: flex; justify-content: center; align-items: center; width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 20px auto; border: 4px solid var(--card-border); font-size: 50px; color: white; }
+        #profile-info p { margin-bottom: 10px; }
+        #chat-container { max-width: 1000px; width: 100%; background-color: var(--card-bg); border-radius: 12px; padding: 20px; margin-top: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); border: 1px solid var(--card-border); }
+        #chat-messages { height: 300px; overflow-y: auto; margin-bottom: 15px; padding-right: 10px; }
+        #chat-form { display: flex; gap: 10px; }
+        #chat-input { flex-grow: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-color); }
+        #chat-send-btn { padding: 10px 15px; background-color: red; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .chat-message { display: flex; align-items: center; margin-bottom: 15px; }
+        .chat-message .pfp-initials { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; }
+        .chat-message .message-content { display: flex; flex-direction: column; }
+        .chat-message .message-author { font-weight: 600; color: var(--card-h2-color); }
+        .chat-message .message-text { word-break: break-word; }
 
-        body.dark-mode #login-btn { color: #ff4d4d; }
-        body.dark-mode #login-btn:hover { color: #ff8a8a; }
+        body.dark-mode #login-btn, body.dark-mode #profile-btn { color: #ff4d4d; }
+        body.dark-mode #login-btn:hover, body.dark-mode #profile-btn:hover { color: #ff8a8a; }
 
-        @media (max-width: 768px) { header h1 { font-size: 2.8em; padding-right: 40px; } .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; } .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; } #chat-btn, #theme-switcher-btn, #language-switcher-btn, #login-btn { padding: 6px 12px; font-size: 0.85em; } #top-actions-container { top: 15px; right: 15px; gap: 8px;} }
-        @media (max-width: 480px) { body { padding: 10px; } header h1 { font-size: 2.2em; padding-right: 35px; } .splash-text { font-size: 0.3em; padding: 1px 5px; right: 2px; bottom: 3px; } header p { font-size: 1em; } .game-grid { grid-template-columns: 1fr; gap: 20px; max-width: 300px; } .game-card .content { padding: 10px; } .game-card h2 { font-size: 1.1em; } .game-card p { font-size: 0.8em; } #chat-btn, #theme-switcher-btn, #language-switcher-btn, #login-btn { padding: 5px 10px; font-size: 0.8em; } #top-actions-container { top: 10px; right: 10px; gap: 6px;} }
+        @media (max-width: 768px) { header h1 { font-size: 2.8em; padding-right: 40px; } .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; } .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; } #theme-switcher-btn, #language-switcher-btn, #login-btn, #profile-btn { padding: 6px 12px; font-size: 0.85em; } #top-actions-container { top: 15px; right: 15px; gap: 8px;} }
+        @media (max-width: 480px) { body { padding: 10px; } header h1 { font-size: 2.2em; padding-right: 35px; } .splash-text { font-size: 0.3em; padding: 1px 5px; right: 2px; bottom: 3px; } header p { font-size: 1em; } .game-grid { grid-template-columns: 1fr; gap: 20px; max-width: 300px; } .game-card .content { padding: 10px; } .game-card h2 { font-size: 1.1em; } .game-card p { font-size: 0.8em; } #theme-switcher-btn, #language-switcher-btn, #login-btn, #profile-btn { padding: 5px 10px; font-size: 0.8em; } #top-actions-container { top: 10px; right: 10px; gap: 6px;} }
     </style>
 </head>
 <body>
     <div id="top-actions-container">
-        <button id="chat-btn">💬</button>
+        <button id="profile-btn" style="display: none;">Profil</button>
         <button id="theme-switcher-btn">🌙</button>
         <button id="language-switcher-btn">
             <span class="lang-current">CS</span><span class="lang-separator">⇌</span><span class="lang-target">EN</span>
@@ -180,7 +161,6 @@
     </header>
 
     <main class="game-grid">
-        <!-- Game Cards remain the same -->
         <div class="game-card">
             <a href="MILAN/MILAN.html" class="game-link">
                 <img src="MILAN/milanbg.png" alt="Milanovy klobásy Game Preview">
@@ -222,54 +202,93 @@
             <button class="leaderboard-btn" data-game="ptak2" title="Leaderboard">🏆</button>
         </div>
     </main>
+
+    <div id="chat-container">
+        <h2>Veřejný Chat</h2>
+        <div id="chat-messages"></div>
+        <form id="chat-form">
+            <input type="text" id="chat-input" placeholder="Napište zprávu..." autocomplete="off" required>
+            <button type="submit" id="chat-send-btn">Odeslat</button>
+        </form>
+    </div>
     
-    <!-- Modals -->
     <div id="login-modal" class="modal">
-        <!-- Login/Register content remains the same -->
-    </div>
-
-    <div id="leaderboard-modal" class="modal">
-        <!-- Leaderboard content remains the same -->
-    </div>
-
-    <!-- NEW PROFILE MODAL -->
-    <div id="profile-modal" class="modal">
         <div class="modal-content">
             <span class="close-btn">&times;</span>
-            <div class="profile-header">
-                <div id="profile-pic-container">
-                    <img id="profile-pic" src="default-pfp.png" alt="Profile Picture">
-                    <label for="upload-pic-input" id="upload-pic-label">
-                        <img id="upload-pic-icon" src="camera-icon.png" alt="Upload">
-                    </label>
-                    <input type="file" id="upload-pic-input" accept="image/*">
-                </div>
-                <div class="profile-info">
-                    <h1 id="profile-name">Player Name</h1>
-                    <p id="profile-level">Level 1</p>
-                    <div class="xp-bar-container">
-                        <div id="xp-bar-fill"></div>
+            <div id="login-view">
+                <h1 data-translate-key="modalLoginTitle">Přihlásit se</h1>
+                <form id="login-form">
+                    <div class="input-group">
+                        <label for="login-username" data-translate-key="modalUsernameLabel">Uživatelské jméno (Email)</label>
+                        <input type="email" id="login-username" required>
                     </div>
-                    <p id="xp-text">0 / 100 XP</p>
-                </div>
+                    <div class="input-group">
+                        <label for="login-password" data-translate-key="modalPasswordLabel">Heslo</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="action-button" data-translate-key="modalLoginButton">Přihlásit se</button>
+                    <div id="login-error-message" class="error-message"></div>
+                </form>
+                <p class="form-switch-text">
+                    <span data-translate-key="modalNoAccount">Nemáte účet?</span>
+                    <a id="show-register-link" data-translate-key="modalRegisterLink">Zaregistrujte se</a>
+                </p>
             </div>
-            <div class="achievements-section">
-                <h2>Úspěchy</h2>
-                <div id="achievements-grid">
-                    <!-- Achievements will be loaded here -->
-                </div>
+            <div id="register-view">
+                <h1 data-translate-key="modalRegisterTitle">Registrace</h1>
+                <form id="register-form">
+                     <div class="input-group">
+                        <label for="register-displayname">Zobrazované jméno</label>
+                        <input type="text" id="register-displayname" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="register-email" data-translate-key="modalUsernameLabel">Email</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="register-password" data-translate-key="modalPasswordLabel">Heslo</label>
+                        <input type="password" id="register-password" required>
+                    </div>
+                     <div class="input-group">
+                        <label for="confirm-password" data-translate-key="modalConfirmPasswordLabel">Potvrďte heslo</label>
+                        <input type="password" id="confirm-password" required>
+                    </div>
+                    <button type="submit" class="action-button" data-translate-key="modalRegisterButton">Zaregistrovat</button>
+                    <div id="register-error-message" class="error-message"></div>
+                </form>
+                <p class="form-switch-text">
+                    <span data-translate-key="modalHaveAccount">Máte již účet?</span>
+                    <a id="show-login-link" data-translate-key="modalLoginLink">Přihlaste se</a>
+                </p>
             </div>
         </div>
     </div>
 
+    <div id="leaderboard-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1 id="leaderboard-title">Leaderboard</h1>
+            <table id="leaderboard-table">
+                <thead id="leaderboard-head"></thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1>Profil</h1>
+            <div class="profile-picture-container" id="profile-pfp-container"></div>
+            <div id="profile-info"></div>
+        </div>
+    </div>
 
     <footer>
         <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
     </footer>
 
-    <!-- JS -->
     <script type="text/javascript">
-        // --- Translations object remains the same ---
         const translations = {
             cs: {
                 welcomeMessage: "Vítám Vás! Vyberte si nějakou hru níže a užijte si!",
@@ -325,24 +344,42 @@
             }
         };
 
-        // --- Functions for language, theme, leaderboards remain the same ---
-
-        // --- NEW SCRIPT LOGIC BELOW ---
-        
         let currentLang = localStorage.getItem('selectedLanguage') || 'cs';
         let currentTheme = localStorage.getItem('selectedTheme') || 'light';
 
-        // --- Functions for language, theme, leaderboards (NO CHANGES) ---
+        const pfpColors = ["#f44336", "#e91e63", "#9c27b0", "#673ab7", "#3f51b5", "#2196f3", "#03a9f4", "#00bcd4", "#009688", "#4caf50", "#8bc34a", "#cddc39", "#ffeb3b", "#ffc107", "#ff9800", "#ff5722", "#795548", "#607d8b"];
+
+        function getInitials(name) {
+            if (!name) return '?';
+            const parts = name.split(' ');
+            if (parts.length > 1) {
+                return parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        function getColorForName(name) {
+            if (!name) return pfpColors[0];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash % pfpColors.length);
+            return pfpColors[index];
+        }
+
         function setLanguage(lang) {
             document.documentElement.lang = lang;
             localStorage.setItem('selectedLanguage', lang);
             currentLang = lang;
+
             document.querySelectorAll('[data-translate-key]').forEach(element => {
                 const key = element.getAttribute('data-translate-key');
                 if (translations[lang] && translations[lang][key]) {
                     element.textContent = translations[lang][key];
                 }
             });
+
             const langSwitcherBtn = document.getElementById('language-switcher-btn');
             if (langSwitcherBtn) {
                 const currentLangSpan = langSwitcherBtn.querySelector('.lang-current');
@@ -355,6 +392,7 @@
                     targetLangSpan.textContent = 'EN';
                 }
             }
+
             const currentUser = auth.currentUser;
             if (currentUser) {
                 const loginBtn = document.getElementById('login-btn');
@@ -384,6 +422,7 @@
                 ptak2: { key: "ptak2_leaderboard" },
             };
             const collectionName = gameData[gameId].key;
+
             try {
                 const userDocRef = db.collection(collectionName).doc(userToDelete);
                 await userDocRef.delete();
@@ -393,93 +432,119 @@
             }
         }
         
-        async function showLeaderboard(gameId) {
-            // This function is unchanged
-        }
-
-        // --- NEW PROFILE AND ACHIEVEMENT LOGIC ---
-
-        const achievements = {
-            'account_created': { name: 'Vytvořen Účet', icon: 'achievement-icon.png' }
-            // Add more achievements here later
-        };
-
-        function calculateLevel(xp) {
-            const level = Math.floor(Math.sqrt(xp / 100)) + 1;
-            return level;
-        }
-
-        function xpForLevel(level) {
-            return (level - 1) ** 2 * 100;
-        }
-
-        async function showProfile(user) {
-            const profileModal = document.getElementById('profile-modal');
-            if (!user || !profileModal) return;
-
-            const userDocRef = db.collection('users').doc(user.uid);
-            const userDoc = await userDocRef.get();
-            const userData = userDoc.exists ? userDoc.data() : {};
-
-            document.getElementById('profile-pic').src = userData.photoURL || 'default-pfp.png';
-            document.getElementById('profile-name').textContent = user.displayName;
-
-            const xp = userData.xp || 0;
-            const level = calculateLevel(xp);
-            const nextLevelXp = xpForLevel(level + 1);
-            const currentLevelXp = xpForLevel(level);
-
-            document.getElementById('profile-level').textContent = `Level ${level}`;
-            document.getElementById('xp-text').textContent = `${xp - currentLevelXp} / ${nextLevelXp - currentLevelXp} XP`;
-            const xpPercentage = ((xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
-            document.getElementById('xp-bar-fill').style.width = `${xpPercentage}%`;
-
-            // Display Achievements
-            const achievementsGrid = document.getElementById('achievements-grid');
-            achievementsGrid.innerHTML = ''; // Clear old achievements
-            if (userData.achievements) {
-                for (const achievementId of userData.achievements) {
-                    const achievement = achievements[achievementId];
-                    if (achievement) {
-                        const achievementEl = document.createElement('div');
-                        achievementEl.classList.add('achievement');
-                        achievementEl.innerHTML = `
-                            <img src="${achievement.icon}" alt="${achievement.name}">
-                            <p>${achievement.name}</p>
-                        `;
-                        achievementsGrid.appendChild(achievementEl);
-                    }
-                }
+       async function showLeaderboard(gameId) {
+            if (typeof db === 'undefined') {
+                alert("Nelze se připojit k žebříčku. Zkontrolujte připojení nebo zkuste to znovu později.");
+                return;
             }
+            
+            const leaderboardModal = document.getElementById('leaderboard-modal');
+            const titleEl = document.getElementById('leaderboard-title');
+            const headEl = document.getElementById('leaderboard-head');
+            const bodyEl = document.getElementById('leaderboard-body');
+            const currentUser = auth.currentUser;
+            const isAdmin = currentUser && currentUser.displayName === '90Tom';
 
+            const gameData = {
+                milan: { title: "Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
+                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
+                ptak2: { title: "PTAK 2", fields: ['Úroveň', 'Čas'], query: db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
+            };
+
+            const { title, fields, query } = gameData[gameId];
+            titleEl.textContent = `Žebříček: ${title}`;
+            
+            bodyEl.innerHTML = '<tr><td colspan="5">Načítání...</td></tr>';
+            leaderboardModal.style.display = 'flex';
+
+            try {
+                const querySnapshot = await query.limit(10).get();
+                const scores = querySnapshot.docs.map(doc => doc.data());
+
+                headEl.innerHTML = '';
+                bodyEl.innerHTML = '';
+                
+                let headers = '<th>#</th><th>Hráč</th>';
+                fields.forEach(field => headers += `<th>${field}</th>`);
+                if (isAdmin) headers += '<th>Akce</th>';
+                headEl.innerHTML = `<tr>${headers}</tr>`;
+
+                if (scores.length === 0) {
+                    const colspan = isAdmin ? fields.length + 3 : fields.length + 2;
+                    bodyEl.innerHTML = `<tr><td colspan="${colspan}">Zatím žádné výsledky!</td></tr>`;
+                } else {
+                    scores.forEach((score, index) => {
+                        let row = `<td>${index + 1}</td><td>${score.user}</td>`;
+                        if (gameId === 'milan') {
+                            row += `<td>${score.orders}</td><td>${score.time}s</td>`;
+                        } else if (gameId === 'krumptezic') {
+                            row += `<td>${Math.floor(score.blocks)}</td><td>${score.winTime ? score.winTime + 's' : '-'}</td>`;
+                        } else if (gameId === 'ptak2') {
+                             const timeInSeconds = (score.time / 1000).toFixed(2);
+                            row += `<td>${score.level}</td><td>${timeInSeconds}s</td>`;
+                        }
+                        if (isAdmin) {
+                            row += `<td><button class="delete-score-btn" data-game="${gameId}" data-user="${score.user}" title="Smazat">🗑️</button></td>`;
+                        }
+                        bodyEl.innerHTML += `<tr>${row}</tr>`;
+                    });
+                }
+            } catch (error) {
+                 console.error("Error fetching leaderboard:", error);
+                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku. Zkontrolujte, zda jsou v databázi nastaveny správné indexy pro kolekci: ${gameData[gameId].key}.</td></tr>`;
+            }
+        }
+
+        function displayChatMessage(msg) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = 'chat-message';
+            
+            const author = msg.displayName || 'Anonym';
+            
+            messageElement.innerHTML = `
+                <div class="pfp-initials" style="background-color: ${getColorForName(author)};">${getInitials(author)}</div>
+                <div class="message-content">
+                    <span class="message-author">${author}</span>
+                    <span class="message-text">${msg.text}</span>
+                </div>
+            `;
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        async function showProfile() {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const profileModal = document.getElementById('profile-modal');
+            const pfpContainer = document.getElementById('profile-pfp-container');
+            const profileInfo = document.getElementById('profile-info');
+
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                const author = userData.displayName || 'Anonym';
+
+                pfpContainer.style.backgroundColor = getColorForName(author);
+                pfpContainer.textContent = getInitials(author);
+                
+                profileInfo.innerHTML = `
+                    <p><strong>Jméno:</strong> ${userData.displayName}</p>
+                    <p><strong>Email:</strong> ${userData.email}</p>
+                    <p><strong>XP:</strong> ${userData.xp}</p>
+                `;
+            }
             profileModal.style.display = 'flex';
         }
 
-        async function grantAchievement(userId, achievementId) {
-            if (!userId || !achievementId) return;
-            const userDocRef = db.collection('users').doc(userId);
-            await userDocRef.update({
-                achievements: firebase.firestore.FieldValue.arrayUnion(achievementId)
-            });
-        }
-
-        async function addXp(userId, amount) {
-            if (!userId || !amount) return;
-            const userDocRef = db.collection('users').doc(userId);
-            await userDocRef.update({
-                xp: firebase.firestore.FieldValue.increment(amount)
-            });
-        }
-
-        // --- DOMContentLoaded ---
         document.addEventListener('DOMContentLoaded', () => {
             const loginBtn = document.getElementById('login-btn');
+            const profileBtn = document.getElementById('profile-btn');
             
-            // Apply Saved Theme and Language
             setTheme(currentTheme);
             setLanguage(currentLang);
 
-            // Card animation
             const cards = document.querySelectorAll('.game-card');
             cards.forEach((card, index) => {
                 card.style.transition = `opacity 0.5s ease ${index * 0.1}s, transform 0.5s ease ${index * 0.1}s, filter 0.3s ease`;
@@ -489,7 +554,6 @@
                 }, 50);
             });
             
-            // Event Listeners for new buttons
             const themeSwitcherBtn = document.getElementById('theme-switcher-btn');
             if(themeSwitcherBtn) {
                 themeSwitcherBtn.addEventListener('click', () => {
@@ -505,18 +569,7 @@
                     setLanguage(newLang);
                 });
             }
-
-            const chatBtn = document.getElementById('chat-btn');
-            if (chatBtn) {
-                chatBtn.addEventListener('click', () => {
-                    alert("Chat coming soon!"); // Placeholder for chat functionality
-                });
-            }
             
-            // Modal variables
-            const loginModal = document.getElementById('login-modal');
-            const leaderboardModal = document.getElementById('leaderboard-modal');
-            const profileModal = document.getElementById('profile-modal');
             const allModals = document.querySelectorAll('.modal');
             
             const loginView = document.getElementById('login-view');
@@ -524,81 +577,94 @@
             const showRegisterLink = document.getElementById('show-register-link');
             const showLoginLink = document.getElementById('show-login-link');
             
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            
-            // Authentication State Change Handler
-            auth.onAuthStateChanged(async (user) => {
+            auth.onAuthStateChanged(user => {
                 if (user) {
                     sessionStorage.setItem('loggedInUser', user.displayName || user.email);
                     const logoutText = translations[currentLang].logoutButtonText;
                     loginBtn.textContent = `${logoutText} (${user.displayName || user.email})`;
                     loginBtn.removeAttribute('data-translate-key');
+                    profileBtn.style.display = 'inline-flex';
                     loginBtn.onclick = (e) => {
                         e.preventDefault();
-                        if (e.target.id === 'login-btn') {
-                            showProfile(user);
-                        } else {
-                           auth.signOut();
-                        }
+                        auth.signOut();
                     };
-                    
-                    // --- User Profile Initialization ---
-                    const userDocRef = db.collection('users').doc(user.uid);
-                    const userDoc = await userDocRef.get();
-                    if (!userDoc.exists) {
-                        await userDocRef.set({
-                            displayName: user.displayName,
-                            email: user.email,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                            xp: 0,
-                            achievements: ['account_created']
-                        });
-                        addXp(user.uid, 10); // Grant 10 XP for creating account
-                    } else {
-                        // Grant login XP once per day
-                        const lastLogin = userDoc.data().lastLogin?.toDate();
-                        const now = new Date();
-                        if (!lastLogin || now.getDate() !== lastLogin.getDate() || now.getMonth() !== lastLogin.getMonth() || now.getFullYear() !== lastLogin.getFullYear()) {
-                            await userDocRef.update({ lastLogin: firebase.firestore.FieldValue.serverTimestamp() });
-                            addXp(user.uid, 5); // 5 XP for daily login
-                        }
-                    }
-
                 } else {
                     sessionStorage.removeItem('loggedInUser');
                     loginBtn.setAttribute('data-translate-key', 'loginButtonText');
                     loginBtn.textContent = translations[currentLang].loginButtonText;
+                    profileBtn.style.display = 'none';
                     loginBtn.onclick = (e) => {
                         e.preventDefault();
                         loginView.style.display = 'block';
                         registerView.style.display = 'none';
-                        loginModal.style.display = 'flex';
+                        document.getElementById('login-modal').style.display = 'flex';
+                    };
+                }
+            });
+
+            profileBtn.addEventListener('click', showProfile);
+
+            showRegisterLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginView.style.display = 'none';
+                registerView.style.display = 'block';
+            });
+
+            showLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                registerView.style.display = 'none';
+                loginView.style.display = 'block';
+            });
+
+            document.querySelectorAll('.leaderboard-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    const gameId = e.currentTarget.dataset.game;
+                    showLeaderboard(gameId);
+                });
+            });
+            
+            document.getElementById('leaderboard-modal').addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-score-btn')) {
+                    const userToDelete = e.target.dataset.user;
+                    const gameId = e.target.dataset.game;
+                    if(confirm(`Opravdu chcete smazat výsledek hráče ${userToDelete}?`)){
+                        deleteLeaderboardEntry(gameId, userToDelete);
+                    }
+                }
+            });
+
+            allModals.forEach(modal => {
+                const closeBtn = modal.querySelector('.close-btn');
+                if (closeBtn) {
+                    closeBtn.onclick = () => {
+                        modal.style.display = 'none';
                     };
                 }
             });
             
-            // --- Event Listeners for Forms and Links ---
-            showRegisterLink.addEventListener('click', (e) => { e.preventDefault(); loginView.style.display = 'none'; registerView.style.display = 'block'; });
-            showLoginLink.addEventListener('click', (e) => { e.preventDefault(); registerView.style.display = 'none'; loginView.style.display = 'block'; });
+            window.onclick = (event) => {
+                if (event.target.classList.contains('modal')) {
+                    event.target.style.display = "none";
+                }
+            };
             
-            // Leaderboard and Modal functionality
-            document.querySelectorAll('.leaderboard-btn').forEach(button => button.addEventListener('click', (e) => { e.stopPropagation(); showLeaderboard(e.currentTarget.dataset.game); }));
-            leaderboardModal.addEventListener('click', (e) => { if (e.target.classList.contains('delete-score-btn')) { const userToDelete = e.target.dataset.user; const gameId = e.target.dataset.game; if(confirm(`Opravdu chcete smazat výsledek hráče ${userToDelete}?`)){ deleteLeaderboardEntry(gameId, userToDelete); } } });
-            allModals.forEach(modal => { const closeBtn = modal.querySelector('.close-btn'); if (closeBtn) { closeBtn.onclick = () => { modal.style.display = 'none'; }; } });
-            window.onclick = (event) => { if (event.target.classList.contains('modal')) { event.target.style.display = "none"; } };
-            
-            // Login/Register Forms
-            loginForm.addEventListener('submit', (event) => {
+            document.getElementById('login-form').addEventListener('submit', function(event) {
                 event.preventDefault();
                 const email = document.getElementById('login-username').value;
                 const password = document.getElementById('login-password').value;
+                const errorMessage = document.getElementById('login-error-message');
+                
                 auth.signInWithEmailAndPassword(email, password)
-                    .then(() => window.location.reload())
-                    .catch((error) => document.getElementById('login-error-message').textContent = error.message);
+                    .then(() => {
+                        window.location.reload();
+                    })
+                    .catch((error) => {
+                        errorMessage.textContent = error.message;
+                    });
             });
             
-            registerForm.addEventListener('submit', (event) => {
+            document.getElementById('register-form').addEventListener('submit', function(event) {
                 event.preventDefault();
                 const displayName = document.getElementById('register-displayname').value;
                 const email = document.getElementById('register-email').value;
@@ -606,40 +672,59 @@
                 const confirmPassword = document.getElementById('confirm-password').value;
                 const errorMessage = document.getElementById('register-error-message');
 
-                if (password !== confirmPassword) { errorMessage.textContent = 'Hesla se neshodují.'; return; }
-                if (displayName.length < 3) { errorMessage.textContent = 'Zobrazované jméno musí mít alespoň 3 znaky.'; return; }
+                if (password !== confirmPassword) {
+                    errorMessage.textContent = 'Hesla se neshodují.';
+                    return;
+                }
+                if (displayName.length < 3) {
+                    errorMessage.textContent = 'Zobrazované jméno musí mít alespoň 3 znaky.';
+                    return;
+                }
 
                 auth.createUserWithEmailAndPassword(email, password)
                     .then((userCredential) => {
-                        return userCredential.user.updateProfile({ displayName: displayName })
-                            .then(() => window.location.reload());
+                        const user = userCredential.user;
+                        return user.updateProfile({
+                            displayName: displayName
+                        }).then(() => {
+                             db.collection('users').doc(user.uid).set({
+                                displayName: displayName,
+                                email: email,
+                                xp: 0,
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        });
                     })
-                    .catch((error) => errorMessage.textContent = error.message);
+                    .catch((error) => {
+                        errorMessage.textContent = error.message;
+                    });
             });
 
-            // --- NEW: Profile Picture Upload Logic ---
-            const uploadPicInput = document.getElementById('upload-pic-input');
-            uploadPicInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
+            document.getElementById('chat-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const chatInput = document.getElementById('chat-input');
+                const text = chatInput.value.trim();
                 const user = auth.currentUser;
-                if (!file || !user) return;
 
-                const filePath = `profile_pictures/${user.uid}/${file.name}`;
-                const fileRef = storage.ref(filePath);
-                const task = fileRef.put(file);
+                if (text && user) {
+                    db.collection('chat').add({
+                        text: text,
+                        userId: user.uid,
+                        displayName: user.displayName,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    chatInput.value = '';
+                }
+            });
 
-                task.on('state_changed', 
-                    (snapshot) => { /* Can add upload progress bar here */ }, 
-                    (error) => { console.error("Upload failed", error); alert("Upload failed!"); }, 
-                    () => {
-                        task.snapshot.ref.getDownloadURL().then(async (downloadURL) => {
-                            await user.updateProfile({ photoURL: downloadURL });
-                            await db.collection('users').doc(user.uid).update({ photoURL: downloadURL });
-                            document.getElementById('profile-pic').src = downloadURL;
-                            alert("Profile picture updated!");
-                        });
-                    }
-                );
+            db.collection('chat').orderBy('createdAt', 'asc').limitToLast(50).onSnapshot(snapshot => {
+                const messagesContainer = document.getElementById('chat-messages');
+                messagesContainer.innerHTML = '';
+                snapshot.forEach(doc => {
+                    displayChatMessage(doc.data());
+                });
             });
         });
     </script>
