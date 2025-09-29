@@ -256,6 +256,7 @@
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script>
@@ -271,10 +272,11 @@
     };
 
     // Initialize Firebase
-    let db;
+    let db, auth;
     try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
+        auth = firebase.auth();
     } catch (e) {
         console.error("Firebase initialization failed:", e);
     }
@@ -990,47 +992,54 @@
         animationFrameId = requestAnimationFrame(gameLoop);
     }
     
-    async function saveScoreToLeaderboard() {
-        const user = sessionStorage.getItem('loggedInUser');
-        if (!user || typeof db === 'undefined') {
-            console.log("User not logged in or DB not available. Cannot save score.");
+    // *** FIXED SCORE SAVING FUNCTION ***
+    async function saveScore(gameId, newScoreData) {
+        if (typeof auth === 'undefined' || typeof db === 'undefined') {
+            console.log("Firebase not ready.");
+            return;
+        }
+        const user = auth.currentUser;
+        if (!user || !user.displayName) {
+            console.log("User not logged in. Score not saved.");
             return;
         }
 
-        const leaderboardRef = db.collection('milan_leaderboard');
-        const userScoreRef = leaderboardRef.doc(user);
+        const userName = user.displayName;
+        const gameConfigs = {
+            'milan': {
+                collection: 'milan_leaderboard',
+                isBetter: (newS, oldS) => newS.orders > oldS.orders || (newS.orders === oldS.orders && newS.time > oldS.time)
+            }
+        };
+
+        const config = gameConfigs[gameId];
+        if (!config) {
+            console.error("Invalid gameId for saving score:", gameId);
+            return;
+        }
+
+        const scoreDocRef = db.collection(config.collection).doc(userName);
 
         try {
-            const doc = await userScoreRef.get();
-            const currentScore = {
-                user: user,
-                orders: ordersCompleted,
-                time: Math.floor(survivalTime),
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            if (doc.exists) {
-                const existingScore = doc.data();
-                if (currentScore.orders > existingScore.orders || (currentScore.orders === existingScore.orders && currentScore.time > existingScore.time)) {
-                    await userScoreRef.set(currentScore);
-                    console.log("New high score saved for user:", user);
-                } else {
-                    console.log("Existing score is better. Not updating.");
-                }
+            const doc = await scoreDocRef.get();
+            if (!doc.exists || config.isBetter(newScoreData, doc.data())) {
+                await scoreDocRef.set({ user: userName, ...newScoreData });
+                console.log("High score saved for:", userName);
             } else {
-                await userScoreRef.set(currentScore);
-                console.log("New user score saved:", user);
+                console.log("Score was not better. Not updating.");
             }
         } catch (error) {
-            console.error("Error saving score to leaderboard: ", error);
+            console.error("Error saving score: ", error);
         }
     }
+
 
     function endGame(reason) {
         gameRunning = false;
         cancelAnimationFrame(animationFrameId);
         
-        saveScoreToLeaderboard();
+        // Call the new save function
+        saveScore('milan', { orders: ordersCompleted, time: Math.floor(survivalTime) });
 
         const t = translations[currentLanguage];
         document.getElementById('end-reason').textContent = reason;
