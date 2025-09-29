@@ -11,6 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script>
       const firebaseConfig = {
         apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
@@ -22,11 +23,12 @@
         measurementId: "G-6MHP8FHQ87"
       };
 
-      let db, auth;
+      let db, auth, rtdb;
       try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         auth = firebase.auth();
+        rtdb = firebase.database();
       } catch (e) {
         console.error("Firebase initialization failed:", e);
         alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
@@ -96,10 +98,12 @@
         footer { text-align: center; margin-top: 50px; padding: 15px; color: var(--text-color-light); font-size: 0.9em; width: 100%; max-width: 800px; background-color: var(--footer-bg); border-radius: 8px; transition: all 0.3s ease; }
         footer p { color: red; }
         #top-actions-container { position: fixed; top: 15px; right: 20px; z-index: 1001; display: flex; gap: 10px; align-items: center; }
-        #theme-switcher-btn, #language-switcher-btn, #login-btn, #profile-btn, #chat-toggle-btn { background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--button-border); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-        #login-btn, #profile-btn { color: red; font-weight: 600; }
-        #theme-switcher-btn:hover, #language-switcher-btn:hover, #login-btn:hover, #profile-btn:hover, #chat-toggle-btn:hover { background-color: var(--button-hover-bg); border-color: var(--button-hover-border); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        #login-btn:hover, #profile-btn:hover { color: #c00; }
+        #theme-switcher-btn, #language-switcher-btn, #login-btn, #chat-toggle-btn { background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--button-border); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        #profile-btn-pfp { display: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid var(--button-border); background-color: var(--button-bg); background-size: cover; background-position: center; overflow: hidden; flex-shrink: 0; }
+        #profile-btn-pfp:hover { border-color: var(--button-hover-border); }
+        #login-btn { color: red; font-weight: 600; }
+        #theme-switcher-btn:hover, #language-switcher-btn:hover, #login-btn:hover, #chat-toggle-btn:hover { background-color: var(--button-hover-bg); border-color: var(--button-hover-border); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #login-btn:hover { color: #c00; }
         #language-switcher-btn .lang-current { font-weight: 600; }
         #language-switcher-btn .lang-separator { margin: 0 5px; opacity: 0.6; }
         #language-switcher-btn .lang-target { opacity: 0.7; }
@@ -112,6 +116,10 @@
         .input-group input:focus { outline: none; border-color: red; }
         .action-button { width: 100%; padding: 12px; border: none; background-color: red; color: white; font-size: 1.1em; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background-color 0.3s ease; }
         .action-button:hover { background-color: #c00; }
+        .logout-button { background-color: #a9a9a9; margin-top: 10px; }
+        .logout-button:hover { background-color: #8b0000; }
+        body.dark-mode .logout-button { background-color: #555; }
+        body.dark-mode .logout-button:hover { background-color: #777; }
         .error-message { color: red; margin-top: 15px; height: 20px; font-weight: 500; font-size: 0.9em; }
         .close-btn { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.3s ease;}
         .close-btn:hover, .close-btn:focus { color: var(--text-color); text-decoration: none; }
@@ -130,11 +138,13 @@
         .initials { font-weight: bold; color: white; }
         .pfp-display .initials { font-size: 50px; }
         .chat-message .initials { font-size: 16px; }
+        #profile-btn-pfp .initials { font-size: 16px; }
         #profile-info p, #user-view-info p { margin-bottom: 10px; }
         .pfp-choices { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--input-border); }
         .pfp-choices h3 { font-size: 1em; margin-bottom: 10px; color: var(--text-color-light); }
         .avatar-grid, .color-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 15px; }
-        .avatar-choice { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; object-fit: cover; }
+        .avatar-choice { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; object-fit: cover; display: flex; justify-content: center; align-items: center; background-color: #ccc; }
+        body.dark-mode .avatar-choice { background-color: #444; }
         .avatar-choice.selected, .color-choice.selected { border-color: red; }
         .color-choice { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; }
         #chat-popup { position: fixed; top: 0; left: 0; width: 350px; height: 100%; background-color: var(--card-bg); z-index: 1999; box-shadow: 5px 0 15px rgba(0,0,0,0.1); transform: translateX(-100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; border-right: 1px solid var(--card-border); }
@@ -159,12 +169,13 @@
         .message-meta { display: flex; justify-content: space-between; align-items: center; }
         .delete-msg-btn { background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 14px; margin-left: 10px; }
         .delete-msg-btn:hover { color: red; }
-        .dm-list-item, .public-chat-btn { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; border-bottom: 1px solid var(--input-border); }
-        .dm-list-item:hover, .public-chat-btn:hover { background-color: var(--table-row-hover); }
-        .dm-list-item .pfp-container { margin-right: 15px; }
+        .dm-list-item, .public-chat-btn, .user-search-result { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; border-bottom: 1px solid var(--input-border); }
+        .dm-list-item:hover, .public-chat-btn:hover, .user-search-result:hover { background-color: var(--table-row-hover); }
+        .dm-list-item .pfp-container, .user-search-result .pfp-container { margin-right: 15px; }
         .dm-info { display: flex; flex-direction: column; }
         .dm-info-name { font-weight: bold; color: var(--text-color); }
         .dm-info-lastmsg { font-size: 0.9em; color: var(--text-color-light); }
+        #dm-search-bar { width: calc(100% - 30px); margin: 15px; padding: 8px; border-radius: 6px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-color); }
         .achievements-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--input-border); }
         .achievements-section h3 { font-size: 1.2em; margin-bottom: 10px; }
         .achievement { display: flex; align-items: center; margin-bottom: 10px; text-align: left; }
@@ -172,22 +183,22 @@
         .achievement-info h4 { margin: 0; font-size: 1em; }
         .achievement-info p { margin: 0; font-size: 0.85em; color: var(--text-color-light); }
 
-        body.dark-mode #login-btn, body.dark-mode #profile-btn { color: #ff4d4d; }
-        body.dark-mode #login-btn:hover, body.dark-mode #profile-btn:hover { color: #ff8a8a; }
+        body.dark-mode #login-btn { color: #ff4d4d; }
+        body.dark-mode #login-btn:hover { color: #ff8a8a; }
 
-        @media (max-width: 768px) { header h1 { font-size: 2.8em; padding-right: 40px; } .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; } .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; } #theme-switcher-btn, #language-switcher-btn, #login-btn, #profile-btn, #chat-toggle-btn { padding: 6px 12px; font-size: 0.85em; } #top-actions-container { top: 15px; right: 15px; gap: 8px;} #chat-popup { width: 300px; } }
-        @media (max-width: 480px) { body { padding: 10px; } header h1 { font-size: 2.2em; padding-right: 35px; } .splash-text { font-size: 0.3em; padding: 1px 5px; right: 2px; bottom: 3px; } header p { font-size: 1em; } .game-grid { grid-template-columns: 1fr; gap: 20px; max-width: 300px; } .game-card .content { padding: 10px; } .game-card h2 { font-size: 1.1em; } .game-card p { font-size: 0.8em; } #theme-switcher-btn, #language-switcher-btn, #login-btn, #profile-btn, #chat-toggle-btn { padding: 5px 10px; font-size: 0.8em; } #top-actions-container { top: 10px; right: 10px; gap: 6px;} #chat-popup { width: 100%; } }
+        @media (max-width: 768px) { header h1 { font-size: 2.8em; padding-right: 40px; } .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; } .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; } #theme-switcher-btn, #language-switcher-btn, #login-btn, #chat-toggle-btn { padding: 6px 12px; font-size: 0.85em; } #top-actions-container { top: 15px; right: 15px; gap: 8px;} #chat-popup { width: 300px; } }
+        @media (max-width: 480px) { body { padding: 10px; } header h1 { font-size: 2.2em; padding-right: 35px; } .splash-text { font-size: 0.3em; padding: 1px 5px; right: 2px; bottom: 3px; } header p { font-size: 1em; } .game-grid { grid-template-columns: 1fr; gap: 20px; max-width: 300px; } .game-card .content { padding: 10px; } .game-card h2 { font-size: 1.1em; } .game-card p { font-size: 0.8em; } #theme-switcher-btn, #language-switcher-btn, #login-btn, #chat-toggle-btn { padding: 5px 10px; font-size: 0.8em; } #top-actions-container { top: 10px; right: 10px; gap: 6px;} #chat-popup { width: 100%; } }
     </style>
 </head>
 <body>
     <div id="top-actions-container">
-        <button id="profile-btn" style="display: none;">Profil</button>
         <button id="chat-toggle-btn" style="display: none;">💬</button>
         <button id="theme-switcher-btn">🌙</button>
         <button id="language-switcher-btn">
             <span class="lang-current">CS</span><span class="lang-separator">⇌</span><span class="lang-target">EN</span>
         </button>
         <a href="#" id="login-btn" data-translate-key="loginButtonText">Login</a>
+        <div id="profile-btn-pfp"></div>
     </div>
 
     <header>
@@ -244,8 +255,10 @@
                 <h2>Zprávy</h2>
                 <button class="close-btn" id="chat-close-btn">&times;</button>
             </div>
-            <div class="public-chat-btn">Veřejný Chat 🌍</div>
-            <div class="chat-messages" id="dm-list-container"></div>
+            <input type="text" id="dm-search-bar" placeholder="Hledat uživatele...">
+            <div class="chat-messages" id="dm-list-container">
+                <div class="public-chat-btn">Veřejný Chat 🌍</div>
+            </div>
         </div>
 
         <div id="chat-view-container" class="chat-view">
@@ -333,10 +346,11 @@
             <div class="pfp-choices">
                 <h3>Vyberte si avatara</h3>
                 <div class="avatar-grid" id="avatar-grid-choices"></div>
-                <h3>Nebo si vyberte barvu</h3>
+                <h3>Vyberte si barvu jména</h3>
                 <div class="color-grid" id="color-grid-choices"></div>
             </div>
             <button id="save-profile-btn" class="action-button" style="margin-top: 20px;">Uložit změny</button>
+            <button id="logout-btn" class="action-button logout-button">Odhlásit se</button>
         </div>
     </div>
 
@@ -356,6 +370,7 @@
 
     <footer>
         <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
+        <p>Online: <span id="online-users-count">0</span></p>
     </footer>
 
     <script type="text/javascript">
@@ -418,11 +433,12 @@
         let currentTheme = localStorage.getItem('selectedTheme') || 'light';
         let currentUserData = null;
         let activeChatListener = null;
+        let activeDmListListener = null;
         let currentChatMode = 'dm-list'; // 'dm-list', 'public', or 'dm'
         let currentDmPartnerId = null;
 
         const pfpColors = ["#f44336", "#9c27b0", "#3f51b5", "#009688", "#4caf50", "#ffeb3b", "#ff9800", "#795548", "#607d8b"];
-        const presetAvatars = [ 'pfps/cat.png', 'pfps/dog.png' ];
+        const presetAvatars = [ 'pfps/cat.png', 'pfps/dog.png', 'pfps/creeper.png', 'pfps/chess.png', 'pfps/nuget.png', 'pfps/ptak.png', 'pfps/glet.png' ];
 
         const ACHIEVEMENTS_LIST = {
             'milan_first_game': { name: 'Začínající kuchař', desc: 'Odehrál první hru Milanovy klobásy.', icon: 'https://i.ibb.co/6yV2Z8j/milan-ach.png' },
@@ -486,12 +502,6 @@
                     currentLangSpan.textContent = 'CS';
                     targetLangSpan.textContent = 'EN';
                 }
-            }
-            const currentUser = auth.currentUser;
-            if (currentUser) {
-                const loginBtn = document.getElementById('login-btn');
-                const logoutText = translations[lang].logoutButtonText;
-                loginBtn.textContent = `${logoutText} (${currentUser.displayName || currentUser.email})`;
             }
         }
         
@@ -589,7 +599,7 @@
             }
             renderPfp(pfpContainer, { ...msg });
 
-            const authorStyle = (!msg.photoURL && msg.pfpColor) ? `style="color: ${msg.pfpColor}"` : '';
+            const authorStyle = msg.pfpColor ? `style="color: ${msg.pfpColor}"` : '';
             const deleteBtn = (currentUserData && currentUserData.displayName === '90Tom' && currentChatMode === 'public') ? 
                 `<button class="delete-msg-btn" onclick="deleteChatMessage('${msg.id}')">🗑️</button>` : '';
             
@@ -635,13 +645,14 @@
             const userData = userDoc.data();
             
             renderPfp(pfpContainer, userData);
-            const nameStyle = (!userData.photoURL && userData.pfpColor) ? `style="color: ${userData.pfpColor}; font-weight: bold;"` : 'style="font-weight: bold;"';
+            const nameStyle = userData.pfpColor ? `style="color: ${userData.pfpColor}; font-weight: bold;"` : 'style="font-weight: bold;"';
             infoContainer.innerHTML = `<p><strong>Jméno:</strong> <span ${nameStyle}>${userData.displayName}</span></p><p><strong>XP:</strong> ${userData.xp}</p>`;
             
             if (auth.currentUser && auth.currentUser.uid !== userId) {
                 sendDmBtn.style.display = 'block';
                 sendDmBtn.onclick = () => {
                     modal.style.display = 'none';
+                    document.getElementById('chat-popup').classList.add('open');
                     openDmChat(userId);
                 };
             }
@@ -669,53 +680,73 @@
             const profileInfo = document.getElementById('profile-info');
             const avatarGrid = document.getElementById('avatar-grid-choices');
             const colorGrid = document.getElementById('color-grid-choices');
-            renderPfp(pfpContainer, currentUserData);
-            const nameStyle = (!currentUserData.photoURL && currentUserData.pfpColor) ? `style="color: ${currentUserData.pfpColor}; font-weight: bold;"` : 'style="font-weight: bold;"';
-            profileInfo.innerHTML = `<p><strong>Jméno:</strong> <span ${nameStyle}>${currentUserData.displayName}</span></p><p><strong>Email:</strong> ${currentUserData.email}</p><p><strong>XP:</strong> ${currentUserData.xp}</p>`;
+            
+            selectedAvatarUrl = currentUserData.photoURL;
+            selectedColor = currentUserData.pfpColor || getColorForName(currentUserData.displayName);
+
+            renderPfp(pfpContainer, { photoURL: selectedAvatarUrl, pfpColor: selectedColor, displayName: currentUserData.displayName });
+            
+            const nameStyle = `style="color: ${selectedColor}; font-weight: bold;"`;
+            profileInfo.innerHTML = `<p><strong>Jméno:</strong> <span id="name-preview" ${nameStyle}>${currentUserData.displayName}</span></p><p><strong>Email:</strong> ${currentUserData.email}</p><p><strong>XP:</strong> ${currentUserData.xp}</p>`;
+
             avatarGrid.innerHTML = '';
+            
+            const initialsChoice = document.createElement('div');
+            initialsChoice.className = 'avatar-choice';
+            initialsChoice.innerHTML = `<span class="initials">${getInitials(currentUserData.displayName)}</span>`;
+            if (!selectedAvatarUrl) initialsChoice.classList.add('selected');
+            initialsChoice.onclick = () => {
+                selectedAvatarUrl = null;
+                document.querySelectorAll('.avatar-choice').forEach(el => el.classList.remove('selected'));
+                initialsChoice.classList.add('selected');
+                renderPfp(pfpContainer, { pfpColor: selectedColor, displayName: currentUserData.displayName });
+            };
+            avatarGrid.appendChild(initialsChoice);
+
             presetAvatars.forEach(url => {
                 const img = document.createElement('img');
                 img.src = url;
                 img.className = 'avatar-choice';
-                if (url === currentUserData.photoURL) img.classList.add('selected');
+                if (url === selectedAvatarUrl) img.classList.add('selected');
                 img.onclick = () => {
-                    document.querySelectorAll('.avatar-choice, .color-choice').forEach(el => el.classList.remove('selected'));
-                    img.classList.add('selected');
                     selectedAvatarUrl = url;
-                    selectedColor = null;
+                    document.querySelectorAll('.avatar-choice').forEach(el => el.classList.remove('selected'));
+                    img.classList.add('selected');
                     renderPfp(pfpContainer, { photoURL: url, displayName: currentUserData.displayName });
                 };
                 avatarGrid.appendChild(img);
             });
+
             colorGrid.innerHTML = '';
             pfpColors.forEach(color => {
                 const div = document.createElement('div');
                 div.className = 'color-choice';
                 div.style.backgroundColor = color;
-                if (!currentUserData.photoURL && color === currentUserData.pfpColor) div.classList.add('selected');
+                if (color === selectedColor) div.classList.add('selected');
                 div.onclick = () => {
-                    document.querySelectorAll('.avatar-choice, .color-choice').forEach(el => el.classList.remove('selected'));
-                    div.classList.add('selected');
                     selectedColor = color;
-                    selectedAvatarUrl = null;
-                    renderPfp(pfpContainer, { pfpColor: color, displayName: currentUserData.displayName });
+                    document.querySelectorAll('.color-choice').forEach(el => el.classList.remove('selected'));
+                    div.classList.add('selected');
+                    document.getElementById('name-preview').style.color = color;
+                    if (!selectedAvatarUrl) {
+                        renderPfp(pfpContainer, { pfpColor: color, displayName: currentUserData.displayName });
+                    }
                 };
                 colorGrid.appendChild(div);
             });
-            selectedAvatarUrl = currentUserData.photoURL;
-            selectedColor = currentUserData.pfpColor;
+            
             profileModal.style.display = 'flex';
         }
 
         async function saveProfileChanges() {
             const user = auth.currentUser;
             if (!user) return;
-            const updates = {};
+            const updates = {
+                pfpColor: selectedColor
+            };
             if (selectedAvatarUrl) {
                 updates.photoURL = selectedAvatarUrl;
-                updates.pfpColor = firebase.firestore.FieldValue.delete();
             } else {
-                updates.pfpColor = selectedColor;
                 updates.photoURL = firebase.firestore.FieldValue.delete();
             }
             try {
@@ -726,6 +757,7 @@
                 }
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 currentUserData = userDoc.data();
+                updateProfileButtonPfp();
                 document.getElementById('profile-modal').style.display = 'none';
                 alert("Profil uložen!");
             } catch (error) {
@@ -733,11 +765,11 @@
                 alert("Nepodařilo se uložit profil.");
             }
         }
-
-        async function fetchCurrentUserData(uid) {
-            const userDoc = await db.collection('users').doc(uid).get();
-            if (userDoc.exists) {
-                currentUserData = userDoc.data();
+        
+        function updateProfileButtonPfp() {
+            const pfpButton = document.getElementById('profile-btn-pfp');
+            if (currentUserData) {
+                renderPfp(pfpButton, currentUserData);
             }
         }
 
@@ -779,11 +811,13 @@
 
         function listenToDmList() {
             const myId = auth.currentUser.uid;
-            db.collection('dms').where('users', 'array-contains', myId)
+            if (activeDmListListener) activeDmListListener();
+            activeDmListListener = db.collection('dms').where('users', 'array-contains', myId)
               .orderBy('lastActivity', 'desc')
               .onSnapshot(async (snapshot) => {
                 const container = document.getElementById('dm-list-container');
-                container.innerHTML = '';
+                container.querySelectorAll('.dm-list-item').forEach(el => el.remove());
+
                 for (const doc of snapshot.docs) {
                     const convo = doc.data();
                     const partnerId = convo.users.find(id => id !== myId);
@@ -803,7 +837,7 @@
                     
                     const info = document.createElement('div');
                     info.className = 'dm-info';
-                    const nameStyle = (!partnerData.photoURL && partnerData.pfpColor) ? `style="color: ${partnerData.pfpColor}"` : '';
+                    const nameStyle = partnerData.pfpColor ? `style="color: ${partnerData.pfpColor}"` : '';
                     info.innerHTML = `<span class="dm-info-name" ${nameStyle}>${partnerData.displayName}</span><span class="dm-info-lastmsg">${convo.lastMessage || ''}</span>`;
                     
                     item.appendChild(pfp);
@@ -813,9 +847,52 @@
             });
         }
 
+        async function searchUsers(searchTerm) {
+            const container = document.getElementById('dm-list-container');
+            container.innerHTML = '<div class="public-chat-btn">Veřejný Chat 🌍</div>'; // Reset and keep public chat button
+            document.querySelector('.public-chat-btn').addEventListener('click', () => { // Re-attach listener
+                document.getElementById('chat-with-name').textContent = 'Veřejný Chat';
+                listenToChat(db.collection('chat'), 'chat-messages-container', 'public');
+                switchChatView('chat-view-container');
+            });
+            
+            if (searchTerm.trim() === '') {
+                if (activeDmListListener) activeDmListListener();
+                listenToDmList();
+                return;
+            }
+
+            if (activeDmListListener) activeDmListListener();
+
+            const usersRef = db.collection('users');
+            const querySnapshot = await usersRef.where('displayName', '>=', searchTerm).where('displayName', '<=', searchTerm + '\uf8ff').limit(10).get();
+
+            querySnapshot.forEach(doc => {
+                if (doc.id === auth.currentUser.uid) return;
+
+                const userData = doc.data();
+                const item = document.createElement('div');
+                item.className = 'user-search-result';
+                item.onclick = () => showUserProfile(doc.id);
+                
+                const pfp = document.createElement('div');
+                pfp.className = 'pfp-container';
+                renderPfp(pfp, userData);
+                
+                const info = document.createElement('div');
+                info.className = 'dm-info';
+                const nameStyle = userData.pfpColor ? `style="color: ${userData.pfpColor}"` : '';
+                info.innerHTML = `<span class="dm-info-name" ${nameStyle}>${userData.displayName}</span>`;
+
+                item.appendChild(pfp);
+                item.appendChild(info);
+                container.appendChild(item);
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const loginBtn = document.getElementById('login-btn');
-            const profileBtn = document.getElementById('profile-btn');
+            const profileBtnPfp = document.getElementById('profile-btn-pfp');
             const chatToggleBtn = document.getElementById('chat-toggle-btn');
             const chatPopup = document.getElementById('chat-popup');
             const chatCloseBtn = document.getElementById('chat-close-btn');
@@ -845,21 +922,45 @@
             
             auth.onAuthStateChanged(async user => {
                 if (user) {
-                    await fetchCurrentUserData(user.uid);
+                    const userDocRef = db.collection('users').doc(user.uid);
+                    let userDoc = await userDocRef.get();
+
+                    if (!userDoc.exists) { // PERFECT BUG FIX: Create user if they don't exist in Firestore
+                        const newUserProfile = {
+                            displayName: user.displayName, email: user.email, xp: 0,
+                            pfpColor: getColorForName(user.displayName),
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        await userDocRef.set(newUserProfile);
+                        userDoc = await userDocRef.get(); // Re-fetch the new document
+                    }
+                    
+                    currentUserData = userDoc.data();
+                    
+                    updateProfileButtonPfp();
                     sessionStorage.setItem('loggedInUser', user.displayName || user.email);
-                    const logoutText = translations[currentLang].logoutButtonText;
-                    loginBtn.textContent = `${logoutText} (${user.displayName || user.email})`;
-                    loginBtn.removeAttribute('data-translate-key');
-                    profileBtn.style.display = 'inline-flex';
+                    loginBtn.style.display = 'none';
+                    profileBtnPfp.style.display = 'flex';
                     chatToggleBtn.style.display = 'inline-flex';
-                    loginBtn.onclick = (e) => { e.preventDefault(); auth.signOut(); };
                     listenToDmList();
+
+                    const userStatusDatabaseRef = rtdb.ref('/status/' + user.uid);
+                    const isOfflineForDatabase = { state: 'offline' };
+                    const isOnlineForDatabase = { state: 'online' };
+                    rtdb.ref('.info/connected').on('value', function(snapshot) {
+                        if (snapshot.val() == false) return;
+                        userStatusDatabaseRef.onDisconnect().set(isOfflineForDatabase).then(function() {
+                            userStatusDatabaseRef.set(isOnlineForDatabase);
+                        });
+                    });
+
                 } else {
                     currentUserData = null;
+                    if (activeDmListListener) activeDmListListener();
+                    activeDmListListener = null;
                     sessionStorage.removeItem('loggedInUser');
-                    loginBtn.setAttribute('data-translate-key', 'loginButtonText');
-                    loginBtn.textContent = translations[currentLang].loginButtonText;
-                    profileBtn.style.display = 'none';
+                    loginBtn.style.display = 'inline-flex';
+                    profileBtnPfp.style.display = 'none';
                     chatToggleBtn.style.display = 'none';
                     chatPopup.classList.remove('open');
                     loginBtn.onclick = (e) => {
@@ -871,7 +972,22 @@
                 }
             });
 
-            profileBtn.addEventListener('click', showMyProfile);
+            rtdb.ref('/status').on('value', (snapshot) => {
+                let onlineCount = 0;
+                snapshot.forEach((childSnapshot) => {
+                    if (childSnapshot.val().state === 'online') {
+                        onlineCount++;
+                    }
+                });
+                document.getElementById('online-users-count').textContent = onlineCount;
+            });
+
+            profileBtnPfp.addEventListener('click', showMyProfile);
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                rtdb.ref('/status/' + auth.currentUser.uid).set({ state: 'offline' });
+                auth.signOut();
+                document.getElementById('profile-modal').style.display = 'none';
+            });
             document.getElementById('save-profile-btn').addEventListener('click', saveProfileChanges);
             chatToggleBtn.addEventListener('click', () => chatPopup.classList.add('open'));
             chatCloseBtn.addEventListener('click', () => chatPopup.classList.remove('open'));
@@ -937,6 +1053,10 @@
                 switchChatView('dm-list-view');
             });
             
+            document.getElementById('dm-search-bar').addEventListener('input', (e) => {
+                searchUsers(e.target.value);
+            });
+            
             document.getElementById('chat-form').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const chatInput = document.getElementById('chat-input');
@@ -949,10 +1069,10 @@
                     userId: user.uid,
                     displayName: currentUserData.displayName,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    deleted: false
+                    deleted: false,
+                    pfpColor: currentUserData.pfpColor || getColorForName(currentUserData.displayName)
                 };
                 if (currentUserData.photoURL) message.photoURL = currentUserData.photoURL;
-                else message.pfpColor = currentUserData.pfpColor;
 
                 if (currentChatMode === 'public') {
                     db.collection('chat').add(message);
