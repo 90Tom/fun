@@ -20,7 +20,8 @@
         storageBucket: "tom-fun.appspot.com",
         messagingSenderId: "710857129785",
         appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
-        measurementId: "G-6MHP8FHQ87"
+        measurementId: "G-6MHP8FHQ87",
+        // PASTE YOUR databaseURL LINE FROM FIREBASE HERE!
       };
 
       let db, auth, rtdb;
@@ -97,6 +98,7 @@
         .leaderboard-btn:hover { background-color: #e83e8c; color: white; transform: scale(1.1); }
         footer { text-align: center; margin-top: 50px; padding: 15px; color: var(--text-color-light); font-size: 0.9em; width: 100%; max-width: 800px; background-color: var(--footer-bg); border-radius: 8px; transition: all 0.3s ease; }
         footer p { color: red; }
+        footer p:first-of-type { margin-bottom: 5px; color: var(--text-color-light); }
         #top-actions-container { position: fixed; top: 15px; right: 20px; z-index: 1001; display: flex; gap: 10px; align-items: center; }
         #theme-switcher-btn, #language-switcher-btn, #login-btn, #chat-toggle-btn { background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--button-border); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
         #profile-btn-pfp { display: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid var(--button-border); background-color: var(--button-bg); background-size: cover; background-position: center; overflow: hidden; flex-shrink: 0; }
@@ -369,8 +371,8 @@
     </div>
 
     <footer>
-        <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
         <p>Online: <span id="online-users-count">0</span></p>
+        <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
     </footer>
 
     <script type="text/javascript">
@@ -803,6 +805,11 @@
             document.getElementById('chat-with-name').textContent = partnerData.displayName;
             
             const convoId = [myId, otherUserId].sort().join('_');
+            await db.collection('dms').doc(convoId).set({
+                users: [myId, otherUserId],
+                lastActivity: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
             const messagesCollection = db.collection('dms').doc(convoId).collection('messages');
             
             listenToChat(messagesCollection, 'chat-messages-container', 'dm');
@@ -924,17 +931,15 @@
                 if (user) {
                     const userDocRef = db.collection('users').doc(user.uid);
                     let userDoc = await userDocRef.get();
-
-                    if (!userDoc.exists) { // PERFECT BUG FIX: Create user if they don't exist in Firestore
+                    if (!userDoc.exists) {
                         const newUserProfile = {
                             displayName: user.displayName, email: user.email, xp: 0,
                             pfpColor: getColorForName(user.displayName),
                             createdAt: firebase.firestore.FieldValue.serverTimestamp()
                         };
                         await userDocRef.set(newUserProfile);
-                        userDoc = await userDocRef.get(); // Re-fetch the new document
+                        userDoc = await userDocRef.get();
                     }
-                    
                     currentUserData = userDoc.data();
                     
                     updateProfileButtonPfp();
@@ -953,7 +958,6 @@
                             userStatusDatabaseRef.set(isOnlineForDatabase);
                         });
                     });
-
                 } else {
                     currentUserData = null;
                     if (activeDmListListener) activeDmListListener();
