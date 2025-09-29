@@ -21,8 +21,7 @@
         storageBucket: "tom-fun.appspot.com",
         messagingSenderId: "710857129785",
         appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
-        measurementId: "G-6MHP8FHQ87",
-        // PASTE YOUR databaseURL LINE FROM FIREBASE HERE!
+        measurementId: "G-6MHP8FHQ87"
       };
 
       let db, auth, rtdb;
@@ -190,16 +189,11 @@
         body.dark-mode #login-btn { color: #ff4d4d; }
         body.dark-mode #login-btn:hover { color: #ff8a8a; }
 
-<<<<<<< HEAD
         @media (max-height: 800px) {
             header h1 { font-size: 2.5em; padding-right: 45px;}
             .game-card img { height: 55%; }
             .game-card .content { padding: 8px; }
         }
-=======
-        @media (max-width: 768px) { header h1 { font-size: 2.8em; padding-right: 40px; } .splash-text { font-size: 0.35em; right: -2px; bottom: 6px; } .game-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; } #theme-switcher-btn, #language-switcher-btn, #login-btn, #chat-toggle-btn { padding: 6px 12px; font-size: 0.85em; } #top-actions-container { top: 15px; right: 15px; gap: 8px;} #chat-popup { width: 300px; } }
-        @media (max-width: 480px) { body { padding: 10px; } header h1 { font-size: 2.2em; padding-right: 35px; } .splash-text { font-size: 0.3em; padding: 1px 5px; right: 2px; bottom: 3px; } header p { font-size: 1em; } .game-grid { grid-template-columns: 1fr; gap: 20px; max-width: 300px; } .game-card .content { padding: 10px; } .game-card h2 { font-size: 1.1em; } .game-card p { font-size: 0.8em; } #theme-switcher-btn, #language-switcher-btn, #login-btn, #chat-toggle-btn { padding: 5px 10px; font-size: 0.8em; } #top-actions-container { top: 10px; right: 10px; gap: 6px;} #chat-popup { width: 100%; } }
->>>>>>> 171ff90e466325efdf6e768f812c61f04e971b50
     </style>
 </head>
 <body>
@@ -866,13 +860,8 @@
 
         async function searchUsers(searchTerm) {
             const container = document.getElementById('dm-list-container');
-<<<<<<< HEAD
             container.innerHTML = '<div class="public-chat-btn">Veřejný Chat 🌍</div>';
             document.querySelector('.public-chat-btn').addEventListener('click', () => {
-=======
-            container.innerHTML = '<div class="public-chat-btn">Veřejný Chat 🌍</div>'; // Reset and keep public chat button
-            document.querySelector('.public-chat-btn').addEventListener('click', () => { // Re-attach listener
->>>>>>> 171ff90e466325efdf6e768f812c61f04e971b50
                 document.getElementById('chat-with-name').textContent = 'Veřejný Chat';
                 listenToChat(db.collection('chat'), 'chat-messages-container', 'public');
                 switchChatView('chat-view-container');
@@ -891,33 +880,17 @@
 
             querySnapshot.forEach(doc => {
                 if (doc.id === auth.currentUser.uid) return;
-<<<<<<< HEAD
-=======
-
->>>>>>> 171ff90e466325efdf6e768f812c61f04e971b50
                 const userData = doc.data();
                 const item = document.createElement('div');
                 item.className = 'user-search-result';
                 item.onclick = () => showUserProfile(doc.id);
-<<<<<<< HEAD
                 const pfp = document.createElement('div');
                 pfp.className = 'pfp-container';
                 renderPfp(pfp, userData);
-=======
-                
-                const pfp = document.createElement('div');
-                pfp.className = 'pfp-container';
-                renderPfp(pfp, userData);
-                
->>>>>>> 171ff90e466325efdf6e768f812c61f04e971b50
                 const info = document.createElement('div');
                 info.className = 'dm-info';
                 const nameStyle = userData.pfpColor ? `style="color: ${userData.pfpColor}"` : '';
                 info.innerHTML = `<span class="dm-info-name" ${nameStyle}>${userData.displayName}</span>`;
-<<<<<<< HEAD
-=======
-
->>>>>>> 171ff90e466325efdf6e768f812c61f04e971b50
                 item.appendChild(pfp);
                 item.appendChild(info);
                 container.appendChild(item);
