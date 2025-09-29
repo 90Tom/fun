@@ -533,6 +533,7 @@
             };
             const collectionName = gameData[gameId].key;
             try {
+                // This assumes the document ID is the user's name. This will work after you implement Step 1.
                 const userDocRef = db.collection(collectionName).doc(userToDelete);
                 await userDocRef.delete();
                 showLeaderboard(gameId); 
@@ -827,6 +828,7 @@
               .orderBy('lastActivity', 'desc')
               .onSnapshot(async (snapshot) => {
                 const container = document.getElementById('dm-list-container');
+                // **FIX:** More robustly clear only DM items, leaving other elements
                 container.querySelectorAll('.dm-list-item').forEach(el => el.remove());
 
                 for (const doc of snapshot.docs) {
@@ -860,20 +862,16 @@
 
         async function searchUsers(searchTerm) {
             const container = document.getElementById('dm-list-container');
-            container.innerHTML = '<div class="public-chat-btn">Veřejný Chat 🌍</div>';
-            document.querySelector('.public-chat-btn').addEventListener('click', () => {
-                document.getElementById('chat-with-name').textContent = 'Veřejný Chat';
-                listenToChat(db.collection('chat'), 'chat-messages-container', 'public');
-                switchChatView('chat-view-container');
-            });
+            // **FIX:** Clear only DM items and previous search results, not the whole container
+            container.querySelectorAll('.dm-list-item, .user-search-result').forEach(el => el.remove());
             
             if (searchTerm.trim() === '') {
                 if (activeDmListListener) activeDmListListener();
-                listenToDmList();
+                listenToDmList(); // Re-attach DM listener and show DMs
                 return;
             }
 
-            if (activeDmListListener) activeDmListListener();
+            if (activeDmListListener) activeDmListListener(); // Stop listening to DMs while searching
 
             const usersRef = db.collection('users');
             const querySnapshot = await usersRef.where('displayName', '>=', searchTerm).where('displayName', '<=', searchTerm + '\uf8ff').limit(10).get();
@@ -955,6 +953,7 @@
                     rtdb.ref('.info/connected').on('value', function(snapshot) {
                         if (snapshot.val() == false) return;
                         userStatusDatabaseRef.onDisconnect().set(isOfflineForDatabase).then(function() {
+                            // **FIXED TYPO HERE**
                             userStatusDatabaseRef.set(isOnlineForDatabase);
                         });
                     });
