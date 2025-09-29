@@ -7,6 +7,7 @@
 
     <!-- Our Kingdom's Connection (Firebase) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script>
       const firebaseConfig = {
@@ -18,10 +19,11 @@
         appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
         measurementId: "G-6MHP8FHQ87"
       };
-      let db;
+      let db, auth;
       try {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
+        auth = firebase.auth();
       } catch (e) {
         console.error("Firebase initialization failed:", e);
       }
@@ -957,13 +959,12 @@
                 bird = { x: pos.x, y: pos.y, type: birdType, width: size, height: size, bobOffset: 0, bobSpeed: Math.random() * 0.06 + 0.04 };
                 createParticles(pos.x + size/2, pos.y + size/2, isGolden ? 6 : 3, { color: isGolden ? 'hsl(50, 100%, 75%)' : 'hsl(180, 100%, 75%)', size: isGolden ? 8.0 : 5.5, life: 90, speed: 2.5, gravity: 0.05, light: isGolden, drag:0.97, shape: isGolden ? 'star' : 'circle', angleSpread: Math.PI * 1.9 });
             } else {
-                console.error(`CRITICAL: Failed to find safe spawn for bird on level ${level}!`);
                 bird = null;
             }
         }
     }
     function spawnNewDog() { if (dogs.length >= (currentBiome?.maxDogs || MAX_DOGS) || currentBiome?.isBossLevel) return; const dogWidth = 50, dogHeight = 50; const pos = findSafeSpawnLocation(dogWidth, dogHeight, SAFE_SPAWN_DISTANCE_CAT, [...dogs, ...pickups]); if (pos) { const aiTypes = Object.values(DogAiType); const randomAiType = aiTypes[getRandomInt(0, aiTypes.length - 1)]; const baseSpeedMultiplier = currentBiome?.dogBaseSpeedMult || 1.0; const newDog = { x: pos.x, y: pos.y, width: dogWidth, height: dogHeight, baseSpeed: (1.3 + Math.min(level * 0.17, 2.5)) * baseSpeedMultiplier * GAME_SPEED_MULTIPLIER, currentSpeed: 0, aiType: randomAiType, state: DogState.IDLE_WANDER, targetX: pos.x, targetY: pos.y, stateTimer: getRandomInt(60, DOG_WANDER_TIMER_MAX), enrageTimer: 0, detourTimer: 0, detourTargetX: 0, detourTargetY: 0, hasClearLOS: false, losCheckTimer: getRandomInt(0, LINE_OF_SIGHT_CHECK_INTERVAL), losLostTimer: 0, stunTimer: 0, dazeTimer: 0, facingRight: (Math.random() > 0.5), separationForceX: 0, separationForceY: 0, lastState: DogState.IDLE_WANDER }; newDog.currentSpeed = newDog.baseSpeed * 0.7; dogs.push(newDog); createParticles(pos.x + dogWidth/2, pos.y + dogHeight/2, 6, { color:'rgb(139, 69, 19)', shape:'square', size:8.8, life:110, speed:2.5, gravity: 0.095, drag: 0.948, rotationSpeed: (Math.random()-0.5)*0.09, angleSpread: Math.PI * 2.2 }); triggerScreenShake(1.9, 7.8); } }
-    function spawnPickup() { if (pickups.length >= MAX_PICKUPS || currentBiome?.isBossLevel) return; const pos = findSafeSpawnLocation(PICKUP_SIZE, PICKUP_SIZE, SAFE_SPAWN_DISTANCE_CAT * 0.8, [...dogs, ...pickups]); if (pos) { let rand = Math.random() * totalPickupWeight, cumulative = 0, chosenType = null; for (const type in PICKUP_WEIGHTS) { cumulative += PICKUP_WEIGHTS[type]; if (rand <= cumulative) { chosenType = type; break; } } if (!chosenType) chosenType = Object.keys(PICKUP_WEIGHTS)[0]; pickups.push({ x: pos.x, y: pos.y, width: PICKUP_SIZE, height: PICKUP_SIZE, type: chosenType, spawnTime: frameCount }); createParticles(pos.x + PICKUP_SIZE/2, pos.y + PICKUP_SIZE/2, 6, { color: getPickupColor(chosenType, true), size:7.8, life:100, speed:2.3, gravity:0.065, drag: 0.96, shape: Math.random() < 0.6 ? 'spark' : 'star', light: true, angleSpread: Math.PI * 2.1 }); } }
+    function spawnPickup() { if (pickups.length >= MAX_PICKUPS || currentBiome?.isBossLevel) return; const pos = findSafeSpawnLocation(PICKUP_SIZE, PICKUP_SIZE, SAFE_SPAWN_DISTANCE_CAT * 0.8, [...dogs, ...pickups]); if (pos) { let rand = Math.random() * totalPickupWeight, cumulative = 0, chosenType = null; for (const type in PICKUP_WEIGHTS) { cumulative += PICKUP_WEIGHTS[type]; if (rand <= cumulative) { chosenType = type; break; } } if (!chosenType) chosenType = Object.keys(PICKUP_WEIGHTS)[0]; pickups.push({ x: pos.x, y: pos.y, width: PICKUP_SIZE, height: PICKUP_SIZE, type: chosenType, spawnTime: frameCount }); createParticles(pos.x + PICKUP_SIZE/2, pos.y + PICKUP_SIZE/2, 6, { color:getPickupColor(chosenType, true), size:7.8, life:100, speed:2.3, gravity:0.065, drag: 0.96, shape: Math.random() < 0.6 ? 'spark' : 'star', light: true, angleSpread: Math.PI * 2.1 }); } }
 
     function updateDash() { if (cat.isDashing) { cat.dashTimer--; if (frameCount % 6 === 0) { createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 1, { color:'rgba(230, 230, 255, 0.60)', size:13.5, life:16, speed:0.09, drag:0.92, shrinkRate:0.86, fadeRate: 0.14, shape: 'line', light: true, angle: Math.atan2(cat.dashDirectionY, cat.dashDirectionX) + Math.PI + (Math.random()-0.5)*0.5, rotation: Math.atan2(cat.dashDirectionY, cat.dashDirectionX) }); } if (cat.dashTimer <= 0) { cat.isDashing = false; cat.dashCooldownTimer = DASH_COOLDOWN; updateDashCooldownBar(); createParticles(cat.x + cat.width/2, cat.y + cat.height/2, 6, { color:'rgba(200, 200, 255, 0.80)', size: 11.5, life: 65, speed: 4.2, drag: 0.92, gravity: 0.045, shape: 'spark', light:true, angleSpread: Math.PI * 1.4 }); triggerScreenShake(2.8, 6); } } else if (cat.dashCooldownTimer > 0 && !isGodModeActive) { cat.dashCooldownTimer--; if (cat.dashCooldownTimer <= 0) { updateDashCooldownBar(); createParticles(cat.x + cat.width * 0.5, cat.y + cat.height * 0.5, 5, { color: '#5dade2', size: 6.5, life: 32, speed: 1.4, gravity: -0.055, light:true, shape:'spark' }); triggerScreenShake(1.6, 4); } else if (cat.dashCooldownTimer % Math.floor(DASH_COOLDOWN/4) === 0) { updateDashCooldownBar(); } } else { updateDashCooldownBar(); } }
     function updateDashCooldownBar() { const ready = cat.dashCooldownTimer <= 0 || isGodModeActive; const cooldownPercent = ready ? 100 : ((DASH_COOLDOWN - cat.dashCooldownTimer) / DASH_COOLDOWN) * 100; dashCooldownBar.style.width = `${clamp(cooldownPercent, 0, 100)}%`; if (ready) { if (!dashCooldownContainer.classList.contains('ready')) { dashCooldownContainer.classList.add('ready'); dashCooldownBar.classList.add('ready'); } } else { if (dashCooldownContainer.classList.contains('ready')) { dashCooldownContainer.classList.remove('ready'); dashCooldownBar.classList.remove('ready'); dashCooldownContainer.style.animation = 'none'; void dashCooldownContainer.offsetWidth; dashCooldownContainer.style.animation = ''; } } }
@@ -989,7 +990,7 @@
     function getPickupCzechName(t){switch(t){case PickupType.SPEED_BOOST:return"Turbo Rychlost";case PickupType.INVINCIBILITY:return"Božský Štít";case PickupType.DOG_SLOW:return"Lepidlo na Psy";case PickupType.DOG_STUN:return"Elektrošok Psů";default:return"Neznámý Bonus";}}
     function getPickupColor(t, bright = false){ switch(t){ case PickupType.HEALTH: return bright ? '#ff9a9a' : '#e74c3c'; case PickupType.SPEED_BOOST: return bright ? '#ffee58' : '#f1c40f'; case PickupType.INVINCIBILITY: return bright ? '#81d4fa' : '#3498db'; case PickupType.DOG_SLOW: return bright ? '#d8a7e8' : '#9b59b6'; case PickupType.DOG_STUN: return bright ? '#ffe082' : '#f39c12'; default: return '#bdc3c7'; } }
     function updateBackground() { if (!currentBiome) return; let backgroundStyle = ''; if (Array.isArray(currentBiome.bgColor)) { backgroundStyle = `linear-gradient(165deg, ${currentBiome.bgColor.join(', ')})`; } else { backgroundStyle = currentBiome.bgColor; } if (gameContainer.style.background !== backgroundStyle) { gameContainer.style.background = backgroundStyle; if (Array.isArray(currentBiome.bgColor)) { gameContainer.style.backgroundSize = '450% 450%'; gameContainer.style.animation = 'gradientBG 35s ease infinite alternate'; } else { gameContainer.style.backgroundSize = 'auto'; gameContainer.style.animation = 'none'; } } }
-    function startBossFight() {
+        function startBossFight() {
         console.log("Starting Boss Fight!");
         boss = {
             x: canvas.width / 2 - 75, y: canvas.height / 2 - 75, width: 150, height: 150,
@@ -1307,39 +1308,17 @@
     }
     
     async function saveScoreToLeaderboard(finalLevel, finalTime) {
-        const user = sessionStorage.getItem('loggedInUser');
-        if (!user || typeof db === 'undefined') {
-            console.log("User not logged in or DB not available. Cannot save score.");
+        const user = auth.currentUser;
+        if (!user || !user.displayName) {
+            console.log("User not logged in. Cannot save score.");
+            const sessionUser = sessionStorage.getItem('loggedInUser');
+            if (sessionUser) {
+                console.log(`Attempting to save for session user: ${sessionUser}`);
+                await saveScore('ptak2', { level: finalLevel, time: finalTime, user: sessionUser });
+            }
             return;
         }
-
-        const leaderboardRef = db.collection('ptak2_leaderboard');
-        const userScoreRef = leaderboardRef.doc(user);
-
-        try {
-            const doc = await userScoreRef.get();
-            const currentScore = {
-                user: user,
-                level: finalLevel,
-                time: finalTime,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            if (doc.exists) {
-                const existingScore = doc.data();
-                if (currentScore.level > existingScore.level || (currentScore.level === existingScore.level && currentScore.time < existingScore.time)) {
-                    await userScoreRef.set(currentScore);
-                    console.log("New high score saved for user:", user);
-                } else {
-                    console.log("Existing score is better. Not updating.");
-                }
-            } else {
-                await userScoreRef.set(currentScore);
-                console.log("New user score saved:", user);
-            }
-        } catch (error) {
-            console.error("Error saving score to leaderboard: ", error);
-        }
+        await saveScore('ptak2', { level: finalLevel, time: finalTime, user: user.displayName });
     }
     
     function triggerGameOver() {
@@ -1387,7 +1366,7 @@
                  winFadeTimer = WIN_FADE_DURATION;
                  fadeOverlay.style.transition = `opacity ${WIN_FADE_DURATION / 60}s ease-in`;
                  fadeOverlay.style.opacity = 1;
-                 console.log("Starting fade to win screen.");
+                 saveScoreToLeaderboard(WIN_LEVEL, elapsedTime);
              }
         } else {
              dogs.forEach(dog => { try { updateDogMovement(dog); } catch (e) { console.error(`Error updating dog ${dogs.indexOf(dog)}:`, e); } });
@@ -1459,8 +1438,7 @@
                      transitionLevelInfo.textContent = `Úroveň ${nextLevelActual}: ${nextBiome.name}`;
                      levelTransitionDisplay.style.display = 'flex';
                      setTimeout(() => { if (isLevelTransitioning) levelTransitionDisplay.classList.add('visible'); }, 10);
-                     console.log(`Starting transition to Level ${nextLevelActual}`);
-
+                     
                      particles = [];
                      createParticles(cat.x + cat.width / 2, cat.y + cat.height / 2, 30, { color: '#66ff99', size: 19, life: 190, speed: 5.8, drag: 0.962, shape: 'spark', light: true, angleSpread: Math.PI*2.2 });
                      triggerScreenShake(11, 23);
@@ -1470,7 +1448,6 @@
                      obstacles = generateObstacles(level);
                      updateBackground();
 
-                     console.log(`Relocating entities for level ${level} within transition...`);
                      relocateIfStuck(cat);
                      if (bird) relocateIfStuck(bird);
                       dogs.forEach((d, index) => {
@@ -1482,7 +1459,6 @@
                          d.stateTimer = getRandomInt(30, 90);
                      });
                      pickups.forEach(p => relocateIfStuck(p));
-                     console.log(`Entity relocation complete during transition.`);
                  }
              }
         }
@@ -1666,29 +1642,22 @@
 
     let imagesLoadedCount = 0, totalImages = 5;
     function imageLoaded(img) {
-        console.log(`Image loaded: ${img.src}`);
         imagesLoadedCount++;
         if(imagesLoadedCount === totalImages) {
-            console.log("All images loaded, starting game...");
             resetGame();
             requestAnimationFrame(gameLoop);
         }
     }
 
     function imageError(img) {
-         console.error(`Failed to load image: ${img.src}. Reducing total image count.`);
          totalImages--;
          if(img === goldenBirdImg) console.warn("Golden Bird image fallback needed.");
          if (img === catImg || img === dogImg || img === birdImg || img === bossImg) {
-             console.error(`CRITICAL ERROR: Could not load essential image ${img.src}. Game will likely break!`);
+             alert("Critical Error: Could not load essential images. Game cannot start.");
          }
          if(imagesLoadedCount === totalImages && totalImages > 0) {
-             console.warn("Some images failed to load, starting game anyway...");
              resetGame();
              requestAnimationFrame(gameLoop);
-         } else if (totalImages <= 0 && imagesLoadedCount === 0) {
-             console.error("CRITICAL ERROR: No essential images could be loaded. Game cannot start.");
-             alert("Critical Error: No essential images could be loaded. Game cannot start.");
          }
     }
 
