@@ -101,11 +101,11 @@
         footer p { color: red; }
         footer p:first-of-type { margin-bottom: 5px; color: var(--text-color-light); }
         #top-actions-container { position: fixed; top: 15px; right: 20px; z-index: 1001; display: flex; gap: 10px; align-items: center; }
-        #theme-switcher-btn, #language-switcher-btn, #login-btn, #chat-toggle-btn { background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--button-border); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        #theme-switcher-btn, #language-switcher-btn, #login-btn, #chat-toggle-btn, #admin-panel-btn { background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--button-border); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
         #profile-btn-pfp { display: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid var(--button-border); background-color: var(--button-bg); background-size: cover; background-position: center; overflow: hidden; flex-shrink: 0; }
         #profile-btn-pfp:hover { border-color: var(--button-hover-border); }
         #login-btn { color: red; font-weight: 600; }
-        #theme-switcher-btn:hover, #language-switcher-btn:hover, #login-btn:hover, #chat-toggle-btn:hover { background-color: var(--button-hover-bg); border-color: var(--button-hover-border); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #theme-switcher-btn:hover, #language-switcher-btn:hover, #login-btn:hover, #chat-toggle-btn:hover, #admin-panel-btn:hover { background-color: var(--button-hover-bg); border-color: var(--button-hover-border); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         #login-btn:hover { color: #c00; }
         #language-switcher-btn .lang-current { font-weight: 600; }
         #language-switcher-btn .lang-separator { margin: 0 5px; opacity: 0.6; }
@@ -159,7 +159,7 @@
         .chat-header .back-btn { font-size: 24px; cursor: pointer; background: none; border: none; color: var(--text-color); margin-right: 10px; }
         .chat-header .close-btn { font-size: 24px; cursor: pointer; background: none; border: none; color: var(--text-color); }
         .chat-messages { flex-grow: 1; overflow-y: auto; padding: 15px; }
-        #dm-list-container { padding: 0; } /* Remove padding for the container */
+        #dm-list-container { padding: 0; }
         .chat-form { padding: 15px; border-top: 1px solid var(--input-border); display: flex; gap: 10px; }
         .chat-input { flex-grow: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-color); }
         .chat-send-btn { padding: 10px 15px; background-color: red; color: white; border: none; border-radius: 6px; cursor: pointer; }
@@ -170,13 +170,14 @@
         .chat-message .message-author { font-weight: 600; color: var(--card-h2-color); cursor: pointer; }
         .chat-message .message-text { word-break: break-word; }
         .message-deleted { color: var(--text-color-light); font-style: italic; }
-        .message-meta { display: flex; justify-content: space-between; align-items: center; }
+        .message-meta { display: flex; align-items: center; }
+        .message-timestamp { font-size: 0.75em; color: var(--text-color-light); margin-left: 8px; }
         .delete-msg-btn { background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 14px; margin-left: 10px; }
         .delete-msg-btn:hover { color: red; }
         .dm-list-item, .public-chat-btn, .user-search-result { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; border-bottom: 1px solid var(--input-border); }
         .dm-list-item:hover, .public-chat-btn:hover, .user-search-result:hover { background-color: var(--table-row-hover); }
         .dm-list-item .pfp-container, .user-search-result .pfp-container { margin-right: 15px; }
-        .dm-info { display: flex; flex-direction: column; }
+        .dm-info { display: flex; flex-direction: column; flex-grow: 1; }
         .dm-info-name { font-weight: bold; color: var(--text-color); }
         .dm-info-lastmsg { font-size: 0.9em; color: var(--text-color-light); }
         #dm-search-bar { width: calc(100% - 30px); margin: 15px; padding: 8px; border-radius: 6px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-color); }
@@ -186,6 +187,22 @@
         .achievement img { width: 50px; height: 50px; margin-right: 15px; }
         .achievement-info h4 { margin: 0; font-size: 1em; }
         .achievement-info p { margin: 0; font-size: 0.85em; color: var(--text-color-light); }
+
+        /* Typing Indicator CSS */
+        .typing-indicator { display: flex; align-items: center; font-size: 0.9em; color: var(--text-color-light); }
+        .typing-indicator .pfp-container { width: 20px; height: 20px; margin-right: 8px; }
+        .typing-indicator .pfp-container .initials { font-size: 10px; }
+        .typing-dots span { display: inline-block; width: 4px; height: 4px; background-color: var(--text-color-light); border-radius: 50%; margin: 0 1px; animation: typing-bounce 1.2s infinite ease-in-out; }
+        .typing-dots span:nth-child(1) { animation-delay: -0.3s; }
+        .typing-dots span:nth-child(2) { animation-delay: -0.15s; }
+        @keyframes typing-bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+        #typing-indicator-container { padding: 5px 15px; height: 32px; }
+
+        /* Admin Panel CSS */
+        #admin-modal .modal-content { max-width: 800px; height: 80%; }
+        .admin-log-container { height: calc(100% - 100px); overflow-y: auto; text-align: left; border: 1px solid var(--input-border); border-radius: 8px; padding: 10px; margin-top: 20px; }
+        .admin-log-entry { padding: 8px; border-bottom: 1px solid var(--input-border); font-size: 0.9em; }
+        .admin-log-entry small { color: var(--text-color-light); }
 
         body.dark-mode #login-btn { color: #ff4d4d; }
         body.dark-mode #login-btn:hover { color: #ff8a8a; }
@@ -200,6 +217,7 @@
 <body>
     <div id="top-actions-container">
         <button id="chat-toggle-btn" style="display: none;">💬</button>
+        <button id="admin-panel-btn" style="display: none;">👑</button>
         <button id="theme-switcher-btn">🌙</button>
         <button id="language-switcher-btn">
             <span class="lang-current">CS</span><span class="lang-separator">⇌</span><span class="lang-target">EN</span>
@@ -264,7 +282,6 @@
             </div>
             <input type="text" id="dm-search-bar" placeholder="Hledat uživatele...">
             <div class="chat-messages" id="dm-list-container">
-                <!-- ** DM LIST & SEARCH RESULTS WILL BE RENDERED HERE BY JS ** -->
             </div>
         </div>
 
@@ -274,6 +291,7 @@
                 <h2 id="chat-with-name"></h2>
             </div>
             <div class="chat-messages" id="chat-messages-container"></div>
+            <div id="typing-indicator-container"></div>
             <form class="chat-form" id="chat-form">
                 <input type="text" class="chat-input" id="chat-input" placeholder="Napište zprávu..." autocomplete="off" required>
                 <button type="submit" class="chat-send-btn">Odeslat</button>
@@ -375,6 +393,17 @@
         </div>
     </div>
 
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1>Admin Panel</h1>
+            <h2>Veřejný Chat Log</h2>
+            <div id="admin-public-log" class="admin-log-container">Načítání...</div>
+            <h2>DM Konverzace</h2>
+            <div id="admin-dm-log-list" class="admin-log-container">Načítání...</div>
+        </div>
+    </div>
+
     <footer>
         <p>Online: <span id="online-users-count">0</span></p>
         <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
@@ -441,8 +470,10 @@
         let currentUserData = null;
         let activeChatListener = null;
         let activeDmListListener = null;
-        let currentChatMode = 'dm-list'; // 'dm-list', 'public', or 'dm'
+        let currentChatMode = 'dm-list';
         let currentDmPartnerId = null;
+        let typingTimeout = null;
+        let activeTypingListener = null;
 
         const pfpColors = ["#f44336", "#9c27b0", "#3f51b5", "#009688", "#4caf50", "#ffeb3b", "#ff9800", "#795548", "#607d8b"];
         const presetAvatars = [ 'pfps/cat.png', 'pfps/dog.png', 'pfps/creeper.png', 'pfps/chess.png', 'pfps/nuget.png', 'pfps/ptak.png', 'pfps/glet.png' ];
@@ -610,11 +641,14 @@
             const deleteBtn = (currentUserData && currentUserData.displayName === '90Tom' && currentChatMode === 'public') ? 
                 `<button class="delete-msg-btn" onclick="deleteChatMessage('${msg.id}')">🗑️</button>` : '';
             
+            const timestamp = msg.createdAt ? msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
             messageElement.innerHTML = `
                 ${pfpContainer.outerHTML}
                 <div class="message-content">
                     <div class="message-meta">
                         <span class="message-author" ${authorStyle} ${currentChatMode === 'public' ? `onclick="showUserProfile('${msg.userId}')"` : ''}>${msg.displayName || 'Anonym'}</span>
+                        <span class="message-timestamp">${timestamp}</span>
                         ${deleteBtn}
                     </div>
                     <span class="message-text ${msg.deleted ? 'message-deleted' : ''}">
@@ -798,6 +832,33 @@
                 if(shouldScroll) container.scrollTop = container.scrollHeight;
             });
         }
+
+        function listenForTyping(convoId) {
+            if (activeTypingListener) activeTypingListener();
+            const typingRef = db.collection('dms').doc(convoId);
+            const indicatorContainer = document.getElementById('typing-indicator-container');
+            
+            activeTypingListener = typingRef.onSnapshot(async (doc) => {
+                const data = doc.data();
+                if (data && data.typing && data.typing.uid === currentDmPartnerId && 
+                    firebase.firestore.Timestamp.now().seconds - data.typing.timestamp.seconds < 5) {
+                    
+                    const userDoc = await db.collection('users').doc(data.typing.uid).get();
+                    if (userDoc.exists) {
+                        const partnerData = userDoc.data();
+                        indicatorContainer.innerHTML = `
+                            <div class="typing-indicator">
+                                <div class="pfp-container"></div>
+                                <div class="typing-dots"><span></span><span></span><span></span></div>
+                            </div>
+                        `;
+                        renderPfp(indicatorContainer.querySelector('.pfp-container'), partnerData);
+                    }
+                } else {
+                    indicatorContainer.innerHTML = '';
+                }
+            });
+        }
         
         async function openDmChat(otherUserId) {
             const myId = auth.currentUser.uid;
@@ -818,6 +879,7 @@
             const messagesCollection = db.collection('dms').doc(convoId).collection('messages');
             
             listenToChat(messagesCollection, 'chat-messages-container', 'dm');
+            listenForTyping(convoId);
             switchChatView('chat-view-container');
         }
 
@@ -827,7 +889,6 @@
             
             const container = document.getElementById('dm-list-container');
             
-            // Rebuild the static Public Chat button first, then clear old DMs
             container.innerHTML = '<div class="public-chat-btn">Veřejný Chat 🌍</div>';
             document.querySelector('.public-chat-btn').addEventListener('click', () => {
                 document.getElementById('chat-with-name').textContent = 'Veřejný Chat';
@@ -839,7 +900,6 @@
               .orderBy('lastActivity', 'desc')
               .onSnapshot(async (snapshot) => {
                 
-                // Keep track of which items are already on the page to avoid redraws if not needed
                 const existingDmElems = new Set(Array.from(container.querySelectorAll('.dm-list-item')).map(el => el.dataset.userId));
                 
                 for (const doc of snapshot.docs) {
@@ -847,9 +907,8 @@
                     const partnerId = convo.users.find(id => id !== myId);
                     if (!partnerId) continue;
                     
-                    existingDmElems.delete(partnerId); // Remove from set, it's still valid
+                    existingDmElems.delete(partnerId);
 
-                    // If an element for this user already exists, don't recreate it, just update it
                     let item = container.querySelector(`.dm-list-item[data-user-id="${partnerId}"]`);
                     if (item) {
                         item.querySelector('.dm-info-lastmsg').textContent = convo.lastMessage || '';
@@ -862,7 +921,7 @@
                     
                     item = document.createElement('div');
                     item.className = 'dm-list-item';
-                    item.dataset.userId = partnerId; // Add data attribute for easier selection
+                    item.dataset.userId = partnerId;
                     item.onclick = () => openDmChat(partnerId);
                     
                     const pfp = document.createElement('div');
@@ -879,7 +938,6 @@
                     container.appendChild(item);
                 }
 
-                // Any user IDs left in the set are from DMs that were deleted/removed
                 existingDmElems.forEach(userIdToRemove => {
                     const elemToRemove = container.querySelector(`.dm-list-item[data-user-id="${userIdToRemove}"]`);
                     if (elemToRemove) elemToRemove.remove();
@@ -925,13 +983,66 @@
                 container.appendChild(item);
             });
         }
+        
+        function updateTypingStatus() {
+            if (currentChatMode !== 'dm' || !currentDmPartnerId || !auth.currentUser) return;
+            
+            const myId = auth.currentUser.uid;
+            const convoId = [myId, currentDmPartnerId].sort().join('_');
+            const typingRef = db.collection('dms').doc(convoId);
+            
+            typingRef.set({
+                typing: {
+                    uid: myId,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                }
+            }, { merge: true });
+        }
+
+        async function loadAdminPublicLog() {
+            const container = document.getElementById('admin-public-log');
+            container.innerHTML = 'Načítání...';
+            const snapshot = await db.collection('chat').orderBy('createdAt', 'desc').limit(100).get();
+            if (snapshot.empty) {
+                container.innerHTML = 'Žádné zprávy ve veřejném chatu.';
+                return;
+            }
+            container.innerHTML = '';
+            snapshot.forEach(doc => {
+                const msg = doc.data();
+                const time = msg.createdAt ? msg.createdAt.toDate().toLocaleString() : 'N/A';
+                container.innerHTML += `<div class="admin-log-entry"><strong>${msg.displayName || 'Anonym'}:</strong> ${msg.text} <small>(${time})</small></div>`;
+            });
+        }
+
+        async function loadAdminDmList() {
+            const container = document.getElementById('admin-dm-log-list');
+            container.innerHTML = 'Načítání...';
+            const snapshot = await db.collection('dms').orderBy('lastActivity', 'desc').get();
+            if (snapshot.empty) {
+                container.innerHTML = 'Žádné DM konverzace.';
+                return;
+            }
+            container.innerHTML = '';
+            for (const doc of snapshot.docs) {
+                const convo = doc.data();
+                const userPromises = convo.users.map(uid => db.collection('users').doc(uid).get());
+                const userDocs = await Promise.all(userPromises);
+                const userNames = userDocs.map(userDoc => userDoc.exists ? userDoc.data().displayName : 'Neznámý uživatel');
+                
+                const time = convo.lastActivity ? convo.lastActivity.toDate().toLocaleString() : 'N/A';
+                container.innerHTML += `<div class="admin-log-entry"><strong>Konverzace:</strong> ${userNames.join(' & ')} <small> (Poslední aktivita: ${time})</small></div>`;
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const loginBtn = document.getElementById('login-btn');
             const profileBtnPfp = document.getElementById('profile-btn-pfp');
             const chatToggleBtn = document.getElementById('chat-toggle-btn');
+            const adminPanelBtn = document.getElementById('admin-panel-btn');
             const chatPopup = document.getElementById('chat-popup');
             const chatCloseBtn = document.getElementById('chat-close-btn');
+            const chatInput = document.getElementById('chat-input');
             
             setTheme(currentTheme);
             setLanguage(currentLang);
@@ -955,9 +1066,9 @@
             const allModals = document.querySelectorAll('.modal');
             const loginView = document.getElementById('login-view');
             const registerView = document.getElementById('register-view');
-            
+
             auth.onAuthStateChanged(async user => {
-                if (user) {
+                if (user && !user.isAnonymous) {
                     const userDocRef = db.collection('users').doc(user.uid);
                     let userDoc = await userDocRef.get();
                     if (!userDoc.exists) {
@@ -976,17 +1087,10 @@
                     loginBtn.style.display = 'none';
                     profileBtnPfp.style.display = 'flex';
                     chatToggleBtn.style.display = 'inline-flex';
+                    if (user.displayName === '90Tom') {
+                        adminPanelBtn.style.display = 'inline-flex';
+                    }
                     listenToDmList();
-
-                    const userStatusDatabaseRef = rtdb.ref('/status/' + user.uid);
-                    const isOfflineForDatabase = { state: 'offline' };
-                    const isOnlineForDatabase = { state: 'online' };
-                    rtdb.ref('.info/connected').on('value', function(snapshot) {
-                        if (snapshot.val() == false) return;
-                        userStatusDatabaseRef.onDisconnect().set(isOfflineForDatabase).then(function() {
-                            userStatusDatabaseRef.set(isOnlineForDatabase);
-                        });
-                    });
                 } else {
                     currentUserData = null;
                     if (activeDmListListener) activeDmListListener();
@@ -995,6 +1099,7 @@
                     loginBtn.style.display = 'inline-flex';
                     profileBtnPfp.style.display = 'none';
                     chatToggleBtn.style.display = 'none';
+                    adminPanelBtn.style.display = 'none';
                     chatPopup.classList.remove('open');
                     loginBtn.onclick = (e) => {
                         e.preventDefault();
@@ -1002,6 +1107,23 @@
                         registerView.style.display = 'none';
                         document.getElementById('login-modal').style.display = 'flex';
                     };
+
+                    if (!user) {
+                        auth.signInAnonymously().catch(error => console.error("Anonymous sign-in failed:", error));
+                    }
+                }
+
+                if (auth.currentUser) {
+                    const uid = auth.currentUser.uid;
+                    const userStatusDatabaseRef = rtdb.ref('/status/' + uid);
+                    const isOfflineForDatabase = { state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP };
+                    const isOnlineForDatabase = { state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP };
+                    rtdb.ref('.info/connected').on('value', function(snapshot) {
+                        if (snapshot.val() == false) return;
+                        userStatusDatabaseRef.onDisconnect().set(isOfflineForDatabase).then(function() {
+                            userStatusDatabaseRef.set(isOnlineForDatabase);
+                        });
+                    });
                 }
             });
 
@@ -1017,13 +1139,20 @@
 
             profileBtnPfp.addEventListener('click', showMyProfile);
             document.getElementById('logout-btn').addEventListener('click', () => {
-                rtdb.ref('/status/' + auth.currentUser.uid).set({ state: 'offline' });
+                if (auth.currentUser) {
+                     rtdb.ref('/status/' + auth.currentUser.uid).set({ state: 'offline' });
+                }
                 auth.signOut();
                 document.getElementById('profile-modal').style.display = 'none';
             });
             document.getElementById('save-profile-btn').addEventListener('click', saveProfileChanges);
             chatToggleBtn.addEventListener('click', () => chatPopup.classList.add('open'));
             chatCloseBtn.addEventListener('click', () => chatPopup.classList.remove('open'));
+            adminPanelBtn.addEventListener('click', () => {
+                document.getElementById('admin-modal').style.display = 'flex';
+                loadAdminPublicLog();
+                loadAdminDmList();
+            });
             document.getElementById('show-register-link').addEventListener('click', (e) => { e.preventDefault(); loginView.style.display = 'none'; registerView.style.display = 'block'; });
             document.getElementById('show-login-link').addEventListener('click', (e) => { e.preventDefault(); registerView.style.display = 'none'; loginView.style.display = 'block'; });
             document.querySelectorAll('.leaderboard-btn').forEach(button => { button.addEventListener('click', (e) => { e.stopPropagation(); const gameId = e.currentTarget.dataset.game; showLeaderboard(gameId); }); });
@@ -1045,6 +1174,7 @@
                 errorMessage.textContent = '';
                 
                 try {
+                    const currentAnonUser = auth.currentUser;
                     let email = userInput;
                     if (!userInput.includes('@')) {
                         const usersRef = db.collection('users');
@@ -1056,6 +1186,9 @@
                         email = querySnapshot.docs[0].data().email;
                     }
                     await auth.signInWithEmailAndPassword(email, password);
+                    if (currentAnonUser) {
+                        await currentAnonUser.delete();
+                    }
                     window.location.reload();
                 } catch (error) {
                     errorMessage.textContent = 'Nesprávné heslo nebo chyba přihlášení.';
@@ -1074,6 +1207,8 @@
                 if (password !== confirmPassword) { errorMessage.textContent = 'Hesla se neshodují.'; return; }
                 if (displayName.length < 3) { errorMessage.textContent = 'Zobrazované jméno musí mít alespoň 3 znaky.'; return; }
 
+                const currentAnonUser = auth.currentUser;
+
                 auth.createUserWithEmailAndPassword(email, password)
                     .then((userCredential) => {
                         const user = userCredential.user;
@@ -1082,7 +1217,12 @@
                                 displayName: displayName, email: email, xp: 0,
                                 pfpColor: getColorForName(displayName),
                                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                            }).then(() => { window.location.reload(); });
+                            }).then(async () => { 
+                                if (currentAnonUser) {
+                                    await currentAnonUser.delete();
+                                }
+                                window.location.reload(); 
+                            });
                         });
                     })
                     .catch((error) => { errorMessage.textContent = error.message; });
@@ -1090,7 +1230,10 @@
 
             document.getElementById('chat-back-btn').addEventListener('click', () => {
                 if (activeChatListener) activeChatListener();
+                if (activeTypingListener) activeTypingListener();
                 activeChatListener = null;
+                activeTypingListener = null;
+                document.getElementById('typing-indicator-container').innerHTML = '';
                 currentChatMode = 'dm-list';
                 currentDmPartnerId = null;
                 switchChatView('dm-list-view');
@@ -1099,10 +1242,15 @@
             document.getElementById('dm-search-bar').addEventListener('input', (e) => {
                 searchUsers(e.target.value);
             });
+
+            chatInput.addEventListener('input', () => {
+                clearTimeout(typingTimeout);
+                updateTypingStatus();
+                typingTimeout = setTimeout(() => {}, 2000);
+            });
             
             document.getElementById('chat-form').addEventListener('submit', function(e) {
                 e.preventDefault();
-                const chatInput = document.getElementById('chat-input');
                 const text = chatInput.value.trim();
                 const user = auth.currentUser;
                 if (!text || !user || !currentUserData) return;
@@ -1126,7 +1274,8 @@
                     db.collection('dms').doc(convoId).set({
                         users: [myId, currentDmPartnerId],
                         lastMessage: text,
-                        lastActivity: firebase.firestore.FieldValue.serverTimestamp()
+                        lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
+                        typing: firebase.firestore.FieldValue.delete()
                     }, { merge: true });
                 }
                 chatInput.value = '';
