@@ -8,6 +8,54 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+      (function() {
+        const firebaseConfig = {
+            apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
+            authDomain: "tom-fun.firebaseapp.com",
+            databaseURL: "https://tom-fun-default-rtdb.firebaseio.com",
+            projectId: "tom-fun",
+            storageBucket: "tom-fun.appspot.com",
+            messagingSenderId: "710857129785",
+            appId: "1:710857129785:web:5f2cdebe736577ea0e72e8"
+        };
+        
+        try {
+            const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig, "presenceApp");
+            const auth = firebase.auth(app);
+            const rtdb = firebase.database(app);
+
+            auth.onAuthStateChanged(user => {
+                let uid;
+                if (user) {
+                    uid = user.uid;
+                    setupPresence(uid, rtdb);
+                } else {
+                    auth.signInAnonymously().catch(err => console.error("Anonymous sign-in for presence failed:", err));
+                }
+            });
+
+            function setupPresence(uid, rtdb) {
+                const userStatusDatabaseRef = rtdb.ref('/status/' + uid);
+                const isOfflineForDatabase = { state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP };
+                const isOnlineForDatabase = { state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP };
+                
+                rtdb.ref('.info/connected').on('value', function(snapshot) {
+                    if (snapshot.val() == false) return;
+                    userStatusDatabaseRef.onDisconnect().set(isOfflineForDatabase).then(function() {
+                        userStatusDatabaseRef.set(isOnlineForDatabase);
+                    });
+                });
+            }
+
+        } catch (e) {
+            console.error("Firebase presence initialization failed in game:", e);
+        }
+      })();
+    </script>
+
     <script>
       const firebaseConfig = {
         apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
@@ -20,9 +68,9 @@
       };
       let db, auth;
       try {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
-        auth = firebase.auth();
+        const app = firebase.apps.length > 0 ? firebase.app() : firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore(app);
+        auth = firebase.auth(app);
       } catch (e) {
         console.error("Firebase initialization failed:", e);
       }
