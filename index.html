@@ -102,15 +102,15 @@
         .splash-text { position: absolute; bottom: 0px; right: 20px; font-size: 0.4em; font-weight: 600; color: #FFD700; padding: 2px 8px; border-radius: 4px; transform: rotate(-15deg); animation: splash-pulse 2s infinite alternate ease-in-out; white-space: nowrap; pointer-events: none; }
         @keyframes splash-pulse { from { transform: rotate(-22deg) scale(1.1); } to { transform: rotate(-16deg) scale(1.3); } }
         header p { color: var(--text-color); font-size: 1em; transition: color 0.3s ease; }
-        .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; max-width: 1200px; width: 100%; flex-grow: 1; justify-content: center; overflow-y: auto; padding: 10px; padding-bottom: 30px; }
+        .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; width: 100%; flex-grow: 1; justify-content: center; overflow-y: auto; padding: 10px; padding-bottom: 30px; }
         .game-card { background-color: var(--card-bg); border-radius: 12px; color: var(--text-color); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; display: flex; flex-direction: column; text-align: center; overflow: hidden; border: 1px solid var(--card-border); opacity: 0; transform: translateY(20px); aspect-ratio: 1 / 1; position: relative; }
         .game-card .game-link { display: flex; flex-direction: column; flex-grow: 1; text-decoration: none; color: inherit; height: 100%; }
         .game-card img { display: block; width: 100%; height: 60%; object-fit: cover; transition: transform 0.3s ease, filter 0.3s ease; }
         .game-card .content { padding: 10px; width: 100%; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; overflow: hidden; }
         .game-card:hover { transform: translateY(-8px) scale(1.04); box-shadow: 0 10px 30px rgba(232, 62, 140, 0.25); border-color: #e83e8c; }
         .game-card:hover img { transform: scale(1.03); filter: brightness(1.05); }
-        .game-card h2 { margin-bottom: 5px; color: var(--card-h2-color); font-size: 1.1em; font-weight: 600; }
-        .game-card p { color: var(--text-color-light); font-size: 0.8em; line-height: 1.3; }
+        .game-card h2 { margin-bottom: 5px; color: var(--card-h2-color); font-size: 1.2em; font-weight: 600; }
+        .game-card p { color: var(--text-color-light); font-size: 0.9em; line-height: 1.3; }
         .leaderboard-btn { position: absolute; top: 10px; right: 10px; background-color: rgba(240, 240, 240, 0.8); border: 1px solid rgba(221, 221, 221, 0.8); border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; line-height: 28px; text-align: center; transition: all 0.2s ease; z-index: 5; backdrop-filter: blur(2px); }
         .leaderboard-btn:hover { background-color: #e83e8c; color: white; transform: scale(1.1); }
         footer { text-align: center; margin-top: 20px; padding: 10px; color: var(--text-color-light); font-size: 0.9em; width: 100%; max-width: 800px; background-color: var(--footer-bg); border-radius: 8px; transition: all 0.3s ease; flex-shrink: 0; }
@@ -224,7 +224,11 @@
 
         @media (max-width: 768px) {
             body { overflow-y: auto; }
-            .game-grid { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+            .game-grid { 
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+                padding-left: 20px; 
+                padding-right: 20px;
+            }
             .game-card { aspect-ratio: unset; min-height: 280px; }
             #chat-popup { width: 100%; }
             .modal-content { padding: 20px; }
@@ -232,10 +236,31 @@
         }
 
         @media (max-width: 480px) {
-            header h1 { font-size: 12vw; padding-right: 0; }
-            .splash-text { font-size: 0.5em; right: 5px; }
-            .game-grid { grid-template-columns: 1fr; gap: 15px; }
-            .game-card { min-height: 300px; }
+            header h1 { 
+                font-size: 10vw; 
+                padding-right: 40px; 
+            }
+            .splash-text { 
+                font-size: 0.6em; 
+                right: 5px; 
+                bottom: 5px; 
+            }
+            .game-grid { 
+                grid-template-columns: 1fr; 
+                gap: 15px; 
+                padding-left: 15px; 
+                padding-right: 15px; 
+            }
+            .game-card { 
+                min-height: auto; 
+                aspect-ratio: 5 / 4;
+            }
+            .game-card h2 { 
+                font-size: 1.3em;
+            } 
+            .game-card p { 
+                font-size: 0.9em;
+            }
             #top-actions-container {
                 gap: 5px;
                 top: 10px;
