@@ -33,7 +33,8 @@
         #start-screen h1 { font-size: 4em; color: var(--secondary-glow); text-shadow: 0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow); margin-bottom: 60px; animation: flicker-all 8s infinite; }
         #start-screen h1 span { display: inline-block; animation: flicker-small 4s infinite; }
         #start-screen h1 span:nth-child(2), #start-screen h1 span:nth-child(7) { animation-delay: 0.2s; } #start-screen h1 span:nth-child(3), #start-screen h1 span:nth-child(9) { animation-delay: 0.5s; } #start-screen h1 span:nth-child(5) { animation-delay: 1.1s; }
-        #arcade-room{text-align:center;padding:20px; display:none;}
+        #arcade-room, #game-container { text-align: center; display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: center; }
+        #arcade-room { padding:20px; }
         h1{font-size:3.5em;color:var(--secondary-glow);text-shadow:0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow);margin-bottom:60px; animation: flicker-all 8s infinite;}
         h1 span { display: inline-block; animation: flicker-small 4s infinite; }
         h1 span:nth-child(2), h1 span:nth-child(7) { animation-delay: 0.2s; } h1 span:nth-child(3), h1 span:nth-child(9) { animation-delay: 0.5s; } h1 span:nth-child(5) { animation-delay: 1.1s; }
@@ -62,20 +63,19 @@
         .buttons{display:flex; gap:15px; align-items:center;}
         .buttons div{width:25px;height:25px;border-radius:50%;background:blue;box-shadow:inset 0 0 5px rgba(0,0,0,0.5);}
         .coin-slot{width:3px; height:25px; background:black;}
-        #game-container{display:none;flex-direction:column;align-items:center;}
         #game-canvas{background-color:#000;border:5px solid #333;box-shadow:0 0 25px var(--primary-glow), inset 0 0 15px rgba(0, 255, 255, 0.3);}
         #game-info{display:flex;justify-content:space-between;width:100%;max-width:800px;margin-top:20px;font-size:1.2em;padding:0 10px;}
         #back-to-arcade{margin-top:20px;padding:15px 30px;font-family:'Press Start 2P',cursive;font-size:1em;color:var(--main-bg);background-color:var(--primary-glow);border:none;cursor:pointer;}
         #high-scores-container{position:absolute;top:20px;right:20px;background-color:rgba(0,0,0,0.8);padding:20px;border:2px solid var(--primary-glow);border-radius:10px;display:none;width:250px;}
         #high-scores-list li .name{color:var(--primary-glow);}
         #high-scores-list li .score{color:#ffff00;}
-        #volume-control { position: fixed; bottom: 20px; right: 20px; z-index: 3000; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; border: 2px solid var(--primary-glow); }
+        #volume-control { position: fixed; bottom: 20px; right: 20px; z-index: 3000; display: flex; align-items: center; gap: 10px; background: transparent; padding: 10px; border-radius: 5px; }
         body:not(.in-game) #volume-control { display: none; }
-        #volume-control label { font-size: 1.2em; color: var(--primary-glow); text-shadow: 0 0 5px var(--primary-glow); }
+        #volume-control label { font-family:'Press Start 2P',cursive; font-size: 1.5em; color: var(--text-color); text-shadow: 0 0 5px var(--primary-glow); -webkit-text-stroke: 1px var(--primary-glow); }
         input[type="range"] { -webkit-appearance: none; appearance: none; width: 150px; height: 16px; background: transparent; cursor: pointer; }
-        input[type="range"]::-webkit-slider-runnable-track { height: 16px; background: #333; border: 2px solid #555; image-rendering: pixelated; }
-        input[type="range"]::-moz-range-track { height: 16px; background: #333; border: 2px solid #555; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 24px; background-color: var(--secondary-glow); margin-top: -6px; border: 2px solid #000; box-shadow: 0 0 10px var(--secondary-glow); }
+        input[type="range"]::-webkit-slider-runnable-track { height: 12px; background: #222; border: 2px solid var(--primary-glow); box-shadow: inset 0 0 8px #000; }
+        input[type="range"]::-moz-range-track { height: 12px; background: #222; border: 2px solid var(--primary-glow); box-shadow: inset 0 0 8px #000; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 24px; background-color: var(--secondary-glow); margin-top: -8px; border: 2px solid #000; box-shadow: 0 0 10px var(--secondary-glow); }
         input[type="range"]::-moz-range-thumb { width: 12px; height: 20px; background-color: var(--secondary-glow); border: 2px solid #000; border-radius: 0; box-shadow: 0 0 10px var(--secondary-glow); }
         #versus-results-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
         .results-content { border: 3px solid var(--secondary-glow); padding: 40px; box-shadow: 0 0 25px var(--secondary-glow) inset; background: var(--main-bg); }
@@ -95,11 +95,11 @@
     
     <div id="lobby-screen">
          <div class="host-join-toggle">
-            <button id="host-btn" class="mode-btn active">HOST</button>
-            <button id="join-btn" class="mode-btn">JOIN</button>
+            <button id="host-btn" class="mode-btn">HOST</button>
+            <button id="join-btn" class="mode-btn active">JOIN</button>
         </div>
         <div class="lobby-container">
-            <div id="host-view" class="lobby-details">
+            <div id="host-view" class="lobby-details" style="display: none;">
                 <h2>IN LOBBY:</h2>
                 <div id="player-list-container">
                     <ul id="player-list"></ul>
@@ -120,7 +120,7 @@
                     </div>
                 </div>
             </div>
-            <div id="join-view" class="lobby-browser" style="display: none;">
+            <div id="join-view" class="lobby-browser">
                 <h2>LOBBIES</h2>
                 <ul id="lobby-list"><li style="color: grey;">Authenticating...</li></ul>
             </div>
@@ -231,10 +231,11 @@
                      alert("You must be logged in to play multiplayer!");
                      return;
                 }
+                AudioEngine.init(); 
                 startScreen.style.display = 'none';
                 lobbyScreen.style.display = 'flex';
                 setupLobbyPage();
-                switchToHostMode();
+                switchToJoinMode();
             });
         }
 
@@ -431,10 +432,11 @@
         }
         
         function switchToArcadeRoom() {
-            AudioEngine.init();
+            if (arcadeRoom.style.display !== 'none' && gameContainer.style.display === 'none') return; 
             AudioEngine.playMusic('menu');
             lobbyScreen.style.display = 'none';
-            arcadeRoom.style.display = 'block';
+            gameContainer.style.display = 'none';
+            arcadeRoom.style.display = 'flex';
             document.body.classList.add('in-game');
         }
 
@@ -447,7 +449,6 @@
                     duration: duration,
                     scores: {}
                 });
-                switchToArcadeRoom();
             }
         }
 
@@ -458,7 +459,8 @@
             const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
             const listener = lobbyRef.on('value', (snapshot) => {
                 if (!snapshot.exists()) {
-                    if(!isHost && arcadeRoom.style.display === 'none') {
+                    if(!isHost) {
+                        stopGame(true); // Pass true to indicate a forced stop
                         alert("Lobby closed by host.");
                         window.location.reload();
                     }
@@ -501,6 +503,13 @@
         const games = { tetris: { name: 'Tetris', init: initTetris, music: 'tetris', sort: 'desc' }, spaceInvaders: { name: 'Space Invaders', init: initSpaceInvaders, music: 'spaceInvaders', sort: 'desc' }, pacman: { name: 'Pac-Man', init: initPacman, music: 'pacman', sort: 'desc' }, racing: { name: 'Retro Racer', init: initRacing, music: 'racing', sort: 'desc' }, snake: { name: 'Snake', init: initSnake, music: null, sort: 'desc' }, pong: { name: 'Pong', init: initPong, music: null, sort: 'desc' }, breakout: { name: 'Breakout', init: initBreakout, music: 'breakout', sort: 'desc' }, maze: { name: 'Maze Runner', init: initMaze, music: null, sort: 'asc' } };
 
         function createGameCabinets() { gameSelection.innerHTML = ''; for (const gameId in games) { const game = games[gameId]; let topScore = '-'; let topScorerName = 'N/A'; if(highScores[gameId] && highScores[gameId].length > 0) { const topEntry = highScores[gameId][0]; topScorerName = topEntry.name; topScore = topEntry.score; if(game.sort === 'asc') topScore += 's'; } const cabinet = document.createElement('div'); cabinet.className = 'game-cabinet'; cabinet.dataset.theme = gameId; cabinet.innerHTML = `<div class="marquee">${game.name}</div><div class="screen-area"><div class="game-title">TOP SCORE</div><div class="high-score-display">${topScorerName}: ${topScore}</div></div><div class="control-panel-base"><div class="control-panel"><div class="joystick"></div><div class="buttons"><div></div><div class="coin-slot"></div></div></div></div>`; cabinet.querySelector('.joystick').innerHTML = '<div class="joystick-base"></div><div class="joystick-stick"></div><div class="joystick-top"></div>'; cabinet.onclick = () => startGame(gameId); gameSelection.appendChild(cabinet); } }
+        
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+        
         function startGame(gameId) {
             AudioEngine.playSound('select');
             AudioEngine.playMusic(games[gameId].music);
@@ -516,10 +525,10 @@
             if (currentLobbyData && currentLobbyData.mode === 'versus') {
                 levelLivesElement.style.display = 'none';
                 let timeLeft = currentLobbyData.duration;
-                timerElement.textContent = `Time: ${timeLeft}`;
+                timerElement.textContent = `Time: ${formatTime(timeLeft)}`;
                 versusGameTimer = setInterval(() => {
                     timeLeft--;
-                    timerElement.textContent = `Time: ${timeLeft}`;
+                    timerElement.textContent = `Time: ${formatTime(timeLeft)}`;
                     if (timeLeft <= 0) {
                         clearInterval(versusGameTimer);
                         endVersusMatch();
@@ -563,21 +572,27 @@
             }, 10000);
         }
 
-        function stopGame() {
+        function stopGame(isForced = false) {
             AudioEngine.playMusic('menu');
             if (gameLoopId) { cancelAnimationFrame(gameLoopId); clearInterval(gameLoopId); gameLoopId = null; }
             if (versusGameTimer) { clearInterval(versusGameTimer); versusGameTimer = null; }
             if(currentKeyListener) { document.removeEventListener('keydown', currentKeyListener); document.removeEventListener('keyup', currentKeyListener); currentKeyListener = null; }
             if(currentMouseListener) { canvas.removeEventListener('mousemove', currentMouseListener); currentMouseListener = null; }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (isForced) {
+                gameContainer.style.display = 'none';
+                arcadeRoom.style.display = 'none';
+            } else {
+                gameContainer.style.display = 'none';
+                arcadeRoom.style.display = 'flex';
+                createGameCabinets();
+            }
             currentGameId = null;
-            arcadeRoom.style.display = 'block';
-            gameContainer.style.display = 'none';
             highScoresContainer.style.display = 'none';
             if (!currentLobbyId) {
                 currentLobbyData = null;
             }
-            createGameCabinets();
         }
         function updateHighScoresDisplay() { highScoresList.innerHTML = ''; const scores = highScores[currentGameId] || []; if (scores.length > 0) { scores.forEach(score => { const li = document.createElement('li'); let scoreDisplay = score.score; if(games[currentGameId].sort === 'asc') scoreDisplay += 's'; li.innerHTML = `<span class="name">${score.name}</span> <span class="score">${scoreDisplay}</span>`; highScoresList.appendChild(li); }); } else { highScoresList.innerHTML = '<li>No scores yet!</li>'; } }
         
