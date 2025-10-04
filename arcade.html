@@ -16,17 +16,15 @@
         #lobby-list li { padding: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s ease; }
         #lobby-list li:hover { background: rgba(0, 229, 255, 0.1); }
         #lobby-list li.selected { border-color: var(--secondary-glow); background: rgba(255, 0, 193, 0.2); }
-        #player-list-container { flex-grow: 1; }
+        #player-list-container { flex-grow: 1; overflow-y: auto; }
         #player-list { list-style: none; text-align: left; font-size: 1.2em; color: #ffff00; }
         #player-list li { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .kick-btn { font-family:'Press Start 2P',cursive; background:none; border:none; color:red; cursor:pointer; font-size: 1em; }
+        .kick-btn:hover { color: #ff5555; }
         .lobby-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-top: 30px; }
         .lobby-btn { font-family:'Press Start 2P',cursive; font-size:1.5em; padding: 15px 30px; border: 3px solid var(--primary-glow); color: var(--primary-glow); background: transparent; text-shadow: 0 0 8px var(--primary-glow); box-shadow: 0 0 15px var(--primary-glow) inset; cursor: pointer; transition: all 0.2s ease; }
         .lobby-btn:hover { background: var(--primary-glow); color: var(--main-bg); box-shadow: 0 0 25px var(--primary-glow); }
         .lobby-btn:disabled { color: #555; border-color: #555; text-shadow: none; box-shadow: none; cursor: not-allowed; }
-        .server-options { margin-top: 20px; display: flex; gap: 15px; }
-        .server-btn { font-family:'Press Start 2P',cursive; font-size:0.8em; padding: 8px 15px; border: 2px solid var(--text-color); color: var(--text-color); background: transparent; cursor: pointer; }
-        .server-btn.active { background: var(--text-color); color: var(--main-bg); }
         #arcade-room{text-align:center;padding:20px; display:none;}
         h1{font-size:3.5em;color:var(--secondary-glow);text-shadow:0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow);margin-bottom:60px; animation: flicker-all 8s infinite;}
         h1 span { display: inline-block; animation: flicker-small 4s infinite; }
@@ -88,10 +86,6 @@
         </div>
         <div class="lobby-controls">
             <button id="play-btn" class="lobby-btn">PLAY</button>
-            <div class="server-options">
-                <button id="public-btn" class="server-btn">PUBLIC</button>
-                <button id="private-btn" class="server-btn active">PRIVATE</button>
-            </div>
         </div>
     </div>
 
@@ -176,7 +170,7 @@
                 listenForPlayersInLobby(currentLobbyId);
                 listenForJoinRequests(currentLobbyId);
             } else {
-                await createLobby(); // Every new player hosts by default
+                await createLobby();
             }
         }
         
@@ -195,10 +189,10 @@
         function initializeLobbyUI(isUserHost) {
             isHost = isUserHost;
             document.getElementById('play-btn').disabled = !isHost;
-            document.querySelectorAll('.server-btn').forEach(btn => btn.style.display = isHost ? 'inline-block' : 'none');
+            document.querySelectorAll('.server-options').forEach(el => el.style.display = isHost ? 'flex' : 'none');
             
             if(!isHost){
-                 document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby to see players.</li>`;
+                 document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby...</li>`;
             }
         }
 
@@ -208,10 +202,10 @@
                 lobbyList.innerHTML = '';
                 let hasLobbies = false;
                 snapshot.forEach((childSnapshot) => {
-                    const lobby = childSnapshot.val();
-                    if (lobby.host === playerName) return; // Don't show your own lobby in list
-                    
                     hasLobbies = true;
+                    const lobby = childSnapshot.val();
+                    if (childSnapshot.key === currentLobbyId) return; 
+                    
                     const playerCount = lobby.players ? Object.keys(lobby.players).length : 0;
                     const lobbyEl = document.createElement('li');
                     lobbyEl.textContent = `${lobby.name} ${lobby.type === 'private' ? '🔒' : ''} (${playerCount}/8)`;
@@ -307,7 +301,7 @@
             listenForLobbyStatus(lobbyId);
 
             playerRef.on('value', (snapshot) => {
-                if(!snapshot.exists() && !arcadeRoom.style.display === 'block') {
+                if(!snapshot.exists() && lobbyScreen.style.display !== 'none') {
                     alert("You have been kicked from the lobby.");
                     window.location.reload();
                 }
@@ -331,7 +325,7 @@
             initializeLobbyUI(true);
             listenForPlayersInLobby(currentLobbyId);
             listenForJoinRequests(currentLobbyId);
-            listenForLobbyStatus(currentLobbyId); // Host needs to know when game starts
+            listenForLobbyStatus(currentLobbyId);
         }
         
         async function setLobbyType(type) {
@@ -343,7 +337,7 @@
         }
         
         async function startGameFromLobby() {
-            if(isHost && currentLobbyId) {
+            if (isHost && currentLobbyId) {
                 await rtdb.ref(`lobbies/${currentLobbyId}`).update({ status: 'playing' });
             }
         }
