@@ -258,7 +258,10 @@ function setupLobbyPage() {
     const volumeSlider = document.getElementById('volume-slider');
     const savedVolume = localStorage.getItem('arcadeVolume') || 0.5;
     volumeSlider.value = savedVolume;
-    volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
+    volumeSlider.addEventListener('input', (e) => {
+        e.stopPropagation();
+        AudioEngine.setVolume(e.target.value)
+    });
     
     document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
     document.getElementById('host-btn').addEventListener('click', switchToHostMode);
@@ -582,7 +585,7 @@ function loadHighScoresFromRtdb() {
                 const scoresArray = Object.values(gameScores);
                 const sortOrder = games[gameId].sort;
                 scoresArray.sort((a, b) => sortOrder === 'asc' ? a.score - b.score : b.score - a.score);
-                highScores[gameId] = scoresArray.slice(0, 1); // We only need the top one for the cabinet
+                highScores[gameId] = scoresArray.slice(0, 1);
             } else {
                 highScores[gameId] = [];
             }
@@ -619,9 +622,8 @@ function startGame(gameId) {
     arcadeRoom.style.display = 'none';
     gameContainer.style.display = 'flex';
     document.body.classList.add('in-game');
-    if (!currentLobbyData) highScoresContainer.style.display = 'block';
     currentGameId = gameId;
-    highScoresTitle.innerText = `${games[currentGameId].name} Scores`;
+    games[gameId].init();
 }
 
 function stopGame(isForced = false) {
@@ -631,29 +633,24 @@ function stopGame(isForced = false) {
     if (currentMouseListener) { canvas.removeEventListener('mousemove', currentMouseListener); currentMouseListener = null; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
+    gameContainer.style.display = 'none';
+    
     if (isForced) {
-        gameContainer.style.display = 'none';
         arcadeRoom.style.display = 'none';
         lobbyScreen.style.display = 'flex';
         document.body.classList.remove('in-game');
     } else if (currentLobbyData) {
-        gameContainer.style.display = 'none';
         arcadeRoom.style.display = 'flex';
     } else {
-        gameContainer.style.display = 'none';
         startScreen.style.display = 'flex';
         document.body.classList.remove('in-game');
     }
     currentGameId = null;
-    highScoresContainer.style.display = 'none';
 }
 
 async function saveHighScore(score, gameId) {
     const user = auth.currentUser;
-    if (!user || user.isAnonymous) {
-        if(!currentLobbyData) alert("You must be logged in to save high scores!");
-        return;
-    }
+    if (!user) return;
 
     if (currentLobbyData) {
         const currentScoreRef = rtdb.ref(`lobbies/${currentLobbyId}/scores/${gameId}/${playerName}`);
@@ -666,6 +663,11 @@ async function saveHighScore(score, gameId) {
         return; 
     }
     
+    if (user.isAnonymous) {
+        alert("You must be logged in to save high scores!");
+        return;
+    }
+
     const scoreRef = rtdb.ref(`arcade_high_scores/${gameId}/${user.uid}`);
     try {
         const snapshot = await scoreRef.once('value');
