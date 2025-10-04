@@ -154,29 +154,21 @@
         };
         
         auth.onAuthStateChanged(user => {
-            if (user && !user.isAnonymous) {
+            if (user) {
+                // User is signed in. This is the correct entry point.
                 playerName = (sessionStorage.getItem('loggedInUser') || user.displayName || 'PLAYER').toUpperCase();
-                initializeLobbyAsHost();
-            } else if (user && user.isAnonymous) {
-                playerName = `GUEST-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-                sessionStorage.setItem('loggedInUser', playerName);
-                initializeLobbyAsGuest();
+                initializeLobbyAsHost(); // Every user starts by hosting their own lobby
             } else {
+                // If not logged in from index.html, sign in anonymously for this session
                 auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
             }
         });
-
+        
         function initializeLobbyAsHost() {
             isHost = true;
-            setupLobbyPage();
             createLobby();
-        }
-
-        function initializeLobbyAsGuest() {
-            isHost = false;
             setupLobbyPage();
-            listenForLobbies();
-            document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby to see players.</li>`;
+            listenForLobbies(); // Also listen for other lobbies
         }
         
         function setupLobbyPage() {
@@ -187,14 +179,9 @@
             
             const publicBtn = document.getElementById('public-btn');
             const privateBtn = document.getElementById('private-btn');
-
-            if(isHost) {
-                publicBtn.addEventListener('click', () => setLobbyType('public'));
-                privateBtn.addEventListener('click', () => setLobbyType('private'));
-            } else {
-                publicBtn.style.display = 'none';
-                privateBtn.style.display = 'none';
-            }
+            
+            publicBtn.addEventListener('click', () => setLobbyType('public'));
+            privateBtn.addEventListener('click', () => setLobbyType('private'));
             
             document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
         }
@@ -205,8 +192,9 @@
                 lobbyList.innerHTML = '';
                 let hasLobbies = false;
                 snapshot.forEach((childSnapshot) => {
-                    const lobby = childSnapshot.val();
+                    if (childSnapshot.key === currentLobbyId) return; // Don't show your own lobby
                     hasLobbies = true;
+                    const lobby = childSnapshot.val();
                     const playerCount = lobby.players ? Object.keys(lobby.players).length : 0;
                     const lobbyEl = document.createElement('li');
                     lobbyEl.textContent = `${lobby.name} ${lobby.type === 'private' ? '🔒' : ''} (${playerCount}/8)`;
@@ -217,31 +205,22 @@
                         lobbyEl.style.cursor = 'not-allowed';
                     } else {
                         lobbyEl.onclick = () => {
-                            handleLobbyClick(childSnapshot.key, lobby.type);
+                             handleLobbyClick(childSnapshot.key, lobby.type, lobby.host);
                         };
                     }
                     lobbyList.appendChild(lobbyEl);
                 });
                 if (!hasLobbies) {
-                    lobbyList.innerHTML = '<li style="color: grey;">No public lobbies found.</li>';
+                    lobbyList.innerHTML = '<li style="color: grey;">No other lobbies found.</li>';
                 }
             });
         }
         
-        async function handleLobbyClick(lobbyId, type) {
-            if(isHost) {
-                if(confirm("This will delete your current lobby. Are you sure?")) {
-                    await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
-                    isHost = false;
-                } else {
-                    return;
-                }
-            }
-            
+        async function handleLobbyClick(lobbyId, type, hostName) {
             if (type === 'private') {
                 const requestRef = rtdb.ref(`lobbies/${lobbyId}/requests/${playerName}`);
                 await requestRef.set(true);
-                alert('Join request sent!');
+                alert(`Join request sent to ${hostName}!`);
             } else {
                 joinLobby(lobbyId);
             }
@@ -293,9 +272,12 @@
             }
 
             currentLobbyId = lobbyId;
+            isHost = false;
             const playerRef = rtdb.ref(`lobbies/${lobbyId}/players/${playerName}`);
             await playerRef.set(true);
             playerRef.onDisconnect().remove();
+            
+            document.querySelectorAll('.server-btn').forEach(btn => btn.style.display = 'none');
             
             listenForPlayersInLobby(lobbyId);
             listenForLobbyStatus(lobbyId);
@@ -330,7 +312,14 @@
         async function startGameFromLobby() {
             if(isHost && currentLobbyId) {
                 await rtdb.ref(`lobbies/${currentLobbyId}`).update({ status: 'playing' });
+            } else if (!isHost && currentLobbyId){
+                // Guests just enter, they don't change status
+            } else if (!currentLobbyId) { // Solo play
+                isHost = true; // Become host of a temporary lobby
+                await createLobby();
+                await rtdb.ref(`lobbies/${currentLobbyId}`).update({ status: 'playing' });
             }
+            
              AudioEngine.init();
              AudioEngine.playMusic('menu');
              lobbyScreen.style.display = 'none';
@@ -342,12 +331,14 @@
             
             lobbyStateListener = rtdb.ref(`lobbies/${lobbyId}`).on('value', (snapshot) => {
                 if(!snapshot.exists()) {
-                    alert("Lobby closed by host.");
-                    window.location.reload();
+                    if(!isHost) {
+                        alert("Lobby closed by host.");
+                        window.location.reload();
+                    }
                     return;
                 }
                 const lobbyData = snapshot.val();
-                if(lobbyData.status === 'playing') {
+                if(lobbyData.status === 'playing' && !isHost) {
                      AudioEngine.init();
                      AudioEngine.playMusic('menu');
                      lobbyScreen.style.display = 'none';
