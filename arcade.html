@@ -153,6 +153,8 @@
         
         document.addEventListener('DOMContentLoaded', () => {
             playerName = (sessionStorage.getItem('loggedInUser') || 'PLAYER').toUpperCase();
+            document.getElementById('player-list').innerHTML = `<li>${playerName}</li>`;
+            
             const volumeSlider = document.getElementById('volume-slider');
             const savedVolume = localStorage.getItem('arcadeVolume') || 0.5;
             volumeSlider.value = savedVolume;
@@ -257,8 +259,9 @@
             }
 
             currentLobbyId = lobbyId;
-            await rtdb.ref(`lobbies/${lobbyId}/players/${playerName}`).set(true);
-            window.addEventListener('beforeunload', cleanupLobby);
+            const playerRef = rtdb.ref(`lobbies/${lobbyId}/players/${playerName}`);
+            await playerRef.set(true);
+            playerRef.onDisconnect().remove();
             
             AudioEngine.init();
             AudioEngine.playMusic('menu');
@@ -275,7 +278,10 @@
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 players: { [playerName]: true }
             });
-            window.addEventListener('beforeunload', cleanupLobby);
+            const playerRef = rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`);
+            playerRef.onDisconnect().remove();
+            
+            listenForPlayersInLobby(currentLobbyId);
 
             AudioEngine.init();
             AudioEngine.playMusic('menu');
@@ -283,8 +289,8 @@
             arcadeRoom.style.display = 'block';
         }
 
-        async function cleanupLobby() {
-            if (currentLobbyId) {
+        window.addEventListener('beforeunload', async () => {
+             if (currentLobbyId) {
                 const playerRef = rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`);
                 await playerRef.remove();
                 
@@ -294,7 +300,7 @@
                     await lobbyRef.remove();
                 }
             }
-        }
+        });
         
         const games = { tetris: { name: 'Tetris', init: initTetris, music: 'tetris', sort: 'desc' }, spaceInvaders: { name: 'Space Invaders', init: initSpaceInvaders, music: 'spaceInvaders', sort: 'desc' }, pacman: { name: 'Pac-Man', init: initPacman, music: 'pacman', sort: 'desc' }, racing: { name: 'Retro Racer', init: initRacing, music: 'racing', sort: 'desc' }, snake: { name: 'Snake', init: initSnake, music: null, sort: 'desc' }, pong: { name: 'Pong', init: initPong, music: null, sort: 'desc' }, breakout: { name: 'Breakout', init: initBreakout, music: 'breakout', sort: 'desc' }, maze: { name: 'Maze Runner', init: initMaze, music: null, sort: 'asc' } };
 
