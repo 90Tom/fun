@@ -15,7 +15,6 @@
         #lobby-list { list-style: none; overflow-y: auto; flex-grow: 1; text-align: left; }
         #lobby-list li { padding: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s ease; }
         #lobby-list li:hover { background: rgba(0, 229, 255, 0.1); }
-        #lobby-list li.selected { border-color: var(--secondary-glow); background: rgba(255, 0, 193, 0.2); }
         #player-list-container { flex-grow: 1; overflow-y: auto; }
         #player-list { list-style: none; text-align: left; font-size: 1.2em; color: #ffff00; }
         #player-list li { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
@@ -86,6 +85,10 @@
         </div>
         <div class="lobby-controls">
             <button id="play-btn" class="lobby-btn">PLAY</button>
+            <div class="server-options" style="display: none;">
+                <button id="public-btn" class="server-btn active">PUBLIC</button>
+                <button id="private-btn" class="server-btn">PRIVATE</button>
+            </div>
         </div>
     </div>
 
@@ -170,7 +173,7 @@
                 listenForPlayersInLobby(currentLobbyId);
                 listenForJoinRequests(currentLobbyId);
             } else {
-                await createLobby();
+                await createLobby(); 
             }
         }
         
@@ -180,16 +183,13 @@
             volumeSlider.value = savedVolume;
             volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
             
-            document.getElementById('public-btn').addEventListener('click', () => setLobbyType('public'));
-            document.getElementById('private-btn').addEventListener('click', () => setLobbyType('private'));
-            
             document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
         }
 
         function initializeLobbyUI(isUserHost) {
             isHost = isUserHost;
             document.getElementById('play-btn').disabled = !isHost;
-            document.querySelectorAll('.server-options').forEach(el => el.style.display = isHost ? 'flex' : 'none');
+            document.querySelector('.server-options').style.display = isHost ? 'flex' : 'none';
             
             if(!isHost){
                  document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby...</li>`;
@@ -204,18 +204,18 @@
                 snapshot.forEach((childSnapshot) => {
                     hasLobbies = true;
                     const lobby = childSnapshot.val();
-                    if (childSnapshot.key === currentLobbyId) return; 
+                    if (lobby.host === playerName) return; 
                     
                     const playerCount = lobby.players ? Object.keys(lobby.players).length : 0;
                     const lobbyEl = document.createElement('li');
-                    lobbyEl.textContent = `${lobby.name} ${lobby.type === 'private' ? '🔒' : ''} (${playerCount}/8)`;
+                    lobbyEl.textContent = `${lobby.name} (${playerCount}/8)`;
                     lobbyEl.dataset.lobbyId = childSnapshot.key;
 
                     if (playerCount >= 8 || lobby.status === 'playing') {
                         lobbyEl.style.color = 'grey';
                         lobbyEl.style.cursor = 'not-allowed';
                     } else {
-                        lobbyEl.onclick = () => handleLobbyClick(childSnapshot.key, lobby.type, lobby.host);
+                        lobbyEl.onclick = () => handleLobbyClick(childSnapshot.key);
                     }
                     lobbyList.appendChild(lobbyEl);
                 });
@@ -225,18 +225,11 @@
             });
         }
         
-        async function handleLobbyClick(lobbyId, type, hostName) {
+        async function handleLobbyClick(lobbyId) {
             if (isHost) {
                 await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
             }
-
-            if (type === 'private') {
-                const requestRef = rtdb.ref(`lobbies/${lobbyId}/requests/${playerName}`);
-                await requestRef.set(true);
-                alert(`Join request sent to ${hostName}!`);
-            } else {
-                joinLobby(lobbyId);
-            }
+            joinLobby(lobbyId);
         }
 
         let currentPlayerListListener = null;
@@ -273,14 +266,7 @@
         }
         
         function listenForJoinRequests(lobbyId) {
-            const requestsRef = rtdb.ref(`lobbies/${lobbyId}/requests`);
-            requestsRef.on('child_added', (snapshot) => {
-                const requestingPlayer = snapshot.key;
-                if(confirm(`${requestingPlayer} wants to join. Accept?`)) {
-                    rtdb.ref(`lobbies/${lobbyId}/players/${requestingPlayer}`).set(true);
-                }
-                snapshot.ref.remove();
-            });
+            // Removed for simplicity
         }
 
         async function joinLobby(lobbyId) {
@@ -314,7 +300,7 @@
             isHost = true;
             await newLobbyRef.set({
                 name: `${playerName}'S GAME`,
-                type: 'private',
+                type: 'public',
                 host: playerName,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 players: { [playerName]: true },
@@ -324,16 +310,11 @@
             
             initializeLobbyUI(true);
             listenForPlayersInLobby(currentLobbyId);
-            listenForJoinRequests(currentLobbyId);
             listenForLobbyStatus(currentLobbyId);
         }
         
         async function setLobbyType(type) {
-            if(isHost && currentLobbyId) {
-                await rtdb.ref(`lobbies/${currentLobbyId}/type`).set(type);
-                document.getElementById('public-btn').classList.toggle('active', type === 'public');
-                document.getElementById('private-btn').classList.toggle('active', type === 'private');
-            }
+            // Removed for simplicity
         }
         
         async function startGameFromLobby() {
@@ -365,10 +346,11 @@
         
         window.addEventListener('beforeunload', async () => {
              if (currentLobbyId) {
-                const playerRef = rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`);
-                await playerRef.remove();
                 if(isHost) {
                      await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
+                } else {
+                     const playerRef = rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`);
+                    await playerRef.remove();
                 }
             }
         });
