@@ -154,9 +154,13 @@
         };
         
         auth.onAuthStateChanged(user => {
-            if (user) {
+            if (user && !user.isAnonymous) {
                 playerName = (sessionStorage.getItem('loggedInUser') || user.displayName || 'PLAYER').toUpperCase();
                 initializeLobbyAsHost();
+            } else if (user && user.isAnonymous) {
+                playerName = `GUEST-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+                sessionStorage.setItem('loggedInUser', playerName);
+                initializeLobbyAsGuest();
             } else {
                 auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
             }
@@ -164,8 +168,8 @@
 
         function initializeLobbyAsHost() {
             isHost = true;
-            createLobby();
             setupLobbyPage();
+            createLobby();
         }
 
         function initializeLobbyAsGuest() {
