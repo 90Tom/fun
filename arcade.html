@@ -84,11 +84,7 @@
             </div>
         </div>
         <div class="lobby-controls">
-            <button id="play-btn" class="lobby-btn">PLAY</button>
-            <div class="server-options" style="display: none;">
-                <button id="public-btn" class="server-btn active">PUBLIC</button>
-                <button id="private-btn" class="server-btn">PRIVATE</button>
-            </div>
+            <button id="play-btn" class="lobby-btn" disabled>PLAY</button>
         </div>
     </div>
 
@@ -173,7 +169,7 @@
                 listenForPlayersInLobby(currentLobbyId);
                 listenForJoinRequests(currentLobbyId);
             } else {
-                await createLobby(); 
+                await createLobby();
             }
         }
         
@@ -189,7 +185,7 @@
         function initializeLobbyUI(isUserHost) {
             isHost = isUserHost;
             document.getElementById('play-btn').disabled = !isHost;
-            document.querySelector('.server-options').style.display = isHost ? 'flex' : 'none';
+            document.querySelector('.server-options').style.display = 'none'; // Buttons removed
             
             if(!isHost){
                  document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby...</li>`;
@@ -202,10 +198,10 @@
                 lobbyList.innerHTML = '';
                 let hasLobbies = false;
                 snapshot.forEach((childSnapshot) => {
-                    hasLobbies = true;
                     const lobby = childSnapshot.val();
                     if (lobby.host === playerName) return; 
                     
+                    hasLobbies = true;
                     const playerCount = lobby.players ? Object.keys(lobby.players).length : 0;
                     const lobbyEl = document.createElement('li');
                     lobbyEl.textContent = `${lobby.name} (${playerCount}/8)`;
@@ -265,12 +261,8 @@
             }
         }
         
-        function listenForJoinRequests(lobbyId) {
-            // Removed for simplicity
-        }
-
         async function joinLobby(lobbyId) {
-            const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
+             const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
             const snapshot = await lobbyRef.get();
             if (!snapshot.exists() || snapshot.val().status === 'playing') { alert("Cannot join lobby."); return; }
             if(currentLobbyId) { await rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`).remove(); }
@@ -300,7 +292,6 @@
             isHost = true;
             await newLobbyRef.set({
                 name: `${playerName}'S GAME`,
-                type: 'public',
                 host: playerName,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 players: { [playerName]: true },
@@ -311,10 +302,6 @@
             initializeLobbyUI(true);
             listenForPlayersInLobby(currentLobbyId);
             listenForLobbyStatus(currentLobbyId);
-        }
-        
-        async function setLobbyType(type) {
-            // Removed for simplicity
         }
         
         async function startGameFromLobby() {
