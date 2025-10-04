@@ -290,6 +290,7 @@
             isHost = true;
             await newLobbyRef.set({
                 name: `${playerName}'S GAME`,
+                type: 'public',
                 host: playerName,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 players: { [playerName]: true },
