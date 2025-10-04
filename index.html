@@ -232,7 +232,7 @@
 
     <main class="game-grid">
          <div class="game-card">
-            <a href="arcade.html" class="game-link">
+            <a href="arcade.html" class="game-link" id="arcade-link">
                 <img src="IndexImages/arcade.png" alt="Retro Arcade Game Preview">
                 <div class="content">
                     <h2 data-translate-key="arcadeTitle">Retro Arcade</h2>
@@ -1147,6 +1147,15 @@
                     }
                 });
                 document.getElementById('online-users-count').textContent = onlineCount;
+            });
+
+            document.getElementById('arcade-link').addEventListener('click', function(event) {
+                const user = auth.currentUser;
+                if (!user || user.isAnonymous) {
+                    event.preventDefault();
+                    alert('You have to be logged in to play the arcade!');
+                    document.getElementById('login-modal').style.display = 'flex';
+                }
             });
 
             profileBtnPfp.addEventListener('click', showMyProfile);

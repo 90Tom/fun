@@ -25,9 +25,11 @@
         .lobby-btn { font-family:'Press Start 2P',cursive; font-size:1.5em; padding: 15px 30px; border: 3px solid var(--primary-glow); color: var(--primary-glow); background: transparent; text-shadow: 0 0 8px var(--primary-glow); box-shadow: 0 0 15px var(--primary-glow) inset; cursor: pointer; transition: all 0.2s ease; }
         .lobby-btn:hover { background: var(--primary-glow); color: var(--main-bg); box-shadow: 0 0 25px var(--primary-glow); }
         .lobby-btn:disabled { color: #555; border-color: #555; text-shadow: none; box-shadow: none; cursor: not-allowed; }
-        .mode-select, .host-join-toggle { margin-top: 20px; display: flex; gap: 15px; }
+        .mode-select, .host-join-toggle, .host-settings { margin-top: 20px; display: flex; gap: 15px; align-items: center; }
         .mode-btn { font-family:'Press Start 2P',cursive; font-size:0.8em; padding: 8px 15px; border: 2px solid var(--text-color); color: var(--text-color); background: transparent; cursor: pointer; }
         .mode-btn.active { background: var(--text-color); color: var(--main-bg); }
+        #time-select { font-family:'Press Start 2P',cursive; background: transparent; color: var(--text-color); border: 2px solid var(--text-color); padding: 5px; font-size: 0.7em;}
+        #time-select option { background: var(--main-bg); color: var(--text-color); }
         #start-screen h1 { font-size: 4em; color: var(--secondary-glow); text-shadow: 0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow); margin-bottom: 60px; animation: flicker-all 8s infinite; }
         #start-screen h1 span { display: inline-block; animation: flicker-small 4s infinite; }
         #start-screen h1 span:nth-child(2), #start-screen h1 span:nth-child(7) { animation-delay: 0.2s; } #start-screen h1 span:nth-child(3), #start-screen h1 span:nth-child(9) { animation-delay: 0.5s; } #start-screen h1 span:nth-child(5) { animation-delay: 1.1s; }
@@ -42,7 +44,7 @@
         .game-cabinet{width:200px;height:280px;border-radius:10px;position:relative;cursor:pointer;transition:transform 0.2s ease;display:flex;flex-direction:column;align-items:center;box-shadow:inset 0 0 10px #000, 5px 5px 15px #000; background-color: var(--cab-color-light); border: 4px solid var(--cab-color-dark);}
         .game-cabinet:hover{transform:translateY(-10px);}
         .marquee{width:100%;height:45px;background:#111;color:white;border-top-left-radius:5px;border-top-right-radius:5px;display:flex;justify-content:center;align-items:center;text-align:center;font-size:1em;text-shadow:0 0 5px var(--primary-glow);}
-        .screen-area{width:85%;height:110px;background:#080808;margin-top:10px;border:10px solid var(--cab-color-dark);box-shadow:inset 0 0 10px #000;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:5px;color:#ffff00;}
+        .screen-area{width:85%;height:110px;background:#080808;margin-top:10px;border:10px solid var(--cab-color-dark);box-shadow:inset 0 0 10px #000;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:5px;color:#ffff00; font-size: 0.8em; line-height: 1.4;}
         .control-panel-base{width:100%; height:110px; margin-top:auto; border-bottom-left-radius:5px; border-bottom-right-radius:5px; display:flex;justify-content:center;align-items:center; background-color: var(--cab-color-dark);}
         .game-cabinet[data-theme="tetris"]{--cab-color-light:#2c3e50; --cab-color-dark:#34495e;}
         .game-cabinet[data-theme="pacman"]{--cab-color-light:#f1c40f; --cab-color-dark:#f39c12;}
@@ -75,6 +77,11 @@
         input[type="range"]::-moz-range-track { height: 16px; background: #333; border: 2px solid #555; }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 24px; background-color: var(--secondary-glow); margin-top: -6px; border: 2px solid #000; box-shadow: 0 0 10px var(--secondary-glow); }
         input[type="range"]::-moz-range-thumb { width: 12px; height: 20px; background-color: var(--secondary-glow); border: 2px solid #000; border-radius: 0; box-shadow: 0 0 10px var(--secondary-glow); }
+        #versus-results-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .results-content { border: 3px solid var(--secondary-glow); padding: 40px; box-shadow: 0 0 25px var(--secondary-glow) inset; background: var(--main-bg); }
+        .results-content h2 { font-size: 2em; color: var(--secondary-glow); margin-bottom: 20px;}
+        #results-list { list-style: none; font-size: 1.2em; }
+        #results-list li { margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -85,7 +92,7 @@
             <button id="multiplayer-btn" class="lobby-btn">MULTIPLAYER</button>
         </div>
     </div>
-    
+
     <div id="lobby-screen">
          <div class="host-join-toggle">
             <button id="host-btn" class="mode-btn active">HOST</button>
@@ -97,9 +104,20 @@
                 <div id="player-list-container">
                     <ul id="player-list"></ul>
                 </div>
-                 <div class="mode-select">
-                    <button id="versus-btn" class="mode-btn active">VERSUS</button>
-                    <button id="teams-btn" class="mode-btn">TEAMS</button>
+                 <div class="host-settings">
+                    <div class="mode-select">
+                        <button id="versus-btn" class="mode-btn active">VERSUS</button>
+                        <button id="teams-btn" class="mode-btn">TEAMS</button>
+                    </div>
+                    <div id="versus-options">
+                        <label for="time-select" style="font-size: 0.8em;">Time:</label>
+                        <select id="time-select">
+                            <option value="60">1 Min</option>
+                            <option value="300">5 Mins</option>
+                            <option value="600">10 Mins</option>
+                            <option value="1800">30 Mins</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div id="join-view" class="lobby-browser" style="display: none;">
@@ -113,11 +131,18 @@
     </div>
 
     <div id="arcade-room"><h1><span>R</span><span>E</span><span>T</span><span>R</span><span>O</span> <span>A</span><span>R</span><span>C</span><span>A</span><span>D</span><span>E</span></h1><div id="game-selection"></div></div>
-    <div id="game-container"><canvas id="game-canvas"></canvas><div id="game-info"><span id="score">Score: 0</span><span id="level-lives">Level: 1</span></div><button id="back-to-arcade">Back to Arcade</button></div>
+    <div id="game-container"><canvas id="game-canvas"></canvas><div id="game-info"><span id="timer"></span><span id="score">Score: 0</span><span id="level-lives">Level: 1</span></div><button id="back-to-arcade">Back to Arcade</button></div>
     <div id="high-scores-container"><h2 id="high-scores-title">High Scores</h2><ul id="high-scores-list"></ul></div>
     <div id="volume-control">
         <label for="volume-slider">🔊</label>
         <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
+    </div>
+
+    <div id="versus-results-modal">
+        <div class="results-content">
+            <h2 id="results-title">MATCH OVER</h2>
+            <ul id="results-list"></ul>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -140,7 +165,7 @@
 
         const startScreen = document.getElementById('start-screen');
         const lobbyScreen = document.getElementById('lobby-screen');
-        const arcadeRoom = document.getElementById('arcade-room'), gameSelection = document.getElementById('game-selection'), gameContainer = document.getElementById('game-container'), canvas = document.getElementById('game-canvas'), ctx = canvas.getContext('2d'), scoreElement = document.getElementById('score'), levelLivesElement = document.getElementById('level-lives'), backToArcadeButton = document.getElementById('back-to-arcade'), highScoresContainer = document.getElementById('high-scores-container'), highScoresList = document.getElementById('high-scores-list'), highScoresTitle = document.getElementById('high-scores-title');
+        const arcadeRoom = document.getElementById('arcade-room'), gameSelection = document.getElementById('game-selection'), gameContainer = document.getElementById('game-container'), canvas = document.getElementById('game-canvas'), ctx = canvas.getContext('2d'), scoreElement = document.getElementById('score'), levelLivesElement = document.getElementById('level-lives'), backToArcadeButton = document.getElementById('back-to-arcade'), highScoresContainer = document.getElementById('high-scores-container'), highScoresList = document.getElementById('high-scores-list'), highScoresTitle = document.getElementById('high-scores-title'), timerElement = document.getElementById('timer');
         let currentGameId = null, gameLoopId = null, highScores = JSON.parse(localStorage.getItem('arcadeHighScores')) || {}, currentKeyListener = null, currentMouseListener = null;
 
         let currentLobbyId = null;
@@ -149,6 +174,8 @@
         let lobbyStateListener = null;
         let playerRef = null;
         let gameMode = 'versus';
+        let currentLobbyData = null;
+        let versusGameTimer = null;
 
         const AudioEngine = {
             audioCtx: null, initialized: false, musicNode: null, masterGain: null,
@@ -174,10 +201,14 @@
             },
             stopMusic() { if (this.musicNode) { clearTimeout(this.musicNode.loop); this.musicNode.gain.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + 0.5); this.musicNode.oscillators.forEach(o => o.stop(this.audioCtx.currentTime + 0.5)); this.musicNode = null; } }
         };
-        
+
         auth.onAuthStateChanged(user => {
             if (user) {
-                playerName = (sessionStorage.getItem('loggedInUser') || user.displayName || `GUEST-${user.uid.substring(0,4)}`).toUpperCase();
+                if(user.isAnonymous) {
+                    playerName = `GUEST-${user.uid.substring(0,4)}`.toUpperCase();
+                } else {
+                    playerName = (sessionStorage.getItem('loggedInUser') || user.displayName || `PLAYER-${user.uid.substring(0,4)}`).toUpperCase();
+                }
                 setupInitialScreen();
             } else {
                 auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
@@ -187,6 +218,7 @@
         function setupInitialScreen() {
             document.getElementById('single-player-btn').addEventListener('click', () => {
                 isHost = true;
+                currentLobbyData = null;
                 AudioEngine.init();
                 AudioEngine.playMusic('menu');
                 startScreen.style.display = 'none';
@@ -194,19 +226,23 @@
                 document.body.classList.add('in-game');
             });
             document.getElementById('multiplayer-btn').addEventListener('click', () => {
+                if (auth.currentUser.isAnonymous) {
+                     alert("You must be logged in to play multiplayer!");
+                     return;
+                }
                 startScreen.style.display = 'none';
                 lobbyScreen.style.display = 'flex';
                 setupLobbyPage();
-                switchToHostMode(); 
+                switchToHostMode();
             });
         }
-        
+
         function setupLobbyPage() {
             const volumeSlider = document.getElementById('volume-slider');
             const savedVolume = localStorage.getItem('arcadeVolume') || 0.5;
             volumeSlider.value = savedVolume;
             volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
-            
+
             document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
             document.getElementById('host-btn').addEventListener('click', switchToHostMode);
             document.getElementById('join-btn').addEventListener('click', switchToJoinMode);
@@ -215,18 +251,17 @@
         }
 
         async function switchToHostMode() {
-            if (isHost) return;
             await leaveCurrentLobby();
             document.getElementById('host-view').style.display = 'flex';
             document.getElementById('join-view').style.display = 'none';
             document.getElementById('host-btn').classList.add('active');
             document.getElementById('join-btn').classList.remove('active');
+            isHost = true;
             await createLobby();
         }
 
         async function switchToJoinMode() {
-            if (!isHost) return;
-            await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
+            await leaveCurrentLobby();
             isHost = false;
             currentLobbyId = null;
             document.getElementById('host-view').style.display = 'none';
@@ -240,7 +275,10 @@
         function initializeLobbyUI(isUserHost) {
             isHost = isUserHost;
             document.getElementById('play-btn').disabled = !isHost;
-            
+            document.getElementById('versus-btn').disabled = !isHost;
+            document.getElementById('teams-btn').disabled = !isHost;
+            document.getElementById('time-select').disabled = !isHost;
+
             if(!isHost){
                  document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby...</li>`;
             }
@@ -253,8 +291,13 @@
                 let hasLobbies = false;
                 snapshot.forEach((childSnapshot) => {
                     const lobby = childSnapshot.val();
-                    if (isHost && childSnapshot.key === currentLobbyId) return; 
-                    
+                    if (!lobby.players && lobby.createdAt < Date.now() - 60000) {
+                        rtdb.ref(`lobbies/${childSnapshot.key}`).remove();
+                        return;
+                    }
+
+                    if (isHost && childSnapshot.key === currentLobbyId) return;
+
                     hasLobbies = true;
                     const playerCount = lobby.players ? Object.keys(lobby.players).length : 0;
                     const lobbyEl = document.createElement('li');
@@ -274,11 +317,9 @@
                 }
             });
         }
-        
+
         async function handleLobbyClick(lobbyId) {
-            if (isHost) {
-                await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
-            }
+            await leaveCurrentLobby();
             joinLobby(lobbyId);
         }
 
@@ -289,6 +330,7 @@
             const lobbyPlayersRef = rtdb.ref(`lobbies/${lobbyId}/players`);
             currentPlayerListListener = lobbyPlayersRef.on('value', (snapshot) => {
                 playerList.innerHTML = '';
+                const playerCount = snapshot.numChildren();
                 if (snapshot.exists()) {
                     snapshot.forEach((playerSnapshot) => {
                         const li = document.createElement('li');
@@ -303,8 +345,10 @@
                         }
                         playerList.appendChild(li);
                     });
-                } else if(isHost) {
+                } else if (isHost) {
                     rtdb.ref(`lobbies/${currentLobbyId}`).remove();
+                    currentLobbyId = null;
+                    createLobby();
                 }
             });
         }
@@ -314,26 +358,26 @@
                 await rtdb.ref(`lobbies/${currentLobbyId}/players/${playerToKick}`).remove();
             }
         }
-        
+
         async function joinLobby(lobbyId) {
-             const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
+            const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
             const snapshot = await lobbyRef.get();
             if (!snapshot.exists() || snapshot.val().status === 'playing') { alert("Cannot join lobby."); return; }
-            if(currentLobbyId) { await rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`).remove(); }
+            await leaveCurrentLobby();
 
             currentLobbyId = lobbyId;
             isHost = false;
             playerRef = rtdb.ref(`lobbies/${lobbyId}/players/${playerName}`);
             await playerRef.set(true);
             playerRef.onDisconnect().remove();
-            
+
             initializeLobbyUI(false);
-            
+
             listenForPlayersInLobby(lobbyId);
             listenForLobbyStatus(lobbyId);
 
             playerRef.on('value', (snapshot) => {
-                if(!snapshot.exists() && lobbyScreen.style.display !== 'none') {
+                if(!snapshot.exists() && lobbyScreen.style.display !== 'none' && arcadeRoom.style.display === 'none') {
                     alert("You have been kicked from the lobby.");
                     window.location.reload();
                 }
@@ -341,6 +385,14 @@
         }
 
         async function createLobby() {
+            const lobbiesRef = rtdb.ref('lobbies');
+            const snapshot = await lobbiesRef.orderByChild('host').equalTo(playerName).get();
+            if (snapshot.exists()) {
+                snapshot.forEach(child => {
+                    child.ref.remove();
+                });
+            }
+
             const newLobbyRef = rtdb.ref('lobbies').push();
             currentLobbyId = newLobbyRef.key;
             isHost = true;
@@ -348,45 +400,55 @@
                 name: `${playerName}'S GAME`,
                 host: playerName,
                 mode: gameMode,
+                duration: parseInt(document.getElementById('time-select').value, 10),
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 players: { [playerName]: true },
                 status: 'waiting'
             });
             newLobbyRef.onDisconnect().remove();
-            
+
             initializeLobbyUI(true);
             listenForPlayersInLobby(currentLobbyId);
             listenForLobbyStatus(currentLobbyId);
         }
-        
+
         async function setGameMode(mode) {
             if(isHost && currentLobbyId) {
                 gameMode = mode;
                 await rtdb.ref(`lobbies/${currentLobbyId}/mode`).set(mode);
                 document.getElementById('versus-btn').classList.toggle('active', mode === 'versus');
                 document.getElementById('teams-btn').classList.toggle('active', mode === 'teams');
+                document.getElementById('versus-options').style.display = mode === 'versus' ? 'flex' : 'none';
             }
         }
-        
+
         async function startGameFromLobby() {
             if (isHost && currentLobbyId) {
-                await rtdb.ref(`lobbies/${currentLobbyId}`).update({ status: 'playing' });
+                 const duration = parseInt(document.getElementById('time-select').value, 10);
+                await rtdb.ref(`lobbies/${currentLobbyId}`).update({
+                    status: 'playing',
+                    mode: gameMode,
+                    duration: duration,
+                    scores: {} // Reset scores on game start
+                });
             }
         }
 
         function listenForLobbyStatus(lobbyId) {
-            if(lobbyStateListener) rtdb.ref(`lobbies/${currentLobbyId}`).off('value', lobbyStateListener);
-            
+            if(lobbyStateListener && currentLobbyId) rtdb.ref(`lobbies/${currentLobbyId}`).off('value', lobbyStateListener);
+
             lobbyStateListener = rtdb.ref(`lobbies/${lobbyId}`).on('value', (snapshot) => {
                 if(!snapshot.exists()) {
-                    if(!isHost) {
+                    if(!isHost && arcadeRoom.style.display === 'none') {
                         alert("Lobby closed by host.");
                         window.location.reload();
                     }
                     return;
                 }
                 const lobbyData = snapshot.val();
-                if(lobbyData.status === 'playing') {
+                currentLobbyData = lobbyData;
+
+                if(lobbyData.status === 'playing' && arcadeRoom.style.display === 'none') {
                      AudioEngine.init();
                      AudioEngine.playMusic('menu');
                      lobbyScreen.style.display = 'none';
@@ -395,31 +457,131 @@
                 }
             });
         }
-        
+
         async function leaveCurrentLobby() {
-             if (currentLobbyId) {
-                if(isHost) {
-                     await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
-                } else {
-                     const playerRef = rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`);
-                    await playerRef.remove();
-                }
-            }
+             if (currentLobbyId && playerRef) {
+                await playerRef.onDisconnect().cancel();
+                await playerRef.remove();
+                playerRef = null;
+             }
+             if (currentLobbyId && isHost) {
+                const hostLobbyRef = rtdb.ref(`lobbies/${currentLobbyId}`);
+                await hostLobbyRef.onDisconnect().cancel();
+                await hostLobbyRef.remove();
+             }
+             currentLobbyId = null;
         }
 
         window.addEventListener('beforeunload', leaveCurrentLobby);
-        
+
         const games = { tetris: { name: 'Tetris', init: initTetris, music: 'tetris', sort: 'desc' }, spaceInvaders: { name: 'Space Invaders', init: initSpaceInvaders, music: 'spaceInvaders', sort: 'desc' }, pacman: { name: 'Pac-Man', init: initPacman, music: 'pacman', sort: 'desc' }, racing: { name: 'Retro Racer', init: initRacing, music: 'racing', sort: 'desc' }, snake: { name: 'Snake', init: initSnake, music: null, sort: 'desc' }, pong: { name: 'Pong', init: initPong, music: null, sort: 'desc' }, breakout: { name: 'Breakout', init: initBreakout, music: 'breakout', sort: 'desc' }, maze: { name: 'Maze Runner', init: initMaze, music: null, sort: 'asc' } };
 
-        function createGameCabinets() { gameSelection.innerHTML = ''; for (const gameId in games) { const game = games[gameId]; let topScore = '-'; if(highScores[gameId] && highScores[gameId].length > 0) { topScore = highScores[gameId][0].score; if(game.sort === 'asc') topScore += 's'; } const cabinet = document.createElement('div'); cabinet.className = 'game-cabinet'; cabinet.dataset.theme = gameId; cabinet.innerHTML = `<div class="marquee">${game.name}</div><div class="screen-area"><div class="game-title">TOP SCORE</div><div class="high-score-display">${topScore}</div></div><div class="control-panel-base"><div class="control-panel"><div class="joystick"></div><div class="buttons"><div></div><div class="coin-slot"></div></div></div></div>`; cabinet.querySelector('.joystick').innerHTML = '<div class="joystick-base"></div><div class="joystick-stick"></div><div class="joystick-top"></div>'; cabinet.onclick = () => startGame(gameId); gameSelection.appendChild(cabinet); } }
-        function startGame(gameId) { AudioEngine.playSound('select'); AudioEngine.playMusic(games[gameId].music); arcadeRoom.style.display = 'none'; gameContainer.style.display = 'flex'; highScoresContainer.style.display = 'block'; currentGameId = gameId; highScoresTitle.innerText = `${games[currentGameId].name} Scores`; updateHighScoresDisplay(); games[gameId].init(); }
-        function stopGame() { AudioEngine.playMusic('menu'); if (gameLoopId) { cancelAnimationFrame(gameLoopId); clearInterval(gameLoopId); gameLoopId = null; } if(currentKeyListener) { document.removeEventListener('keydown', currentKeyListener); document.removeEventListener('keyup', currentKeyListener); currentKeyListener = null; } if(currentMouseListener) { canvas.removeEventListener('mousemove', currentMouseListener); currentMouseListener = null; } ctx.clearRect(0, 0, canvas.width, canvas.height); currentGameId = null; arcadeRoom.style.display = 'block'; gameContainer.style.display = 'none'; highScoresContainer.style.display = 'none'; createGameCabinets(); }
+        function createGameCabinets() { gameSelection.innerHTML = ''; for (const gameId in games) { const game = games[gameId]; let topScore = '-'; let topScorerName = 'N/A'; if(highScores[gameId] && highScores[gameId].length > 0) { const topEntry = highScores[gameId][0]; topScorerName = topEntry.name; topScore = topEntry.score; if(game.sort === 'asc') topScore += 's'; } const cabinet = document.createElement('div'); cabinet.className = 'game-cabinet'; cabinet.dataset.theme = gameId; cabinet.innerHTML = `<div class="marquee">${game.name}</div><div class="screen-area"><div class="game-title">TOP SCORE</div><div class="high-score-display">${topScorerName}: ${topScore}</div></div><div class="control-panel-base"><div class="control-panel"><div class="joystick"></div><div class="buttons"><div></div><div class="coin-slot"></div></div></div></div>`; cabinet.querySelector('.joystick').innerHTML = '<div class="joystick-base"></div><div class="joystick-stick"></div><div class="joystick-top"></div>'; cabinet.onclick = () => startGame(gameId); gameSelection.appendChild(cabinet); } }
+        function startGame(gameId) {
+            AudioEngine.playSound('select');
+            AudioEngine.playMusic(games[gameId].music);
+            arcadeRoom.style.display = 'none';
+            gameContainer.style.display = 'flex';
+            highScoresContainer.style.display = 'block';
+            currentGameId = gameId;
+            highScoresTitle.innerText = `${games[currentGameId].name} Scores`;
+            updateHighScoresDisplay();
+
+            timerElement.textContent = '';
+            levelLivesElement.style.display = 'block';
+            if (currentLobbyData && currentLobbyData.mode === 'versus') {
+                levelLivesElement.style.display = 'none'; // Hide level/lives in versus
+                let timeLeft = currentLobbyData.duration;
+                timerElement.textContent = `Time: ${timeLeft}`;
+                versusGameTimer = setInterval(() => {
+                    timeLeft--;
+                    timerElement.textContent = `Time: ${timeLeft}`;
+                    if (timeLeft <= 0) {
+                        clearInterval(versusGameTimer);
+                        endVersusMatch();
+                    }
+                }, 1000);
+            }
+
+            games[gameId].init();
+        }
+
+        async function endVersusMatch() {
+            AudioEngine.playSound('gameOver');
+            if (gameLoopId) { cancelAnimationFrame(gameLoopId); clearInterval(gameLoopId); gameLoopId = null; }
+            if(currentKeyListener) { document.removeEventListener('keydown', currentKeyListener); document.removeEventListener('keyup', currentKeyListener); currentKeyListener = null; } if(currentMouseListener) { canvas.removeEventListener('mousemove', currentMouseListener); currentMouseListener = null; }
+
+            const scoresRef = rtdb.ref(`lobbies/${currentLobbyId}/scores`);
+            const snapshot = await scoresRef.get();
+            const scores = snapshot.val() || {};
+
+            const sortedScores = Object.entries(scores).sort(([,a],[,b]) => b-a);
+
+            const resultsList = document.getElementById('results-list');
+            resultsList.innerHTML = '';
+            sortedScores.forEach(([name, score], index) => {
+                const li = document.createElement('li');
+                li.textContent = `${index === 0 ? '👑' : ''} ${name}: ${score}`;
+                resultsList.appendChild(li);
+            });
+            if (sortedScores.length === 0) {
+                 resultsList.innerHTML = '<li>No scores were submitted!</li>';
+            }
+
+            document.getElementById('versus-results-modal').style.display = 'flex';
+
+            setTimeout(() => {
+                document.getElementById('versus-results-modal').style.display = 'none';
+                if(isHost) {
+                    rtdb.ref(`lobbies/${currentLobbyId}`).remove();
+                }
+                stopGame();
+            }, 10000);
+        }
+
+        function stopGame() {
+            AudioEngine.playMusic('menu');
+            if (gameLoopId) { cancelAnimationFrame(gameLoopId); clearInterval(gameLoopId); gameLoopId = null; }
+            if (versusGameTimer) { clearInterval(versusGameTimer); versusGameTimer = null; }
+            if(currentKeyListener) { document.removeEventListener('keydown', currentKeyListener); document.removeEventListener('keyup', currentKeyListener); currentKeyListener = null; }
+            if(currentMouseListener) { canvas.removeEventListener('mousemove', currentMouseListener); currentMouseListener = null; }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            currentGameId = null;
+            arcadeRoom.style.display = 'block';
+            gameContainer.style.display = 'none';
+            highScoresContainer.style.display = 'none';
+            if (!currentLobbyId) {
+                currentLobbyData = null;
+            }
+            createGameCabinets();
+        }
         function updateHighScoresDisplay() { highScoresList.innerHTML = ''; const scores = highScores[currentGameId] || []; if (scores.length > 0) { scores.forEach(score => { const li = document.createElement('li'); let scoreDisplay = score.score; if(games[currentGameId].sort === 'asc') scoreDisplay += 's'; li.innerHTML = `<span class="name">${score.name}</span> <span class="score">${scoreDisplay}</span>`; highScoresList.appendChild(li); }); } else { highScoresList.innerHTML = '<li>No scores yet!</li>'; } }
-        function saveHighScore(score, gameId) { const gameData = games[gameId]; if (!gameData) return; let scores = highScores[gameId] || []; let isHighScore = false; if (gameData.sort === 'desc') { isHighScore = scores.length < 5 || score > (scores[scores.length-1]?.score ?? 0); } else { isHighScore = scores.length < 5 || score < (scores[scores.length-1]?.score ?? Infinity); } if (isHighScore) { const name = prompt('New High Score! Enter your name (3 chars):', playerName.substring(0,3)); if (name && name.trim()) { let currentScores = highScores[gameId] || []; currentScores.push({ name: name.substring(0, 3).toUpperCase(), score }); if(gameData.sort === 'desc') { currentScores.sort((a, b) => b.score - a.score); } else { currentScores.sort((a, b) => a.score - b.score); } highScores[gameId] = currentScores.slice(0, 5); localStorage.setItem('arcadeHighScores', JSON.stringify(highScores)); if(gameId === currentGameId) updateHighScoresDisplay(); createGameCabinets(); } } }
+        
+        function updatePlayerScore(score) {
+            scoreElement.textContent = `Score: ${score}`;
+            if (currentLobbyData && currentLobbyData.status === 'playing' && currentLobbyData.mode === 'versus') {
+                rtdb.ref(`lobbies/${currentLobbyId}/scores/${playerName}`).set(score);
+            }
+        }
+
+        function saveHighScore(score, gameId) {
+            if (currentLobbyData) return;
+            const gameData = games[gameId]; if (!gameData) return; let scores = highScores[gameId] || []; let isHighScore = false; if (gameData.sort === 'desc') { isHighScore = scores.length < 5 || score > (scores[scores.length-1]?.score ?? 0); } else { isHighScore = scores.length < 5 || score < (scores[scores.length-1]?.score ?? Infinity); }
+            if (isHighScore) {
+                const name = playerName.substring(0, 3).toUpperCase();
+                let currentScores = highScores[gameId] || [];
+                currentScores.push({ name: name, score });
+                if(gameData.sort === 'desc') { currentScores.sort((a, b) => b.score - a.score); } else { currentScores.sort((a, b) => a.score - b.score); }
+                highScores[gameId] = currentScores.slice(0, 5);
+                localStorage.setItem('arcadeHighScores', JSON.stringify(highScores));
+                if(gameId === currentGameId) updateHighScoresDisplay();
+                createGameCabinets();
+             }
+        }
         backToArcadeButton.onclick = stopGame;
 
-        function initTetris() { canvas.width = 300; canvas.height = 600; let gameOver = false; const COLS = 10, ROWS = 20, BLOCK_SIZE = 30; const COLORS = ['#00FFFF', '#0000FF', '#FFA500', '#FFFF00', '#00FF00', '#800080', '#FF0000']; const SHAPES = [ [], [[1,1,1,1]], [[2,0,0],[2,2,2]], [[0,0,3],[3,3,3]], [[4,4],[4,4]], [[0,5,5],[5,5,0]], [[0,6,0],[6,6,6]], [[7,7,0],[0,7,7]] ]; let arena = Array.from({ length: ROWS }, () => Array(COLS).fill(0)); let player = { pos: { x: 0, y: 0 }, matrix: null, score: 0, level: 1, lines: 0 }; let dropCounter = 0, dropInterval = 1000, lastTime = 0; function playerReset() { const typeId = Math.floor(Math.random() * (SHAPES.length-1)) + 1; player.matrix = SHAPES[typeId]; player.pos.y = 0; player.pos.x = (COLS / 2 | 0) - (player.matrix[0].length / 2 | 0); if (collide(arena, player)) { endGame(); } } function endGame() { if (gameOver) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(player.score, 'tetris'); setTimeout(() => { if (currentGameId === 'tetris') stopGame(); }, 2000); alert('Game Over'); } function drawMatrix(matrix, offset, colorOverride = null) { matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) { ctx.fillStyle = colorOverride ? colorOverride : COLORS[value-1]; ctx.fillRect(x + offset.x, y + offset.y, 1, 1); } })); } function drawGhost() { const ghost = { ...player, pos: { ...player.pos }}; while (!collide(arena, ghost)) { ghost.pos.y++; } ghost.pos.y--; drawMatrix(ghost.matrix, ghost.pos, 'rgba(255, 255, 255, 0.2)'); } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.scale(BLOCK_SIZE, BLOCK_SIZE); drawMatrix(arena, { x: 0, y: 0 }); if(!gameOver) drawGhost(); drawMatrix(player.matrix, player.pos); ctx.setTransform(1, 0, 0, 1, 0, 0); } function merge() { player.matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; })); } function collide(arena, player) { const [m, o] = [player.matrix, player.pos]; for (let y = 0; y < m.length; ++y) for (let x = 0; x < m[y].length; ++x) if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true; return false; } function playerDrop() { player.pos.y++; if (collide(arena, player)) { player.pos.y--; merge(); AudioEngine.playSound('hit'); arenaSweep(); playerReset(); } dropCounter = 0; } function playerMove(dir) { player.pos.x += dir; if (collide(arena, player)) player.pos.x -= dir; } function rotate(matrix) { const newMatrix = []; for (let i = 0; i < matrix[0].length; i++) { newMatrix.push([]); }; for (let i = 0; i < matrix.length; i++) { for (let j = 0; j < matrix[0].length; j++) { newMatrix[j].unshift(matrix[i][j]); } } return newMatrix; } function playerRotate() { const originalPos = player.pos.x; const originalMatrix = player.matrix; player.matrix = rotate(player.matrix); let offset = 1; while (collide(arena, player)) { player.pos.x += offset; offset = -(offset + (offset > 0 ? 1 : -1)); if (offset > player.matrix[0].length) { player.pos.x = originalPos; player.matrix = originalMatrix; return; } } } function arenaSweep() { let rowCount = 0; outer: for (let y = arena.length - 1; y > 0; --y) { for (let x = 0; x < arena[y].length; ++x) if (arena[y][x] === 0) continue outer; const row = arena.splice(y, 1)[0].fill(0); arena.unshift(row); ++y; rowCount++; } if (rowCount > 0) { AudioEngine.playSound('score'); player.score += (rowCount * 10) * rowCount * player.level; player.lines += rowCount; player.level = Math.floor(player.lines / 10) + 1; dropInterval = Math.max(100, 1000 * Math.pow(0.85, player.level - 1)); } } function update(time = 0) { if(gameOver) return; const deltaTime = time - lastTime; lastTime = time; dropCounter += deltaTime; if (dropCounter > dropInterval) playerDrop(); draw(); scoreElement.textContent = `Score: ${player.score}`; levelLivesElement.textContent = `Level: ${player.level}`; gameLoopId = requestAnimationFrame(update); } currentKeyListener = event => { if (gameOver) return; if (event.key === 'ArrowLeft') playerMove(-1); else if (event.key === 'ArrowRight') playerMove(1); else if (event.key === 'ArrowDown') playerDrop(); else if (event.key === 'ArrowUp') playerRotate(); }; document.addEventListener('keydown', currentKeyListener); playerReset(); update(); }
-        function initSpaceInvaders() { canvas.width = 600; canvas.height = 600; let score = 0, lives = 3, gameOver = false, gameOverText = '', currentLevel = 0, lastTime = 0, moveAccumulator = 0; const invaderLayouts = [ [[1,1,1,1,1,1,1,1],[2,2,2,2,2,2,2,2],[3,3,3,3,3,3,3,3]], [[0,1,1,0,0,2,2,0],[1,0,0,1,2,0,0,2],[1,1,1,1,2,2,2,2],[0,3,0,3,3,0,3,0]], [[1,1,0,0,0,0,2,2],[1,1,1,0,0,2,2,2],[3,3,3,3,3,3,3,3],[0,1,1,3,3,1,1,0]] ]; const invaderPixels = { 1: [ [0,0,1,1,1,1,0,0], [0,1,1,1,1,1,1,0], [1,1,0,1,1,0,1,1], [1,1,1,1,1,1,1,1], [0,1,0,1,1,0,1,0], [1,0,0,0,0,0,0,1] ], 2: [ [0,1,1,0,0,1,1,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ], 3: [ [0,0,1,1,1,1,0,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ] }; class Player { constructor() { this.x = canvas.width/2; this.y = canvas.height-50; this.width = 32; this.height = 16; this.speed = 250; } draw() { ctx.fillStyle = 'lime'; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillRect(this.x-2, this.y-4, 4, 4);}} class Bullet { constructor(x, y, speed, color) { this.x = x; this.y = y; this.width = 4; this.height = 15; this.speed = speed; this.color = color; } update(dt) { this.y += this.speed * dt; } draw() { ctx.shadowColor = this.color; ctx.shadowBlur = 15; ctx.fillStyle = this.color; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillStyle = 'white'; ctx.fillRect(this.x - 1, this.y + 2, 2, this.height-4); ctx.shadowBlur = 0; }} class Invader { constructor(x, y, type) { this.x = x; this.y = y; this.width = 32; this.height = 24; this.type = type; } draw() { const pixels = invaderPixels[this.type]; ctx.fillStyle='white'; for(let r=0; r<pixels.length; r++) for(let c=0; c<pixels[r].length; c++) if(pixels[r][c]) { ctx.fillRect(this.x+c*4, this.y+r*4, 4, 4); } }} class Bunker { constructor(x) { this.x = x; this.y = canvas.height - 120; this.width = 80; this.height = 40; this.health = 20; } draw() { if(this.health > 0) { ctx.fillStyle = `rgb(0, ${this.health * 12}, 0)`; ctx.fillRect(this.x, this.y, this.width, this.height); } }} let player = new Player(); let keys = {}; let playerBullets = [], invaderBullets = [], invaders = [], bunkers = []; let invaderDirection = 1, invaderDrop = 20, invaderMoveThreshold = 1000; function loadLevel(levelIndex) { invaders = []; const layout = invaderLayouts[levelIndex]; for(let r = 0; r < layout.length; r++) for(let c = 0; c < layout[r].length; c++) if(layout[r][c]) invaders.push(new Invader(80 + c * 50, 50 + r * 40, layout[r][c])); invaderMoveThreshold = 1000 - levelIndex * 150; player.x = canvas.width/2; } function update(dt) { if (gameOver) return; if (keys['ArrowLeft'] && player.x > player.width/2) player.x -= player.speed * dt; if (keys['ArrowRight'] && player.x < canvas.width-player.width/2) player.x += player.speed * dt; playerBullets.forEach((b, i) => { b.update(dt); if(b.y < 0) playerBullets.splice(i, 1); }); invaderBullets.forEach((b, i) => { b.update(dt); if(b.y > canvas.height) invaderBullets.splice(i, 1); }); moveAccumulator += dt * 1000; if(moveAccumulator > invaderMoveThreshold) { moveAccumulator = 0; let wallHit = false; invaders.forEach(invader => { invader.x += 10 * invaderDirection; if (invader.x + invader.width > canvas.width || invader.x < 0) wallHit = true; }); if (wallHit) { invaderDirection *= -1; invaders.forEach(invader => invader.y += invaderDrop); }} if (Math.random() < 0.02 && invaders.length > 0) { const shooter = invaders[Math.floor(Math.random()*invaders.length)]; invaderBullets.push(new Bullet(shooter.x+shooter.width/2, shooter.y+shooter.height, 300, 'red')); } invaders.forEach(invader => { if(invader.y + invader.height >= (bunkers[0]?.y || canvas.height - 50)) endGame('Game Over!'); }); playerBullets.forEach((bullet, bIndex) => { invaders.forEach((invader, iIndex) => { if (bullet.x > invader.x && bullet.x < invader.x + invader.width && bullet.y > invader.y && bullet.y < invader.y + invader.height) { playerBullets.splice(bIndex, 1); invaders.splice(iIndex, 1); score += 100 * (currentLevel+1); AudioEngine.playSound('hit'); } }); bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { playerBullets.splice(bIndex,1); bunker.health--; }}); }); invaderBullets.forEach((bullet, bIndex) => { if (bullet.x > player.x - player.width/2 && bullet.x < player.x + player.width/2 && bullet.y > player.y - player.height/2 && bullet.y < player.y + player.height/2) { invaderBullets.splice(bIndex, 1); lives--; AudioEngine.playSound('hit'); if (lives <= 0) endGame('Game Over!'); } bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { invaderBullets.splice(bIndex,1); bunker.health--; }}); }); if (invaders.length === 0) { currentLevel++; if(currentLevel >= invaderLayouts.length) { endGame('You Win!'); } else { loadLevel(currentLevel); } } } function draw() { ctx.clearRect(0, 0, canvas.width, canvas.height); if (!gameOver) player.draw(); playerBullets.forEach(b => b.draw()); invaderBullets.forEach(b => b.draw()); invaders.forEach(i => i.draw()); bunkers.forEach(b => b.draw()); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Lives: ${lives}`; if(gameOver) { ctx.fillStyle = 'white'; ctx.font = '40px "Press Start 2P"'; ctx.textAlign = 'center'; ctx.fillText(gameOverText, canvas.width/2, canvas.height/2); } } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); if (!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } function endGame(message) { if(gameOver) return; gameOver = true; gameOverText = message; AudioEngine.playSound('gameOver'); saveHighScore(score, 'spaceInvaders'); setTimeout(stopGame, 2000); } currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; if (e.key === ' ' && e.type === 'keydown' && playerBullets.length < 3) { AudioEngine.playSound('shoot'); playerBullets.push(new Bullet(player.x, player.y, -400, 'yellow')); } }; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); for(let i = 0; i < 4; i++) bunkers.push(new Bunker(70 + i * 120)); loadLevel(0); gameLoopId = requestAnimationFrame(gameLoop); }
+        function initTetris() { canvas.width = 300; canvas.height = 600; let gameOver = false; const COLS = 10, ROWS = 20, BLOCK_SIZE = 30; const COLORS = ['#00FFFF', '#0000FF', '#FFA500', '#FFFF00', '#00FF00', '#800080', '#FF0000']; const SHAPES = [ [], [[1,1,1,1]], [[2,0,0],[2,2,2]], [[0,0,3],[3,3,3]], [[4,4],[4,4]], [[0,5,5],[5,5,0]], [[0,6,0],[6,6,6]], [[7,7,0],[0,7,7]] ]; let arena = Array.from({ length: ROWS }, () => Array(COLS).fill(0)); let player = { pos: { x: 0, y: 0 }, matrix: null, score: 0, level: 1, lines: 0 }; let dropCounter = 0, dropInterval = 1000, lastTime = 0; function playerReset() { const typeId = Math.floor(Math.random() * (SHAPES.length-1)) + 1; player.matrix = SHAPES[typeId]; player.pos.y = 0; player.pos.x = (COLS / 2 | 0) - (player.matrix[0].length / 2 | 0); if (collide(arena, player)) { endGame(); } } function endGame() { if (gameOver || (currentLobbyData && currentLobbyData.mode === 'versus')) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(player.score, 'tetris'); setTimeout(() => { if (currentGameId === 'tetris') stopGame(); }, 2000); alert('Game Over'); } function drawMatrix(matrix, offset, colorOverride = null) { matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) { ctx.fillStyle = colorOverride ? colorOverride : COLORS[value-1]; ctx.fillRect(x + offset.x, y + offset.y, 1, 1); } })); } function drawGhost() { const ghost = { ...player, pos: { ...player.pos }}; while (!collide(arena, ghost)) { ghost.pos.y++; } ghost.pos.y--; drawMatrix(ghost.matrix, ghost.pos, 'rgba(255, 255, 255, 0.2)'); } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.scale(BLOCK_SIZE, BLOCK_SIZE); drawMatrix(arena, { x: 0, y: 0 }); if(!gameOver) drawGhost(); drawMatrix(player.matrix, player.pos); ctx.setTransform(1, 0, 0, 1, 0, 0); } function merge() { player.matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; })); } function collide(arena, player) { const [m, o] = [player.matrix, player.pos]; for (let y = 0; y < m.length; ++y) for (let x = 0; x < m[y].length; ++x) if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true; return false; } function playerDrop() { player.pos.y++; if (collide(arena, player)) { player.pos.y--; merge(); AudioEngine.playSound('hit'); arenaSweep(); playerReset(); } dropCounter = 0; } function playerMove(dir) { player.pos.x += dir; if (collide(arena, player)) player.pos.x -= dir; } function rotate(matrix) { const newMatrix = []; for (let i = 0; i < matrix[0].length; i++) { newMatrix.push([]); }; for (let i = 0; i < matrix.length; i++) { for (let j = 0; j < matrix[0].length; j++) { newMatrix[j].unshift(matrix[i][j]); } } return newMatrix; } function playerRotate() { const originalPos = player.pos.x; const originalMatrix = player.matrix; player.matrix = rotate(player.matrix); let offset = 1; while (collide(arena, player)) { player.pos.x += offset; offset = -(offset + (offset > 0 ? 1 : -1)); if (offset > player.matrix[0].length) { player.pos.x = originalPos; player.matrix = originalMatrix; return; } } } function arenaSweep() { let rowCount = 0; outer: for (let y = arena.length - 1; y > 0; --y) { for (let x = 0; x < arena[y].length; ++x) if (arena[y][x] === 0) continue outer; const row = arena.splice(y, 1)[0].fill(0); arena.unshift(row); ++y; rowCount++; } if (rowCount > 0) { AudioEngine.playSound('score'); player.score += (rowCount * 10) * rowCount * player.level; player.lines += rowCount; player.level = Math.floor(player.lines / 10) + 1; dropInterval = Math.max(100, 1000 * Math.pow(0.85, player.level - 1)); updatePlayerScore(player.score); } } function update(time = 0) { if(gameOver) return; const deltaTime = time - lastTime; lastTime = time; dropCounter += deltaTime; if (dropCounter > dropInterval) playerDrop(); draw(); levelLivesElement.textContent = `Level: ${player.level}`; gameLoopId = requestAnimationFrame(update); } currentKeyListener = event => { if (gameOver) return; if (event.key === 'ArrowLeft') playerMove(-1); else if (event.key === 'ArrowRight') playerMove(1); else if (event.key === 'ArrowDown') playerDrop(); else if (event.key === 'ArrowUp') playerRotate(); }; document.addEventListener('keydown', currentKeyListener); playerReset(); update(); }
+        function initSpaceInvaders() { canvas.width = 600; canvas.height = 600; let score = 0, lives = 3, gameOver = false, gameOverText = '', currentLevel = 0, lastTime = 0, moveAccumulator = 0; const invaderLayouts = [ [[1,1,1,1,1,1,1,1],[2,2,2,2,2,2,2,2],[3,3,3,3,3,3,3,3]], [[0,1,1,0,0,2,2,0],[1,0,0,1,2,0,0,2],[1,1,1,1,2,2,2,2],[0,3,0,3,3,0,3,0]], [[1,1,0,0,0,0,2,2],[1,1,1,0,0,2,2,2],[3,3,3,3,3,3,3,3],[0,1,1,3,3,1,1,0]] ]; const invaderPixels = { 1: [ [0,0,1,1,1,1,0,0], [0,1,1,1,1,1,1,0], [1,1,0,1,1,0,1,1], [1,1,1,1,1,1,1,1], [0,1,0,1,1,0,1,0], [1,0,0,0,0,0,0,1] ], 2: [ [0,1,1,0,0,1,1,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ], 3: [ [0,0,1,1,1,1,0,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ] }; class Player { constructor() { this.x = canvas.width/2; this.y = canvas.height-50; this.width = 32; this.height = 16; this.speed = 250; } draw() { ctx.fillStyle = 'lime'; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillRect(this.x-2, this.y-4, 4, 4);}} class Bullet { constructor(x, y, speed, color) { this.x = x; this.y = y; this.width = 4; this.height = 15; this.speed = speed; this.color = color; } update(dt) { this.y += this.speed * dt; } draw() { ctx.shadowColor = this.color; ctx.shadowBlur = 15; ctx.fillStyle = this.color; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillStyle = 'white'; ctx.fillRect(this.x - 1, this.y + 2, 2, this.height-4); ctx.shadowBlur = 0; }} class Invader { constructor(x, y, type) { this.x = x; this.y = y; this.width = 32; this.height = 24; this.type = type; } draw() { const pixels = invaderPixels[this.type]; ctx.fillStyle='white'; for(let r=0; r<pixels.length; r++) for(let c=0; c<pixels[r].length; c++) if(pixels[r][c]) { ctx.fillRect(this.x+c*4, this.y+r*4, 4, 4); } }} class Bunker { constructor(x) { this.x = x; this.y = canvas.height - 120; this.width = 80; this.height = 40; this.health = 20; } draw() { if(this.health > 0) { ctx.fillStyle = `rgb(0, ${this.health * 12}, 0)`; ctx.fillRect(this.x, this.y, this.width, this.height); } }} let player = new Player(); let keys = {}; let playerBullets = [], invaderBullets = [], invaders = [], bunkers = []; let invaderDirection = 1, invaderDrop = 20, invaderMoveThreshold = 1000; function loadLevel(levelIndex) { invaders = []; const layout = invaderLayouts[levelIndex]; for(let r = 0; r < layout.length; r++) for(let c = 0; c < layout[r].length; c++) if(layout[r][c]) invaders.push(new Invader(80 + c * 50, 50 + r * 40, layout[r][c])); invaderMoveThreshold = 1000 - levelIndex * 150; player.x = canvas.width/2; } function update(dt) { if (gameOver) return; if (keys['ArrowLeft'] && player.x > player.width/2) player.x -= player.speed * dt; if (keys['ArrowRight'] && player.x < canvas.width-player.width/2) player.x += player.speed * dt; playerBullets.forEach((b, i) => { b.update(dt); if(b.y < 0) playerBullets.splice(i, 1); }); invaderBullets.forEach((b, i) => { b.update(dt); if(b.y > canvas.height) invaderBullets.splice(i, 1); }); moveAccumulator += dt * 1000; if(moveAccumulator > invaderMoveThreshold) { moveAccumulator = 0; let wallHit = false; invaders.forEach(invader => { invader.x += 10 * invaderDirection; if (invader.x + invader.width > canvas.width || invader.x < 0) wallHit = true; }); if (wallHit) { invaderDirection *= -1; invaders.forEach(invader => invader.y += invaderDrop); }} if (Math.random() < 0.02 && invaders.length > 0) { const shooter = invaders[Math.floor(Math.random()*invaders.length)]; invaderBullets.push(new Bullet(shooter.x+shooter.width/2, shooter.y+shooter.height, 300, 'red')); } invaders.forEach(invader => { if(invader.y + invader.height >= (bunkers[0]?.y || canvas.height - 50)) endGame('Game Over!'); }); playerBullets.forEach((bullet, bIndex) => { invaders.forEach((invader, iIndex) => { if (bullet.x > invader.x && bullet.x < invader.x + invader.width && bullet.y > invader.y && bullet.y < invader.y + invader.height) { playerBullets.splice(bIndex, 1); invaders.splice(iIndex, 1); score += 100 * (currentLevel+1); updatePlayerScore(score); AudioEngine.playSound('hit'); } }); bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { playerBullets.splice(bIndex,1); bunker.health--; }}); }); invaderBullets.forEach((bullet, bIndex) => { if (bullet.x > player.x - player.width/2 && bullet.x < player.x + player.width/2 && bullet.y > player.y - player.height/2 && bullet.y < player.y + player.height/2) { invaderBullets.splice(bIndex, 1); lives--; AudioEngine.playSound('hit'); if (lives <= 0) endGame('Game Over!'); } bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { invaderBullets.splice(bIndex,1); bunker.health--; }}); }); if (invaders.length === 0) { currentLevel++; if(currentLevel >= invaderLayouts.length) { endGame('You Win!'); } else { loadLevel(currentLevel); } } } function draw() { ctx.clearRect(0, 0, canvas.width, canvas.height); if (!gameOver) player.draw(); playerBullets.forEach(b => b.draw()); invaderBullets.forEach(b => b.draw()); invaders.forEach(i => i.draw()); bunkers.forEach(b => b.draw()); levelLivesElement.textContent = `Lives: ${lives}`; if(gameOver) { ctx.fillStyle = 'white'; ctx.font = '40px "Press Start 2P"'; ctx.textAlign = 'center'; ctx.fillText(gameOverText, canvas.width/2, canvas.height/2); } } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); if (!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } function endGame(message) { if(gameOver || (currentLobbyData && currentLobbyData.mode === 'versus')) return; gameOver = true; gameOverText = message; AudioEngine.playSound('gameOver'); saveHighScore(score, 'spaceInvaders'); setTimeout(stopGame, 2000); } currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; if (e.key === ' ' && e.type === 'keydown' && playerBullets.length < 3) { AudioEngine.playSound('shoot'); playerBullets.push(new Bullet(player.x, player.y, -400, 'yellow')); } }; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); for(let i = 0; i < 4; i++) bunkers.push(new Bunker(70 + i * 120)); loadLevel(0); gameLoopId = requestAnimationFrame(gameLoop); }
         function initPacman() {
             canvas.width = 560; canvas.height = 620; let score = 0, lives = 3; let frame = 0, lastTime = 0, gameOver = false; const TILE_SIZE = 20, PAC_SPEED = 100; const map=[[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1],[1,2,1,1,1,1,2,1,1,2,1,1,1,4,4,1,1,1,2,1,1,2,1,1,1,1,2,1],[1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],[1,1,1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1,1,1],[0,0,0,0,0,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,1,1,1,5,5,1,1,1,0,1,1,2,1,0,0,0,0,0],[1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1],[0,0,0,0,0,0,2,0,0,0,1,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0],[1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1],[0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0],[1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1],[1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],[1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],[1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],[1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],[1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]; let totalPellets = map.flat().filter(tile => tile === 2 || tile === 3).length;
             class Entity { constructor(x, y, radius, color, speed) { this.x = x; this.y = y; this.radius = radius; this.color = color; this.speed = speed; this.dir = {x:0, y:0}; this.nextDir = {x:0, y:0}; } getMapPos() { return { x: Math.floor(this.x / TILE_SIZE), y: Math.floor(this.y / TILE_SIZE) }; } isAtCenter() { const xRem = this.x % TILE_SIZE; const yRem = this.y % TILE_SIZE; const center = TILE_SIZE/2; return xRem > center-1 && xRem < center+1 && yRem > center-1 && yRem < center+1; }}
@@ -431,17 +593,17 @@
             function canMove(entity, dir) { const nextMapX = Math.floor(entity.x/TILE_SIZE) + dir.x; const nextMapY = Math.floor(entity.y/TILE_SIZE) + dir.y; const tile = getTile(nextMapX, nextMapY); return tile !== 1;}
             function moveEntity(entity, dt) { if (entity.isAtCenter()) { if ((entity.nextDir.x !== 0 || entity.nextDir.y !== 0) && canMove(entity, entity.nextDir)) entity.dir = {...entity.nextDir}; if (!canMove(entity, entity.dir)) { entity.x = entity.getMapPos().x * TILE_SIZE + TILE_SIZE/2; entity.y = entity.getMapPos().y * TILE_SIZE + TILE_SIZE/2; entity.dir = {x:0, y:0}; } } entity.x += entity.dir.x * entity.speed * dt; entity.y += entity.dir.y * entity.speed * dt; if(entity.x < -entity.radius) entity.x = canvas.width + entity.radius; if(entity.x > canvas.width + entity.radius) entity.x = -entity.radius; }
             function updateGhost(ghost) { if (!ghost.isReleased || ghost.respawnTimer > 0) return; if (ghost.isAtCenter()) { const ghostPos = ghost.getMapPos(); let target; const isInBox = ghostPos.y >= 12 && ghostPos.x >= 12 && ghostPos.x <= 16; if (isInBox) { target = { x: 14 * TILE_SIZE, y: 11 * TILE_SIZE }; } else { target = pacman; } let possibleMoves = []; if (canMove(ghost, {x: 1, y: 0})) possibleMoves.push({x: 1, y: 0}); if (canMove(ghost, {x: -1, y: 0})) possibleMoves.push({x: -1, y: 0}); if (canMove(ghost, {x: 0, y: 1})) possibleMoves.push({x: 0, y: 1}); if (canMove(ghost, {x: 0, y: -1})) possibleMoves.push({x: 0, y: -1}); let choices = possibleMoves; if (choices.length > 1) { choices = choices.filter(move => move.x !== -ghost.dir.x || move.y !== -ghost.dir.y); } if (!isInBox) { const isAtIntersectionAboveBox = ghostPos.y === 11 && (ghostPos.x >= 13 && ghostPos.x <= 15); if(isAtIntersectionAboveBox){ choices = choices.filter(move => move.y !== 1); } } if (choices.length > 0) { choices.sort((a, b) => { const distA = Math.hypot(target.x - ((ghostPos.x + a.x) * TILE_SIZE), target.y - ((ghostPos.y + a.y) * TILE_SIZE)); const distB = Math.hypot(target.x - ((ghostPos.x + b.x) * TILE_SIZE), target.y - ((ghostPos.y + b.y) * TILE_SIZE)); return distA - distB; }); if (ghost.isFrightened && !isInBox) { ghost.nextDir = choices[choices.length - 1]; } else { ghost.nextDir = choices[0]; } } else { ghost.nextDir = {x: -ghost.dir.x, y: -ghost.dir.y}; } } }
-            function checkCollisions() { const {x:mapX, y:mapY} = pacman.getMapPos(); if(getTile(mapX, mapY) === 2) { map[mapY][mapX] = 0; score += 10; totalPellets--; AudioEngine.playSound('score'); } else if(getTile(mapX, mapY) === 3) { map[mapY][mapX] = 0; score += 50; totalPellets--; ghosts.forEach(g => { if(g.isReleased) g.isFrightened = true; }); frightenedTimer = 7; AudioEngine.playSound('score');} ghosts.forEach(ghost => { if (ghost.respawnTimer > 0) return; const dist = Math.hypot(pacman.x-ghost.x, pacman.y-ghost.y); if(dist < pacman.radius+ghost.radius) { if (ghost.isFrightened) { score += 200; ghost.x = ghost.homeX; ghost.y = ghost.homeY; ghost.isFrightened=false; ghost.respawnTimer = 3; AudioEngine.playSound('score'); } else { resetAfterDeath(); }}})}
-            function resetAfterDeath() { lives--; AudioEngine.playSound('hit'); if(lives <= 0) { gameOver=true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'pacman'); alert("Game Over!"); setTimeout(stopGame, 100); } else { pacman.x = 14*TILE_SIZE+TILE_SIZE/2; pacman.y = 23*TILE_SIZE+TILE_SIZE/2; pacman.dir = {x:0, y:0}; pacman.nextDir = {x:0, y:0}; ghosts.forEach((g,i) => {g.x = g.homeX; g.y = g.homeY; g.isFrightened=false; g.isReleased = (i===0); g.respawnTimer = 0;}); releaseTimer=0;}}
-            function gameLoop(currentTime) { if(gameOver) return; frame++; const dt = (currentTime - (lastTime||currentTime)) / 1000; lastTime = currentTime; ctx.clearRect(0,0,canvas.width,canvas.height); drawMap(); moveEntity(pacman, dt); ghosts.forEach((g) => { if (g.respawnTimer > 0) g.respawnTimer -= dt; else { updateGhost(g); } moveEntity(g, dt); }); pacman.draw(); ghosts.forEach(g => g.draw()); checkCollisions(); if (frightenedTimer > 0) { frightenedTimer -= dt; if (frightenedTimer <= 0) ghosts.forEach(g => g.isFrightened = false); } releaseTimer += dt; if(releaseTimer > 4 && !ghosts[1].isReleased){ghosts[1].isReleased = true;} if(releaseTimer > 8 && !ghosts[2].isReleased){ghosts[2].isReleased = true;} if(releaseTimer > 12 && !ghosts[3].isReleased){ghosts[3].isReleased = true;} if(totalPellets === 0) { saveHighScore(score, 'pacman'); alert("You Win!"); stopGame(); return; } scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Lives: ${lives}`; gameLoopId = requestAnimationFrame(gameLoop); }
+            function checkCollisions() { const {x:mapX, y:mapY} = pacman.getMapPos(); if(getTile(mapX, mapY) === 2) { map[mapY][mapX] = 0; score += 10; updatePlayerScore(score); totalPellets--; AudioEngine.playSound('score'); } else if(getTile(mapX, mapY) === 3) { map[mapY][mapX] = 0; score += 50; updatePlayerScore(score); totalPellets--; ghosts.forEach(g => { if(g.isReleased) g.isFrightened = true; }); frightenedTimer = 7; AudioEngine.playSound('score');} ghosts.forEach(ghost => { if (ghost.respawnTimer > 0) return; const dist = Math.hypot(pacman.x-ghost.x, pacman.y-ghost.y); if(dist < pacman.radius+ghost.radius) { if (ghost.isFrightened) { score += 200; updatePlayerScore(score); ghost.x = ghost.homeX; ghost.y = ghost.homeY; ghost.isFrightened=false; ghost.respawnTimer = 3; AudioEngine.playSound('score'); } else { resetAfterDeath(); }}})}
+            function resetAfterDeath() { lives--; AudioEngine.playSound('hit'); if(lives <= 0) { if(currentLobbyData && currentLobbyData.mode === 'versus') { pacman.x = -1000; pacman.y = -1000; } else { gameOver=true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'pacman'); alert("Game Over!"); setTimeout(stopGame, 100); } } else { pacman.x = 14*TILE_SIZE+TILE_SIZE/2; pacman.y = 23*TILE_SIZE+TILE_SIZE/2; pacman.dir = {x:0, y:0}; pacman.nextDir = {x:0, y:0}; ghosts.forEach((g,i) => {g.x = g.homeX; g.y = g.homeY; g.isFrightened=false; g.isReleased = (i===0); g.respawnTimer = 0;}); releaseTimer=0;}}
+            function gameLoop(currentTime) { if(gameOver) return; frame++; const dt = (currentTime - (lastTime||currentTime)) / 1000; lastTime = currentTime; ctx.clearRect(0,0,canvas.width,canvas.height); drawMap(); moveEntity(pacman, dt); ghosts.forEach((g) => { if (g.respawnTimer > 0) g.respawnTimer -= dt; else { updateGhost(g); } moveEntity(g, dt); }); pacman.draw(); ghosts.forEach(g => g.draw()); checkCollisions(); if (frightenedTimer > 0) { frightenedTimer -= dt; if (frightenedTimer <= 0) ghosts.forEach(g => g.isFrightened = false); } releaseTimer += dt; if(releaseTimer > 4 && !ghosts[1].isReleased){ghosts[1].isReleased = true;} if(releaseTimer > 8 && !ghosts[2].isReleased){ghosts[2].isReleased = true;} if(releaseTimer > 12 && !ghosts[3].isReleased){ghosts[3].isReleased = true;} if(totalPellets === 0 && !(currentLobbyData && currentLobbyData.mode === 'versus')) { saveHighScore(score, 'pacman'); alert("You Win!"); stopGame(); return; } levelLivesElement.textContent = `Lives: ${lives}`; gameLoopId = requestAnimationFrame(gameLoop); }
             currentKeyListener = e => { if (e.type === 'keydown') { if (e.key==='ArrowUp') pacman.nextDir = {x:0, y:-1}; else if (e.key==='ArrowDown') pacman.nextDir = {x:0, y:1}; else if (e.key==='ArrowLeft') pacman.nextDir = {x:-1, y:0}; else if (e.key==='ArrowRight') pacman.nextDir = {x:1, y:0}; }};
             document.addEventListener('keydown', currentKeyListener);
             gameLoopId = requestAnimationFrame(gameLoop);
         }
-        function initBreakout() { canvas.width = 800; canvas.height = 600; let score = 0, lives = 3, currentLevel = 0, lastTime = 0, gameOver=false; const paddle = { x: canvas.width/2-50, y: canvas.height-30, width: 100, height: 10, speed: 500, baseWidth: 100, laserActive: false }; let balls = [], bullets = []; const R = 0; const brickLevels = [ [[1,2,3,4,5,4,3,2,1],[1,2,3,4,5,4,3,2,1],[1,2,3,4,5,4,3,2,1]], [[R,R,1,1,R,1,1,R,R],[R,1,1,1,1,1,1,1,R],[1,1,1,1,1,1,1,1,1],[R,R,1,1,1,1,1,R,R],[R,R,R,1,1,1,R,R,R]], [[5,5,5,5,5,5,5,5,5],[R,R,R,R,R,R,R,R,R],[3,3,3,3,3,3,3,3,3],[R,R,R,R,R,R,R,R,R],[1,1,1,1,1,1,1,1,1]], [[1,1,R,R,R,R,R,1,1],[1,1,1,R,R,R,1,1,1],[1,1,1,1,R,1,1,1,1],[1,1,1,R,R,R,1,1,1],[1,1,R,R,R,R,R,1,1]], ]; const brickInfo = { rowCount: 0, columnCount: 9, width: 75, height: 20, padding: 10, offsetTop: 30, offsetLeft: 30 }; const brickColors = ["#f1c40f", "#e67e22", "#c0392b", "#9b59b6", "#3498db"]; let bricks = [], totalBricks = 0, powerups = []; function Ball(x, y, dx, dy) { this.x = x; this.y = y; this.radius = 8; this.dx = dx; this.dy = dy; this.speed = 400; } function loadLevel(levelIndex) { bricks = []; totalBricks = 0; powerups = []; balls = []; lives = 3; const layout = brickLevels[levelIndex % brickLevels.length]; brickInfo.rowCount = layout.length; brickInfo.columnCount = layout[0].length; for (let c = 0; c < brickInfo.columnCount; c++) { bricks[c] = []; for (let r = 0; r < brickInfo.rowCount; r++) { const type = layout[r][c]; if(type) { bricks[c][r] = { x: 0, y: 0, status: 1, color: brickColors[type-1], points: type * 10 }; totalBricks++; }}} setTimeout(resetBallAndPaddle, 100); } function resetBallAndPaddle() { balls = [new Ball(canvas.width/2, canvas.height/2, Math.random() > 0.5 ? 1 : -1, -1)]; paddle.x = canvas.width/2 - paddle.width/2; } function update(dt) { if(gameOver) return; if(keys['ArrowLeft'] && paddle.x > 0) paddle.x -= player.speed * dt; if(keys['ArrowRight'] && paddle.x < canvas.width - paddle.width) paddle.x += player.speed * dt; for(let i = powerups.length-1; i >= 0; i--) { const p = powerups[i]; p.y += 150 * dt; if(p.y > paddle.y && p.x > paddle.x && p.x < paddle.x + paddle.width) { activatePowerup(p.type); powerups.splice(i, 1); } else if(p.y > canvas.height) powerups.splice(i, 1); } for(let i=balls.length-1; i>=0; i--) { let ball = balls[i]; ball.x += ball.dx * ball.speed * dt; ball.y += ball.dy * ball.speed * dt; if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) ball.dx = -ball.dx; if (ball.y - ball.radius < 0) ball.dy = -ball.dy; if (ball.y + ball.radius > canvas.height + 20) balls.splice(i,1); if (ball.y + ball.radius > paddle.y && ball.y - ball.radius < paddle.y + paddle.height && ball.x + ball.radius > paddle.x && ball.x - ball.radius < paddle.x + paddle.width) { if (ball.dy > 0) { ball.dy = -1; ball.y = paddle.y - ball.radius; const hitPos = (ball.x - (paddle.x + paddle.width/2)) / (paddle.width/2); ball.dx = hitPos * 2; AudioEngine.playSound('hit'); } } } for (let c = 0; c < brickInfo.columnCount; c++) for (let r = 0; r < brickInfo.rowCount; r++) { const b = bricks[c]?.[r]; if (b?.status === 1) { balls.forEach(ball => { if (ball.x > b.x && ball.x < b.x + brickInfo.width && ball.y > b.y && ball.y < b.y + brickInfo.height) { ball.dy = -ball.dy; b.status = 0; score += b.points; totalBricks--; AudioEngine.playSound('hit'); if(Math.random() < 0.2) powerups.push({x:b.x+brickInfo.width/2, y:b.y, type: ['big_paddle','multi_ball','laser'][Math.floor(Math.random()*3)]}); }}); bullets.forEach((bullet, bIndex) => { if (bullet.x > b.x && bullet.x < b.x + brickInfo.width && bullet.y > b.y && bullet.y < b.y + brickInfo.height) { bullets.splice(bIndex, 1); b.status = 0; score += b.points; totalBricks--; AudioEngine.playSound('hit'); }});}} bullets.forEach((bullet, i) => { bullet.y -= 400 * dt; if(bullet.y < 0) bullets.splice(i, 1); }); if (totalBricks === 0 && balls.length > 0) { currentLevel++; loadLevel(currentLevel); } if(balls.length === 0 && totalBricks > 0) { lives--; AudioEngine.playSound('hit'); if (!lives) { gameOver=true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'breakout'); alert('GAME OVER'); stopGame(); return; } else { resetBallAndPaddle(); }} } function drawPowerupIcon(x, y, type) { ctx.fillStyle='lime'; if(type==='big_paddle') { ctx.fillRect(x-10, y, 20, 5); } else if(type==='multi_ball') { ctx.beginPath(); ctx.arc(x-5, y+2, 3, 0, Math.PI*2); ctx.arc(x+5, y+2, 3, 0, Math.PI*2); ctx.fill(); } else if(type==='laser') { ctx.fillRect(x-2, y, 4, 10); }} function draw() { ctx.clearRect(0, 0, canvas.width, canvas.height); for (let c=0; c<brickInfo.columnCount; c++) for (let r=0; r<brickInfo.rowCount; r++) { const b = bricks[c]?.[r]; if(b?.status) { b.x = c * (brickInfo.width + brickInfo.padding) + brickInfo.offsetLeft; b.y = r * (brickInfo.height + brickInfo.padding) + brickInfo.offsetTop; ctx.fillStyle = b.color; ctx.fillRect(b.x, b.y, brickInfo.width, brickInfo.height); } } ctx.fillStyle = paddle.laserActive ? '#ff55de' : '#3498db'; ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height); powerups.forEach(p => drawPowerupIcon(p.x, p.y, p.type)); balls.forEach(ball => { ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2); ctx.fillStyle='white'; ctx.fill(); }); bullets.forEach(bullet => { ctx.fillStyle = 'yellow'; ctx.fillRect(bullet.x-2, bullet.y, 4, 10); }); } function activatePowerup(type) { AudioEngine.playSound('score'); if(type==='big_paddle') { paddle.width = paddle.baseWidth * 1.5; setTimeout(() => paddle.width=paddle.baseWidth, 10000); } else if(type==='multi_ball') { const currentBalls = [...balls]; currentBalls.forEach(b => { balls.push(new Ball(b.x, b.y, -b.dx, -b.dy), new Ball(b.x, b.y, b.dx, -b.dy)); }); } else if(type==='laser') { paddle.laserActive = true; setTimeout(() => paddle.laserActive=false, 10000); } } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Lives: ${lives}`; if(!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } let keys = {}; currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; if(e.key === ' ' && e.type === 'keydown' && paddle.laserActive) { AudioEngine.playSound('shoot'); bullets.push({x: paddle.x + 10, y: paddle.y}); bullets.push({x: paddle.x + paddle.width - 10, y: paddle.y}); }}; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); loadLevel(0); gameLoopId = requestAnimationFrame(gameLoop); }
-        function initRacing() { canvas.width = 400; canvas.height = 600; const initialSpeed = 80; let topSpeed = 0; let score = 0; let speed = initialSpeed, gameOver = false, lastTime = 0, enemySpawnTimer = 2; const player = { x: canvas.width/2 - 20, y: canvas.height - 100, width: 40, height: 60, speed: 300 }; const keys = {}; let roadMarkings = [], enemies = [], verges = []; const vehicleTypes = [ {type:'car', w:40, h:60}, {type:'van', w:45, h:70}, {type:'bike', w:20, h:50}, {type:'bus', w:50, h:100}, {type:'limo', w:40, h:120} ]; function spawnEnemyWave() { const laneWidth = (canvas.width-100)/3; const lane = Math.floor(Math.random()*3); const vehicle = vehicleTypes[Math.floor(Math.random()*vehicleTypes.length)]; const x = 50 + lane * laneWidth + (laneWidth/2) - (vehicle.w/2) + (Math.random()-0.5)*(laneWidth/4); const color = ['#FF5555', '#FFFF88', '#88FF88', '#3498db'][Math.floor(Math.random() * 4)]; enemies.push({ x, y: -vehicle.h, ...vehicle, color, speedModifier: Math.random() * 0.2 + 0.85 }); } function update(dt) { if (gameOver) return; if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed * dt; if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed * dt; speed += 8 * dt; roadMarkings.forEach(m => { m.y += speed * 1.1 * dt; }); roadMarkings = roadMarkings.filter(m => m.y < canvas.height); verges.forEach(v => { v.y += speed * 1.1 * dt; }); verges = verges.filter(v => v.y < canvas.height); enemies.forEach(e => { e.y += speed * e.speedModifier * dt; }); enemies = enemies.filter(e => e.y < canvas.height); if(roadMarkings.length === 0 || roadMarkings[roadMarkings.length-1].y > 120) roadMarkings.push({ y: -60, height: 40 }); if(verges.length === 0 || verges[verges.length-1].y > 0) verges.push({ y: -50, height: 52, color: Math.random() < 0.5 ? '#00A000' : '#11BB11' }); enemySpawnTimer -= dt; if(enemySpawnTimer <= 0) { spawnEnemyWave(); enemySpawnTimer = Math.max(0.5, 1.5 - (speed / 500)); } enemies.forEach(enemy => { if (player.x < enemy.x + enemy.w && player.x + player.width > enemy.x && player.y < enemy.y + enemy.h && player.y + player.height > enemy.y) { endGame(); } }); topSpeed = Math.max(topSpeed, (30 + (speed-initialSpeed)/5)); score = Math.floor(topSpeed * 10); } function endGame(){ if(gameOver) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'racing'); alert("Game Over!"); setTimeout(stopGame, 100); } function drawF1Car(x,y,w,h,color) { ctx.fillStyle = color; ctx.fillRect(x+w*0.2, y, w*0.6, h); ctx.fillRect(x, y+h*0.2, w, h*0.2); ctx.fillRect(x, y+h*0.6, w, h*0.2); ctx.fillStyle = '#111'; ctx.fillRect(x-w*0.1, y+h*0.1, w*0.2, h*0.2); ctx.fillRect(x+w*0.9, y+h*0.1, w*0.2, h*0.2); ctx.fillRect(x-w*0.1, y+h*0.7, w*0.2, h*0.2); ctx.fillRect(x+w*0.9, y+h*0.7, w*0.2, h*0.2); ctx.fillStyle = '#00e5ff'; ctx.fillRect(x+w*0.4, y+h*0.4, w*0.2, h*0.2); } function drawVehicle(x, y, w, h, color, type) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#2c3e50'; if (type === 'car' || type === 'van' || type === 'limo') { ctx.fillRect(x + w*0.1, y + h*0.1, w*0.8, h*0.3); ctx.fillRect(x + w*0.1, y + h*0.6, w*0.8, h*0.3); } else if (type === 'bus') { for(let i=0.1; i < 0.9; i+=0.3) ctx.fillRect(x + w*0.1, y + h*i, w*0.8, h*0.1); } else if (type === 'bike') { ctx.fillStyle = '#333'; ctx.fillRect(x, y+h*0.2, w, h*0.6); ctx.fillStyle=color; ctx.fillRect(x+w*0.3, y, w*0.4, h*0.8); } } function draw() { ctx.fillStyle = '#666'; ctx.fillRect(0, 0, canvas.width, canvas.height); verges.forEach(v => { ctx.fillStyle = v.color; ctx.fillRect(0, v.y, 50, v.height+2); ctx.fillRect(canvas.width-50, v.y, 50, v.height+2); }); ctx.fillStyle = 'yellow'; ctx.fillRect(50,0,5,canvas.height); ctx.fillRect(canvas.width-55,0,5,canvas.height); ctx.fillStyle = 'white'; const laneWidth = (canvas.width-100)/3; roadMarkings.forEach(m => { ctx.fillRect(50 + laneWidth - 2.5, m.y, 5, m.height); ctx.fillRect(50 + 2*laneWidth - 2.5, m.y, 5, m.height); }); enemies.forEach(e => drawVehicle(e.x, e.y, e.w, e.h, e.color, e.type)); drawF1Car(player.x, player.y, player.width, player.height, '#FF0000'); } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Speed: ${Math.floor(topSpeed)}`; if(!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; }; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); gameLoopId = requestAnimationFrame(gameLoop); }
-        function initSnake() { canvas.width = 400; canvas.height = 400; const gridSize = 20; let snake = [{ x: 10, y: 10 }]; let food = {}; let direction = {x:1, y:0}; let score = 0; let gameOver = false; let inputQueue = []; let lastTime=0, accumulator=0, interval=0.12; function generateFood() { food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) }; snake.forEach(s => {if(s.x === food.x && s.y === food.y) generateFood();}); } function update() { if(inputQueue.length > 0) { const nextDir = inputQueue.shift(); if((nextDir.x !== -direction.x || nextDir.y !== -direction.y) && (direction.x !==0 || direction.y !==0)) direction = nextDir; } const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y }; if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 || checkCollision(head)) { gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'snake'); alert(`Game Over! Score: ${score}`); stopGame(); return; } snake.unshift(head); if (head.x === food.x && head.y === food.y) { score++; scoreElement.textContent = `Score: ${score}`; generateFood(); AudioEngine.playSound('snakeEat'); } else { snake.pop(); } } function checkCollision(head) { for (let i = 1; i < snake.length; i++) if (head.x === snake[i].x && head.y === snake[i].y) return true; return false; } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); snake.forEach((segment, i) => { ctx.fillStyle = i === 0 ? 'lime' : '#00A000'; ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 1, gridSize - 1); }); ctx.shadowColor = 'red'; ctx.shadowBlur = 10; ctx.fillStyle = 'red'; ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1); ctx.shadowBlur = 0; } function gameLoop(time) { if (gameOver) return; accumulator += (time - lastTime) / 1000; lastTime = time; while(accumulator > interval){ update(); accumulator -= interval; } draw(); gameLoopId = requestAnimationFrame(gameLoop); } currentKeyListener = e => { if (e.key === 'ArrowUp') inputQueue.push({x:0, y:-1}); else if (e.key === 'ArrowDown') inputQueue.push({x:0, y:1}); else if (e.key === 'ArrowLeft') inputQueue.push({x:-1, y:0}); else if (e.key === 'ArrowRight') inputQueue.push({x:1, y:0}); }; document.addEventListener('keydown', currentKeyListener); generateFood(); scoreElement.textContent = 'Score: 0'; levelLivesElement.textContent = ''; lastTime = performance.now(); gameLoopId = requestAnimationFrame(gameLoop); }
-        function initPong() { canvas.width = 800; canvas.height = 500; const paddleWidth = 15, paddleHeight = 100; let lastTime = 0, gameOver = false; let player = { x: 10, y: canvas.height/2-paddleHeight/2, width: paddleWidth, height: paddleHeight, score: 0 }; let computer = { x: canvas.width-paddleWidth-10, y: canvas.height/2-paddleHeight/2, width: paddleWidth, height: paddleHeight, score: 0 }; let ball = { x: canvas.width/2, y: canvas.height/2, radius: 10, speed: 500, dx: 1, dy: 1 }; const winScore = 5; function drawRect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); } function drawCircle(x, y, r, color) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.closePath(); ctx.fill(); } function drawNet() { for (let i = 0; i < canvas.height; i += 40) drawRect(canvas.width / 2 - 1, i, 2, 20, "rgba(255,255,255,0.5)"); } function update(dt) { ball.x += ball.dx * ball.speed * dt; ball.y += ball.dy * ball.speed * dt; computer.y += (ball.y - (computer.y + computer.height / 2)) * 4.0 * dt; if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) { ball.dy = -ball.dy; AudioEngine.playSound('pongHit'); } let activePaddle = (ball.dx < 0) ? player : computer; if (ball.x - ball.radius < activePaddle.x + activePaddle.width && ball.x + ball.radius > activePaddle.x && ball.y - ball.radius < activePaddle.y + activePaddle.height && ball.y + ball.radius > activePaddle.y) { let collidePoint = (ball.y - (activePaddle.y + activePaddle.height / 2)) / (activePaddle.height / 2); let angleRad = collidePoint * (Math.PI / 4); ball.dx = -ball.dx; ball.dy = Math.sin(angleRad); AudioEngine.playSound('pongHit'); } if (ball.x - ball.radius < 0) { computer.score++; resetBall(); AudioEngine.playSound('pongScore'); } else if (ball.x + ball.radius > canvas.width) { player.score++; resetBall(); AudioEngine.playSound('pongScore'); } if (player.score >= winScore || computer.score >= winScore) { endGame(); } } function endGame(){ if(gameOver) return; gameOver = true; const winner = player.score >= winScore ? "Player" : "Computer"; saveHighScore(player.score, 'pong'); alert(`Game Over! ${winner} wins!`); setTimeout(stopGame, 100); } function resetBall() { ball.x = canvas.width/2; ball.y = canvas.height/2; ball.dx = -ball.dx; ball.dy = (Math.random()*2 - 1); } function render() { drawRect(0, 0, canvas.width, canvas.height, '#000'); drawNet(); drawRect(player.x, player.y, player.width, player.height, '#fff'); drawRect(computer.x, computer.y, computer.width, computer.height, '#fff'); drawCircle(ball.x, ball.y, ball.radius, '#fff'); scoreElement.textContent = `Player: ${player.score}`; levelLivesElement.textContent = `Computer: ${computer.score}`; } currentMouseListener = event => { let rect = canvas.getBoundingClientRect(); player.y = event.clientY - rect.top - player.height / 2; }; canvas.addEventListener('mousemove', currentMouseListener); gameLoopId = requestAnimationFrame(function gameLoop(currentTime){ if(gameOver) return; const dt = (currentTime - (lastTime || currentTime))/1000; lastTime = currentTime; update(dt); render(); gameLoopId = requestAnimationFrame(gameLoop); }); }
+        function initBreakout() { canvas.width = 800; canvas.height = 600; let score = 0, lives = 3, currentLevel = 0, lastTime = 0, gameOver=false; const paddle = { x: canvas.width/2-50, y: canvas.height-30, width: 100, height: 10, speed: 500, baseWidth: 100, laserActive: false }; let balls = [], bullets = []; const R = 0; const brickLevels = [ [[1,2,3,4,5,4,3,2,1],[1,2,3,4,5,4,3,2,1],[1,2,3,4,5,4,3,2,1]], [[R,R,1,1,R,1,1,R,R],[R,1,1,1,1,1,1,1,R],[1,1,1,1,1,1,1,1,1],[R,R,1,1,1,1,1,R,R],[R,R,R,1,1,1,R,R,R]], [[5,5,5,5,5,5,5,5,5],[R,R,R,R,R,R,R,R,R],[3,3,3,3,3,3,3,3,3],[R,R,R,R,R,R,R,R,R],[1,1,1,1,1,1,1,1,1]], [[1,1,R,R,R,R,R,1,1],[1,1,1,R,R,R,1,1,1],[1,1,1,1,R,1,1,1,1],[1,1,1,R,R,R,1,1,1],[1,1,R,R,R,R,R,1,1]], ]; const brickInfo = { rowCount: 0, columnCount: 9, width: 75, height: 20, padding: 10, offsetTop: 30, offsetLeft: 30 }; const brickColors = ["#f1c40f", "#e67e22", "#c0392b", "#9b59b6", "#3498db"]; let bricks = [], totalBricks = 0, powerups = []; function Ball(x, y, dx, dy) { this.x = x; this.y = y; this.radius = 8; this.dx = dx; this.dy = dy; this.speed = 400; } function loadLevel(levelIndex) { bricks = []; totalBricks = 0; powerups = []; balls = []; lives = 3; const layout = brickLevels[levelIndex % brickLevels.length]; brickInfo.rowCount = layout.length; brickInfo.columnCount = layout[0].length; for (let c = 0; c < brickInfo.columnCount; c++) { bricks[c] = []; for (let r = 0; r < brickInfo.rowCount; r++) { const type = layout[r][c]; if(type) { bricks[c][r] = { x: 0, y: 0, status: 1, color: brickColors[type-1], points: type * 10 }; totalBricks++; }}} setTimeout(resetBallAndPaddle, 100); } function resetBallAndPaddle() { balls = [new Ball(canvas.width/2, canvas.height/2, Math.random() > 0.5 ? 1 : -1, -1)]; paddle.x = canvas.width/2 - paddle.width/2; } function update(dt) { if(gameOver) return; if(keys['ArrowLeft'] && paddle.x > 0) paddle.x -= paddle.speed * dt; if(keys['ArrowRight'] && paddle.x < canvas.width - paddle.width) paddle.x += paddle.speed * dt; for(let i = powerups.length-1; i >= 0; i--) { const p = powerups[i]; p.y += 150 * dt; if(p.y > paddle.y && p.x > paddle.x && p.x < paddle.x + paddle.width) { activatePowerup(p.type); powerups.splice(i, 1); } else if(p.y > canvas.height) powerups.splice(i, 1); } for(let i=balls.length-1; i>=0; i--) { let ball = balls[i]; ball.x += ball.dx * ball.speed * dt; ball.y += ball.dy * ball.speed * dt; if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) ball.dx = -ball.dx; if (ball.y - ball.radius < 0) ball.dy = -ball.dy; if (ball.y + ball.radius > canvas.height + 20) balls.splice(i,1); if (ball.y + ball.radius > paddle.y && ball.y - ball.radius < paddle.y + paddle.height && ball.x + ball.radius > paddle.x && ball.x - ball.radius < paddle.x + paddle.width) { if (ball.dy > 0) { ball.dy = -1; ball.y = paddle.y - ball.radius; const hitPos = (ball.x - (paddle.x + paddle.width/2)) / (paddle.width/2); ball.dx = hitPos * 2; AudioEngine.playSound('hit'); } } } for (let c = 0; c < brickInfo.columnCount; c++) for (let r = 0; r < brickInfo.rowCount; r++) { const b = bricks[c]?.[r]; if (b?.status === 1) { balls.forEach(ball => { if (ball.x > b.x && ball.x < b.x + brickInfo.width && ball.y > b.y && ball.y < b.y + brickInfo.height) { ball.dy = -ball.dy; b.status = 0; score += b.points; updatePlayerScore(score); totalBricks--; AudioEngine.playSound('hit'); if(Math.random() < 0.2) powerups.push({x:b.x+brickInfo.width/2, y:b.y, type: ['big_paddle','multi_ball','laser'][Math.floor(Math.random()*3)]}); }}); bullets.forEach((bullet, bIndex) => { if (bullet.x > b.x && bullet.x < b.x + brickInfo.width && bullet.y > b.y && bullet.y < b.y + brickInfo.height) { bullets.splice(bIndex, 1); b.status = 0; score += b.points; updatePlayerScore(score); totalBricks--; AudioEngine.playSound('hit'); }});}} bullets.forEach((bullet, i) => { bullet.y -= 400 * dt; if(bullet.y < 0) bullets.splice(i, 1); }); if (totalBricks === 0 && balls.length > 0 && !(currentLobbyData && currentLobbyData.mode === 'versus')) { currentLevel++; loadLevel(currentLevel); } if(balls.length === 0 && totalBricks > 0) { lives--; AudioEngine.playSound('hit'); if (!lives && !(currentLobbyData && currentLobbyData.mode === 'versus')) { gameOver=true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'breakout'); alert('GAME OVER'); stopGame(); return; } else { resetBallAndPaddle(); }} } function drawPowerupIcon(x, y, type) { ctx.fillStyle='lime'; if(type==='big_paddle') { ctx.fillRect(x-10, y, 20, 5); } else if(type==='multi_ball') { ctx.beginPath(); ctx.arc(x-5, y+2, 3, 0, Math.PI*2); ctx.arc(x+5, y+2, 3, 0, Math.PI*2); ctx.fill(); } else if(type==='laser') { ctx.fillRect(x-2, y, 4, 10); }} function draw() { ctx.clearRect(0, 0, canvas.width, canvas.height); for (let c=0; c<brickInfo.columnCount; c++) for (let r=0; r<brickInfo.rowCount; r++) { const b = bricks[c]?.[r]; if(b?.status) { b.x = c * (brickInfo.width + brickInfo.padding) + brickInfo.offsetLeft; b.y = r * (brickInfo.height + brickInfo.padding) + brickInfo.offsetTop; ctx.fillStyle = b.color; ctx.fillRect(b.x, b.y, brickInfo.width, brickInfo.height); } } ctx.fillStyle = paddle.laserActive ? '#ff55de' : '#3498db'; ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height); powerups.forEach(p => drawPowerupIcon(p.x, p.y, p.type)); balls.forEach(ball => { ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2); ctx.fillStyle='white'; ctx.fill(); }); bullets.forEach(bullet => { ctx.fillStyle = 'yellow'; ctx.fillRect(bullet.x-2, bullet.y, 4, 10); }); } function activatePowerup(type) { AudioEngine.playSound('score'); if(type==='big_paddle') { paddle.width = paddle.baseWidth * 1.5; setTimeout(() => paddle.width=paddle.baseWidth, 10000); } else if(type==='multi_ball') { const currentBalls = [...balls]; currentBalls.forEach(b => { balls.push(new Ball(b.x, b.y, -b.dx, -b.dy), new Ball(b.x, b.y, b.dx, -b.dy)); }); } else if(type==='laser') { paddle.laserActive = true; setTimeout(() => paddle.laserActive=false, 10000); } } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); levelLivesElement.textContent = `Lives: ${lives}`; if(!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } let keys = {}; currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; if(e.key === ' ' && e.type === 'keydown' && paddle.laserActive) { AudioEngine.playSound('shoot'); bullets.push({x: paddle.x + 10, y: paddle.y}); bullets.push({x: paddle.x + paddle.width - 10, y: paddle.y}); }}; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); loadLevel(0); gameLoopId = requestAnimationFrame(gameLoop); }
+        function initRacing() { canvas.width = 400; canvas.height = 600; const initialSpeed = 80; let topSpeed = 0; let score = 0; let speed = initialSpeed, gameOver = false, lastTime = 0, enemySpawnTimer = 2; const player = { x: canvas.width/2 - 20, y: canvas.height - 100, width: 40, height: 60, speed: 300 }; const keys = {}; let roadMarkings = [], enemies = [], verges = []; const vehicleTypes = [ {type:'car', w:40, h:60}, {type:'van', w:45, h:70}, {type:'bike', w:20, h:50}, {type:'bus', w:50, h:100}, {type:'limo', w:40, h:120} ]; function spawnEnemyWave() { const laneWidth = (canvas.width-100)/3; const lane = Math.floor(Math.random()*3); const vehicle = vehicleTypes[Math.floor(Math.random()*vehicleTypes.length)]; const x = 50 + lane * laneWidth + (laneWidth/2) - (vehicle.w/2) + (Math.random()-0.5)*(laneWidth/4); const color = ['#FF5555', '#FFFF88', '#88FF88', '#3498db'][Math.floor(Math.random() * 4)]; enemies.push({ x, y: -vehicle.h, ...vehicle, color, speedModifier: Math.random() * 0.2 + 0.85 }); } function update(dt) { if (gameOver) return; if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed * dt; if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed * dt; speed += 8 * dt; roadMarkings.forEach(m => { m.y += speed * 1.1 * dt; }); roadMarkings = roadMarkings.filter(m => m.y < canvas.height); verges.forEach(v => { v.y += speed * 1.1 * dt; }); verges = verges.filter(v => v.y < canvas.height); enemies.forEach(e => { e.y += speed * e.speedModifier * dt; }); enemies = enemies.filter(e => e.y < canvas.height); if(roadMarkings.length === 0 || roadMarkings[roadMarkings.length-1].y > 120) roadMarkings.push({ y: -60, height: 40 }); if(verges.length === 0 || verges[verges.length-1].y > 0) verges.push({ y: -50, height: 52, color: Math.random() < 0.5 ? '#00A000' : '#11BB11' }); enemySpawnTimer -= dt; if(enemySpawnTimer <= 0) { spawnEnemyWave(); enemySpawnTimer = Math.max(0.5, 1.5 - (speed / 500)); } enemies.forEach(enemy => { if (player.x < enemy.x + enemy.w && player.x + player.width > enemy.x && player.y < enemy.y + enemy.h && player.y + player.height > enemy.y) { endGame(); } }); topSpeed = Math.max(topSpeed, (30 + (speed-initialSpeed)/5)); score = Math.floor(topSpeed * 10); updatePlayerScore(score); } function endGame(){ if(gameOver || (currentLobbyData && currentLobbyData.mode === 'versus')) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'racing'); alert("Game Over!"); setTimeout(stopGame, 100); } function drawF1Car(x,y,w,h,color) { ctx.fillStyle = color; ctx.fillRect(x+w*0.2, y, w*0.6, h); ctx.fillRect(x, y+h*0.2, w, h*0.2); ctx.fillRect(x, y+h*0.6, w, h*0.2); ctx.fillStyle = '#111'; ctx.fillRect(x-w*0.1, y+h*0.1, w*0.2, h*0.2); ctx.fillRect(x+w*0.9, y+h*0.1, w*0.2, h*0.2); ctx.fillRect(x-w*0.1, y+h*0.7, w*0.2, h*0.2); ctx.fillRect(x+w*0.9, y+h*0.7, w*0.2, h*0.2); ctx.fillStyle = '#00e5ff'; ctx.fillRect(x+w*0.4, y+h*0.4, w*0.2, h*0.2); } function drawVehicle(x, y, w, h, color, type) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#2c3e50'; if (type === 'car' || type === 'van' || type === 'limo') { ctx.fillRect(x + w*0.1, y + h*0.1, w*0.8, h*0.3); ctx.fillRect(x + w*0.1, y + h*0.6, w*0.8, h*0.3); } else if (type === 'bus') { for(let i=0.1; i < 0.9; i+=0.3) ctx.fillRect(x + w*0.1, y + h*i, w*0.8, h*0.1); } else if (type === 'bike') { ctx.fillStyle = '#333'; ctx.fillRect(x, y+h*0.2, w, h*0.6); ctx.fillStyle=color; ctx.fillRect(x+w*0.3, y, w*0.4, h*0.8); } } function draw() { ctx.fillStyle = '#666'; ctx.fillRect(0, 0, canvas.width, canvas.height); verges.forEach(v => { ctx.fillStyle = v.color; ctx.fillRect(0, v.y, 50, v.height+2); ctx.fillRect(canvas.width-50, v.y, 50, v.height+2); }); ctx.fillStyle = 'yellow'; ctx.fillRect(50,0,5,canvas.height); ctx.fillRect(canvas.width-55,0,5,canvas.height); ctx.fillStyle = 'white'; const laneWidth = (canvas.width-100)/3; roadMarkings.forEach(m => { ctx.fillRect(50 + laneWidth - 2.5, m.y, 5, m.height); ctx.fillRect(50 + 2*laneWidth - 2.5, m.y, 5, m.height); }); enemies.forEach(e => drawVehicle(e.x, e.y, e.w, e.h, e.color, e.type)); drawF1Car(player.x, player.y, player.width, player.height, '#FF0000'); } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); levelLivesElement.textContent = `Speed: ${Math.floor(topSpeed)}`; if(!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; }; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); gameLoopId = requestAnimationFrame(gameLoop); }
+        function initSnake() { canvas.width = 400; canvas.height = 400; const gridSize = 20; let snake = [{ x: 10, y: 10 }]; let food = {}; let direction = {x:1, y:0}; let score = 0; let gameOver = false; let inputQueue = []; let lastTime=0, accumulator=0, interval=0.12; function generateFood() { food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) }; snake.forEach(s => {if(s.x === food.x && s.y === food.y) generateFood();}); } function update() { if(inputQueue.length > 0) { const nextDir = inputQueue.shift(); if((nextDir.x !== -direction.x || nextDir.y !== -direction.y) && (direction.x !==0 || direction.y !==0)) direction = nextDir; } const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y }; if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 || checkCollision(head)) { if (!(currentLobbyData && currentLobbyData.mode === 'versus')) { gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'snake'); alert(`Game Over! Score: ${score}`); stopGame(); } return; } snake.unshift(head); if (head.x === food.x && head.y === food.y) { score++; updatePlayerScore(score); generateFood(); AudioEngine.playSound('snakeEat'); } else { snake.pop(); } } function checkCollision(head) { for (let i = 1; i < snake.length; i++) if (head.x === snake[i].x && head.y === snake[i].y) return true; return false; } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); snake.forEach((segment, i) => { ctx.fillStyle = i === 0 ? 'lime' : '#00A000'; ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 1, gridSize - 1); }); ctx.shadowColor = 'red'; ctx.shadowBlur = 10; ctx.fillStyle = 'red'; ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1); ctx.shadowBlur = 0; } function gameLoop(time) { if (gameOver) return; accumulator += (time - lastTime) / 1000; lastTime = time; while(accumulator > interval){ update(); accumulator -= interval; } draw(); gameLoopId = requestAnimationFrame(gameLoop); } currentKeyListener = e => { if (e.key === 'ArrowUp') inputQueue.push({x:0, y:-1}); else if (e.key === 'ArrowDown') inputQueue.push({x:0, y:1}); else if (e.key === 'ArrowLeft') inputQueue.push({x:-1, y:0}); else if (e.key === 'ArrowRight') inputQueue.push({x:1, y:0}); }; document.addEventListener('keydown', currentKeyListener); generateFood(); updatePlayerScore(0); levelLivesElement.textContent = ''; lastTime = performance.now(); gameLoopId = requestAnimationFrame(gameLoop); }
+        function initPong() { canvas.width = 800; canvas.height = 500; const paddleWidth = 15, paddleHeight = 100; let lastTime = 0, gameOver = false; let player = { x: 10, y: canvas.height/2-paddleHeight/2, width: paddleWidth, height: paddleHeight, score: 0 }; let computer = { x: canvas.width-paddleWidth-10, y: canvas.height/2-paddleHeight/2, width: paddleWidth, height: paddleHeight, score: 0 }; let ball = { x: canvas.width/2, y: canvas.height/2, radius: 10, speed: 500, dx: 1, dy: 1 }; const winScore = 5; function drawRect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); } function drawCircle(x, y, r, color) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.closePath(); ctx.fill(); } function drawNet() { for (let i = 0; i < canvas.height; i += 40) drawRect(canvas.width / 2 - 1, i, 2, 20, "rgba(255,255,255,0.5)"); } function update(dt) { ball.x += ball.dx * ball.speed * dt; ball.y += ball.dy * ball.speed * dt; computer.y += (ball.y - (computer.y + computer.height / 2)) * 4.0 * dt; if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) { ball.dy = -ball.dy; AudioEngine.playSound('pongHit'); } let activePaddle = (ball.dx < 0) ? player : computer; if (ball.x - ball.radius < activePaddle.x + activePaddle.width && ball.x + ball.radius > activePaddle.x && ball.y - ball.radius < activePaddle.y + activePaddle.height && ball.y + ball.radius > activePaddle.y) { let collidePoint = (ball.y - (activePaddle.y + activePaddle.height / 2)) / (activePaddle.height / 2); let angleRad = collidePoint * (Math.PI / 4); ball.dx = -ball.dx; ball.dy = Math.sin(angleRad); AudioEngine.playSound('pongHit'); } if (ball.x - ball.radius < 0) { computer.score++; resetBall(); AudioEngine.playSound('pongScore'); } else if (ball.x + ball.radius > canvas.width) { player.score++; updatePlayerScore(player.score); resetBall(); AudioEngine.playSound('pongScore'); } if (player.score >= winScore || computer.score >= winScore) { if(!(currentLobbyData && currentLobbyData.mode === 'versus')) endGame(); } } function endGame(){ if(gameOver) return; gameOver = true; const winner = player.score >= winScore ? "Player" : "Computer"; saveHighScore(player.score, 'pong'); alert(`Game Over! ${winner} wins!`); setTimeout(stopGame, 100); } function resetBall() { ball.x = canvas.width/2; ball.y = canvas.height/2; ball.dx = -ball.dx; ball.dy = (Math.random()*2 - 1); } function render() { drawRect(0, 0, canvas.width, canvas.height, '#000'); drawNet(); drawRect(player.x, player.y, player.width, player.height, '#fff'); drawRect(computer.x, computer.y, computer.width, computer.height, '#fff'); drawCircle(ball.x, ball.y, ball.radius, '#fff'); scoreElement.textContent = `Player: ${player.score}`; levelLivesElement.textContent = `Computer: ${computer.score}`; } currentMouseListener = event => { let rect = canvas.getBoundingClientRect(); player.y = event.clientY - rect.top - player.height / 2; }; canvas.addEventListener('mousemove', currentMouseListener); gameLoopId = requestAnimationFrame(function gameLoop(currentTime){ if(gameOver) return; const dt = (currentTime - (lastTime || currentTime))/1000; lastTime = currentTime; update(dt); render(); gameLoopId = requestAnimationFrame(gameLoop); }); }
         function initMaze() { let currentLevel = 1; let player, goal, maze, key, door, princess; let startTime, mazeEnded = false, lastMoveTime = 0, moveDelay = 120; function loadLevel(level) { mazeEnded = false; let mazeSize; if(level === 1) mazeSize = 15; else if(level === 2) mazeSize = 25; else mazeSize = 35; canvas.width = 600; canvas.height = 600; const cellSize = canvas.width / mazeSize; player = { x: 0, y: 0, hasKey: false, hasPrincess: false }; goal = { x: mazeSize - 1, y: mazeSize - 1 }; key = null; door = null; princess = null; if (level === 2) { key = { x: mazeSize-2, y: 1 }; door = { x: mazeSize-2, y: mazeSize-1 };} if (level === 3) { key = { x: 1, y: mazeSize-2 }; door = { x: mazeSize-2, y: mazeSize-1 }; princess = { x: Math.floor(mazeSize/2), y: Math.floor(mazeSize/2) }; goal = {x: mazeSize-1, y: 0}; } function generateMaze() { maze = []; for (let y = 0; y < mazeSize; y++) { maze[y] = []; for (let x = 0; x < mazeSize; x++) maze[y][x] = { n: true, s: true, e: true, w: true, visited: false }; } let stack = [], current = { x: 0, y: 0 }; maze[current.y][current.x].visited = true; stack.push(current); while (stack.length > 0) { current = stack[stack.length - 1]; let neighbors = []; if (current.y > 0 && !maze[current.y - 1][current.x].visited) neighbors.push({ x: 0, y: -1, wall: 'n', opp: 's' }); if (current.y < mazeSize - 1 && !maze[current.y + 1][current.x].visited) neighbors.push({ x: 0, y: 1, wall: 's', opp: 'n' }); if (current.x > 0 && !maze[current.y][current.x - 1].visited) neighbors.push({ x: -1, y: 0, wall: 'w', opp: 'e' }); if (current.x < mazeSize - 1 && !maze[current.y][current.x + 1].visited) neighbors.push({ x: 1, y: 0, wall: 'e', opp: 'w' }); if (neighbors.length > 0) { let nextDir = neighbors[Math.floor(Math.random() * neighbors.length)]; let next = { x: current.x + nextDir.x, y: current.y + nextDir.y }; maze[current.y][current.x][nextDir.wall] = false; maze[next.y][next.x][nextDir.opp] = false; maze[next.y][next.x].visited = true; stack.push(next); } else { stack.pop(); } } if (door) maze[door.y][door.x].e = true; } function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = 'cyan'; ctx.lineWidth = 2; for (let y=0; y<mazeSize; y++) for (let x=0; x<mazeSize; x++) { const c = maze[y][x]; if(c.n) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,y*cellSize);ctx.stroke();} if(c.s) {ctx.beginPath();ctx.moveTo(x*cellSize,(y+1)*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.w) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo(x*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.e) {ctx.beginPath();ctx.moveTo((x+1)*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();}} if(key && !player.hasKey) { ctx.fillStyle = 'yellow'; ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.5, cellSize*0.5, cellSize*0.1); ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.25, cellSize*0.1, cellSize*0.4); } if(door) { ctx.fillStyle = '#8B4513'; ctx.fillRect(door.x * cellSize + cellSize-3, door.y*cellSize, 6, cellSize); ctx.fillStyle = 'yellow'; ctx.fillRect(door.x*cellSize+cellSize-5, door.y*cellSize+cellSize*0.45, 10, 5); } if(goal) { ctx.fillStyle = 'lime'; ctx.fillRect(goal.x * cellSize + 2, goal.y * cellSize + 2, cellSize - 4, cellSize - 4); } if(princess && !player.hasPrincess) { ctx.fillStyle = '#ff00c1'; ctx.fillRect(princess.x*cellSize+cellSize*0.4, princess.y*cellSize+cellSize*0.2, cellSize*0.2, cellSize*0.2); ctx.beginPath(); ctx.moveTo(princess.x*cellSize+cellSize*0.5, princess.y*cellSize+cellSize*0.4); ctx.lineTo(princess.x*cellSize+cellSize*0.3, princess.y*cellSize+cellSize*0.8); ctx.lineTo(princess.x*cellSize+cellSize*0.7, princess.y*cellSize+cellSize*0.8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = player.hasKey ? '#ffeb3b' : '#ffff00'; ctx.fillRect(player.x * cellSize + 2, player.y * cellSize + 2, cellSize - 4, cellSize - 4); if(player.hasPrincess){ctx.fillStyle='#ff00c1'; ctx.fillRect(player.x * cellSize + 3, player.y*cellSize + 3, 4, 4);} let elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2); levelLivesElement.textContent = `Time: ${elapsedTime}s`; } currentKeyListener = e => { if (mazeEnded) return; const now = performance.now(); if(now - lastMoveTime < moveDelay) return; const currentCell = maze[player.y][player.x]; let moved = false, bumped=false; if (e.key === 'ArrowUp') { if(!currentCell.n) {player.y--; moved=true;} else bumped=true; } else if (e.key === 'ArrowDown') { if(!currentCell.s) {player.y++; moved=true;} else bumped=true; } else if (e.key === 'ArrowLeft') { if(!currentCell.w) {player.x--; moved=true;} else bumped=true; } else if (e.key === 'ArrowRight') { if(!currentCell.e) {player.x++; moved=true;} else bumped=true; } if(moved) { AudioEngine.playSound('mazeStep'); lastMoveTime = now; } if(bumped) { AudioEngine.playSound('mazeBump'); lastMoveTime = now; } if (moved && door && player.x === door.x && player.y === door.y && !player.hasKey) { player.x = door.x-1; } if (key && !player.hasKey && player.x === key.x && player.y === key.y) { player.hasKey = true; AudioEngine.playSound('score'); if(door) { maze[door.y][door.x].e = false; AudioEngine.playSound('score'); } } if (princess && !player.hasPrincess && player.x === princess.x && player.y === princess.y) { player.hasPrincess = true; AudioEngine.playSound('score'); } if (goal && player.x === goal.x && player.y === goal.y && (!princess || player.hasPrincess) ) { if(currentLevel < 3){ currentLevel++; AudioEngine.playSound('score'); clearInterval(gameLoopId); loadLevel(currentLevel); } else { mazeEnded = true; const finalTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2)); AudioEngine.playSound('score'); alert(`You finished in ${finalTime} seconds!`); saveHighScore(finalTime, 'maze'); setTimeout(stopGame, 100); } } }; document.addEventListener('keydown', currentKeyListener); generateMaze(); startTime = Date.now(); scoreElement.textContent = `Level ${currentLevel}`; gameLoopId = setInterval(draw, 30); } loadLevel(currentLevel); }
         createGameCabinets();
     </script>
