@@ -157,70 +157,37 @@
         auth.onAuthStateChanged(user => {
             if (user) {
                 playerName = (sessionStorage.getItem('loggedInUser') || user.displayName || `GUEST-${user.uid.substring(0,4)}`).toUpperCase();
-                
-                // Determine if user is a host of an existing lobby
-                rtdb.ref('lobbies').orderByChild('host').equalTo(playerName).once('value', snapshot => {
-                    if (snapshot.exists()) {
-                        currentLobbyId = Object.keys(snapshot.val())[0];
-                        isHost = true;
-                        initializeLobby(true);
-                    } else {
-                        isHost = false;
-                        initializeLobby(false);
-                    }
-                });
+                setupLobbyPage();
+                findMyLobby();
             } else {
                 auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
             }
         });
 
-        function initializeLobby(isUserHost) {
-            isHost = isUserHost;
-            
+        async function findMyLobby() {
+            const snapshot = await rtdb.ref('lobbies').orderByChild('host').equalTo(playerName).once('value');
+            if (snapshot.exists()) {
+                currentLobbyId = Object.keys(snapshot.val())[0];
+                isHost = true;
+                listenForLobbies();
+                listenForPlayersInLobby(currentLobbyId);
+                listenForJoinRequests(currentLobbyId);
+            } else {
+                isHost = false;
+                await createLobby(); // Every new player hosts by default
+            }
+        }
+        
+        function setupLobbyPage() {
             const volumeSlider = document.getElementById('volume-slider');
             const savedVolume = localStorage.getItem('arcadeVolume') || 0.5;
             volumeSlider.value = savedVolume;
             volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
             
+            document.getElementById('public-btn').addEventListener('click', () => setLobbyType('public'));
+            document.getElementById('private-btn').addEventListener('click', () => setLobbyType('private'));
+            
             document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
-            
-            if (isHost) {
-                document.getElementById('public-btn').addEventListener('click', () => setLobbyType('public'));
-                document.getElementById('private-btn').addEventListener('click', () => setLobbyType('private'));
-                listenForPlayersInLobby(currentLobbyId);
-                listenForJoinRequests(currentLobbyId);
-                listenForLobbies();
-            } else {
-                document.getElementById('public-btn').style.display = 'none';
-                document.getElementById('private-btn').style.display = 'none';
-                document.getElementById('play-btn').disabled = true;
-                document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby...</li>`;
-                listenForLobbies();
-            }
-        }
-        
-        async function createLobby() {
-            const newLobbyRef = rtdb.ref('lobbies').push();
-            currentLobbyId = newLobbyRef.key;
-            isHost = true;
-            
-            await newLobbyRef.set({
-                name: `${playerName}'S GAME`,
-                type: 'private',
-                host: playerName,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                players: { [playerName]: true },
-                status: 'waiting'
-            });
-            
-            newLobbyRef.onDisconnect().remove();
-            
-            document.getElementById('play-btn').disabled = false;
-            document.querySelectorAll('.server-btn').forEach(btn => btn.style.display = 'inline-block');
-            
-            listenForPlayersInLobby(currentLobbyId);
-            listenForJoinRequests(currentLobbyId);
-            listenForLobbies();
         }
 
         function listenForLobbies() {
@@ -231,6 +198,8 @@
                 snapshot.forEach((childSnapshot) => {
                     hasLobbies = true;
                     const lobby = childSnapshot.val();
+                    if (childSnapshot.key === currentLobbyId) return; // Don't show own lobby in list
+                    
                     const playerCount = lobby.players ? Object.keys(lobby.players).length : 0;
                     const lobbyEl = document.createElement('li');
                     lobbyEl.textContent = `${lobby.name} ${lobby.type === 'private' ? '🔒' : ''} (${playerCount}/8)`;
@@ -240,13 +209,14 @@
                         lobbyEl.style.color = 'grey';
                         lobbyEl.style.cursor = 'not-allowed';
                     } else {
-                        lobbyEl.onclick = () => handleLobbyClick(childSnapshot.key, lobby.type, lobby.host);
+                        lobbyEl.onclick = () => {
+                             handleLobbyClick(childSnapshot.key, lobby.type, lobby.host);
+                        };
                     }
                     lobbyList.appendChild(lobbyEl);
                 });
-                if (!hasLobbies && !isHost) {
-                    lobbyList.innerHTML = '<li style="color: grey;">No lobbies found. Create one!</li>';
-                    document.getElementById('play-btn').disabled = false;
+                if (!hasLobbies) {
+                    lobbyList.innerHTML = '<li style="color: grey;">No other lobbies found.</li>';
                 }
             });
         }
@@ -255,6 +225,7 @@
              if (isHost && lobbyId !== currentLobbyId) {
                 if(confirm("This will delete your current lobby to join another. Are you sure?")) {
                     await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
+                    isHost = false; // You are no longer a host
                 } else { return; }
             }
 
@@ -298,7 +269,7 @@
         }
 
         async function joinLobby(lobbyId) {
-            const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
+             const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
             const snapshot = await lobbyRef.get();
             if (!snapshot.exists() || snapshot.val().status === 'playing') { alert("Cannot join lobby."); return; }
             if(currentLobbyId) { await rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`).remove(); }
@@ -315,6 +286,28 @@
             listenForPlayersInLobby(lobbyId);
             listenForLobbyStatus(lobbyId);
         }
+
+        async function createLobby() {
+            const newLobbyRef = rtdb.ref('lobbies').push();
+            currentLobbyId = newLobbyRef.key;
+            isHost = true;
+            await newLobbyRef.set({
+                name: `${playerName}'S GAME`,
+                type: 'private',
+                host: playerName,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                players: { [playerName]: true },
+                status: 'waiting'
+            });
+            newLobbyRef.onDisconnect().remove();
+            
+            document.getElementById('play-btn').disabled = false;
+            document.querySelectorAll('.server-btn').forEach(btn => btn.style.display = 'inline-block');
+
+            listenForPlayersInLobby(currentLobbyId);
+            listenForJoinRequests(currentLobbyId);
+            listenForLobbies();
+        }
         
         async function setLobbyType(type) {
             if(isHost && currentLobbyId) {
@@ -325,9 +318,6 @@
         }
         
         async function startGameFromLobby() {
-            if(!currentLobbyId && isHost) { // Handle case where host created lobby but then disconnected and reconnected
-                await createLobby();
-            }
             if(isHost && currentLobbyId) {
                 await rtdb.ref(`lobbies/${currentLobbyId}`).update({ status: 'playing' });
             }
@@ -358,6 +348,9 @@
              if (currentLobbyId) {
                 const playerRef = rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`);
                 await playerRef.remove();
+                if(isHost) {
+                     await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
+                }
             }
         });
         
