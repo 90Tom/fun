@@ -304,6 +304,11 @@
                     const lobbyEl = document.createElement('li');
                     lobbyEl.textContent = `${lobby.name} (${playerCount}/8)`;
                     lobbyEl.dataset.lobbyId = childSnapshot.key;
+                    
+                    if (!isHost && childSnapshot.key === currentLobbyId) {
+                        lobbyEl.textContent += " (Joined)";
+                        lobbyEl.style.color = 'var(--primary-glow)';
+                    }
 
                     if (playerCount >= 8 || lobby.status === 'playing') {
                         lobbyEl.style.color = 'grey';
@@ -426,7 +431,6 @@
         }
         
         function switchToArcadeRoom() {
-            if (arcadeRoom.style.display !== 'none') return; 
             AudioEngine.init();
             AudioEngine.playMusic('menu');
             lobbyScreen.style.display = 'none';
@@ -453,7 +457,7 @@
             }
             const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
             const listener = lobbyRef.on('value', (snapshot) => {
-                if(!snapshot.exists()) {
+                if (!snapshot.exists()) {
                     if(!isHost && arcadeRoom.style.display === 'none') {
                         alert("Lobby closed by host.");
                         window.location.reload();
@@ -463,7 +467,7 @@
                 const lobbyData = snapshot.val();
                 currentLobbyData = lobbyData;
 
-                if(lobbyData.status === 'playing') {
+                if (lobbyData && lobbyData.status === 'playing') {
                      switchToArcadeRoom();
                 }
             });
