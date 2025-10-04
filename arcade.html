@@ -167,9 +167,8 @@
                 initializeLobbyUI(true);
                 listenForLobbies();
                 listenForPlayersInLobby(currentLobbyId);
-                listenForJoinRequests(currentLobbyId);
             } else {
-                await createLobby();
+                await createLobby(); 
             }
         }
         
@@ -185,7 +184,6 @@
         function initializeLobbyUI(isUserHost) {
             isHost = isUserHost;
             document.getElementById('play-btn').disabled = !isHost;
-            document.querySelector('.server-options').style.display = 'none'; // Buttons removed
             
             if(!isHost){
                  document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby...</li>`;
@@ -198,10 +196,10 @@
                 lobbyList.innerHTML = '';
                 let hasLobbies = false;
                 snapshot.forEach((childSnapshot) => {
+                    hasLobbies = true;
                     const lobby = childSnapshot.val();
                     if (lobby.host === playerName) return; 
                     
-                    hasLobbies = true;
                     const playerCount = lobby.players ? Object.keys(lobby.players).length : 0;
                     const lobbyEl = document.createElement('li');
                     lobbyEl.textContent = `${lobby.name} (${playerCount}/8)`;
@@ -260,7 +258,7 @@
                 await rtdb.ref(`lobbies/${currentLobbyId}/players/${playerToKick}`).remove();
             }
         }
-        
+
         async function joinLobby(lobbyId) {
              const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
             const snapshot = await lobbyRef.get();
