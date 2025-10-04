@@ -8,7 +8,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         :root{--main-bg:#0d0d0d;--primary-glow:#00e5ff;--secondary-glow:#ff00c1;--text-color:#ffffff;}
         body{background-color:var(--main-bg);background-image:linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);background-size:20px 20px, 20px 20px;color:var(--text-color);font-family:'Press Start 2P',cursive;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;overflow:hidden;}
-        #lobby-screen, #start-screen {position:absolute;top:0;left:0;width:100%;height:100%;background:var(--main-bg);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;}
+        #start-screen, #lobby-screen {position:absolute;top:0;left:0;width:100%;height:100%;background:var(--main-bg);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;}
         #lobby-screen { display: none; }
         .lobby-container { display: flex; gap: 40px; width: 100%; max-width: 900px; height: 400px; }
         .lobby-browser, .lobby-details { border: 3px solid var(--primary-glow); padding: 20px; box-shadow: 0 0 15px var(--primary-glow) inset; width: 100%; display: flex; flex-direction: column; }
@@ -25,10 +25,12 @@
         .lobby-btn { font-family:'Press Start 2P',cursive; font-size:1.5em; padding: 15px 30px; border: 3px solid var(--primary-glow); color: var(--primary-glow); background: transparent; text-shadow: 0 0 8px var(--primary-glow); box-shadow: 0 0 15px var(--primary-glow) inset; cursor: pointer; transition: all 0.2s ease; }
         .lobby-btn:hover { background: var(--primary-glow); color: var(--main-bg); box-shadow: 0 0 25px var(--primary-glow); }
         .lobby-btn:disabled { color: #555; border-color: #555; text-shadow: none; box-shadow: none; cursor: not-allowed; }
-        .lobby-mode-select { display: flex; gap: 20px; margin-top: 20px; }
+        .mode-select, .host-join-toggle { margin-top: 20px; display: flex; gap: 15px; }
         .mode-btn { font-family:'Press Start 2P',cursive; font-size:0.8em; padding: 8px 15px; border: 2px solid var(--text-color); color: var(--text-color); background: transparent; cursor: pointer; }
         .mode-btn.active { background: var(--text-color); color: var(--main-bg); }
-        #start-screen h1 { font-size: 4em; color: var(--primary-glow); text-shadow: 0 0 15px var(--primary-glow), 0 0 25px var(--primary-glow); animation: flicker-big 1.5s infinite alternate; margin-bottom: 50px;}
+        #start-screen h1 { font-size: 4em; color: var(--secondary-glow); text-shadow: 0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow); margin-bottom: 60px; animation: flicker-all 8s infinite; }
+        #start-screen h1 span { display: inline-block; animation: flicker-small 4s infinite; }
+        #start-screen h1 span:nth-child(2), #start-screen h1 span:nth-child(7) { animation-delay: 0.2s; } #start-screen h1 span:nth-child(3), #start-screen h1 span:nth-child(9) { animation-delay: 0.5s; } #start-screen h1 span:nth-child(5) { animation-delay: 1.1s; }
         #arcade-room{text-align:center;padding:20px; display:none;}
         h1{font-size:3.5em;color:var(--secondary-glow);text-shadow:0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow);margin-bottom:60px; animation: flicker-all 8s infinite;}
         h1 span { display: inline-block; animation: flicker-small 4s infinite; }
@@ -66,6 +68,7 @@
         #high-scores-list li .name{color:var(--primary-glow);}
         #high-scores-list li .score{color:#ffff00;}
         #volume-control { position: fixed; bottom: 20px; right: 20px; z-index: 3000; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; border: 2px solid var(--primary-glow); }
+        body:not(.in-game) #volume-control { display: none; }
         #volume-control label { font-size: 1.2em; color: var(--primary-glow); text-shadow: 0 0 5px var(--primary-glow); }
         input[type="range"] { -webkit-appearance: none; appearance: none; width: 150px; height: 16px; background: transparent; cursor: pointer; }
         input[type="range"]::-webkit-slider-runnable-track { height: 16px; background: #333; border: 2px solid #555; image-rendering: pixelated; }
@@ -76,28 +79,32 @@
 </head>
 <body>
     <div id="start-screen">
-        <h1>RETRO ARCADE</h1>
-        <div class="lobby-buttons">
+        <h1><span>R</span><span>E</span><span>T</span><span>R</span><span>O</span> <span>A</span><span>R</span><span>C</span><span>A</span><span>D</span><span>E</span></h1>
+        <div class="lobby-controls">
             <button id="single-player-btn" class="lobby-btn">SINGLE PLAYER</button>
             <button id="multiplayer-btn" class="lobby-btn">MULTIPLAYER</button>
         </div>
     </div>
-
+    
     <div id="lobby-screen">
+         <div class="host-join-toggle">
+            <button id="host-btn" class="mode-btn active">HOST</button>
+            <button id="join-btn" class="mode-btn">JOIN</button>
+        </div>
         <div class="lobby-container">
-            <div class="lobby-browser">
-                <h2>LOBBIES</h2>
-                <ul id="lobby-list"><li style="color: grey;">Authenticating...</li></ul>
-            </div>
-            <div class="lobby-details">
+            <div id="host-view" class="lobby-details">
                 <h2>IN LOBBY:</h2>
                 <div id="player-list-container">
                     <ul id="player-list"></ul>
                 </div>
-                 <div class="lobby-mode-select">
+                 <div class="mode-select">
                     <button id="versus-btn" class="mode-btn active">VERSUS</button>
                     <button id="teams-btn" class="mode-btn">TEAMS</button>
                 </div>
+            </div>
+            <div id="join-view" class="lobby-browser" style="display: none;">
+                <h2>LOBBIES</h2>
+                <ul id="lobby-list"><li style="color: grey;">Authenticating...</li></ul>
             </div>
         </div>
         <div class="lobby-controls">
@@ -171,24 +178,27 @@
         auth.onAuthStateChanged(user => {
             if (user) {
                 playerName = (sessionStorage.getItem('loggedInUser') || user.displayName || `GUEST-${user.uid.substring(0,4)}`).toUpperCase();
-                setupLobbyPage();
-                findMyLobbyOrCreateNew();
+                setupInitialScreen();
             } else {
                 auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
             }
         });
 
-        async function findMyLobbyOrCreateNew() {
-            const snapshot = await rtdb.ref('lobbies').orderByChild('host').equalTo(playerName).once('value');
-            if (snapshot.exists()) {
-                currentLobbyId = Object.keys(snapshot.val())[0];
+        function setupInitialScreen() {
+            document.getElementById('single-player-btn').addEventListener('click', () => {
                 isHost = true;
-                initializeLobbyUI(true);
-                listenForLobbies();
-                listenForPlayersInLobby(currentLobbyId);
-            } else {
-                await createLobby(); 
-            }
+                AudioEngine.init();
+                AudioEngine.playMusic('menu');
+                startScreen.style.display = 'none';
+                arcadeRoom.style.display = 'block';
+                document.body.classList.add('in-game');
+            });
+            document.getElementById('multiplayer-btn').addEventListener('click', () => {
+                startScreen.style.display = 'none';
+                lobbyScreen.style.display = 'flex';
+                setupLobbyPage();
+                switchToHostMode(); 
+            });
         }
         
         function setupLobbyPage() {
@@ -198,6 +208,33 @@
             volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
             
             document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
+            document.getElementById('host-btn').addEventListener('click', switchToHostMode);
+            document.getElementById('join-btn').addEventListener('click', switchToJoinMode);
+            document.getElementById('versus-btn').addEventListener('click', () => setGameMode('versus'));
+            document.getElementById('teams-btn').addEventListener('click', () => setGameMode('teams'));
+        }
+
+        async function switchToHostMode() {
+            if (isHost) return;
+            await leaveCurrentLobby();
+            document.getElementById('host-view').style.display = 'flex';
+            document.getElementById('join-view').style.display = 'none';
+            document.getElementById('host-btn').classList.add('active');
+            document.getElementById('join-btn').classList.remove('active');
+            await createLobby();
+        }
+
+        async function switchToJoinMode() {
+            if (!isHost) return;
+            await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
+            isHost = false;
+            currentLobbyId = null;
+            document.getElementById('host-view').style.display = 'none';
+            document.getElementById('join-view').style.display = 'flex';
+            document.getElementById('host-btn').classList.remove('active');
+            document.getElementById('join-btn').classList.add('active');
+            initializeLobbyUI(false);
+            listenForLobbies();
         }
 
         function initializeLobbyUI(isUserHost) {
@@ -216,7 +253,7 @@
                 let hasLobbies = false;
                 snapshot.forEach((childSnapshot) => {
                     const lobby = childSnapshot.val();
-                    if (lobby.host === playerName) return; 
+                    if (isHost && childSnapshot.key === currentLobbyId) return; 
                     
                     hasLobbies = true;
                     const playerCount = lobby.players ? Object.keys(lobby.players).length : 0;
@@ -310,6 +347,7 @@
             await newLobbyRef.set({
                 name: `${playerName}'S GAME`,
                 host: playerName,
+                mode: gameMode,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 players: { [playerName]: true },
                 status: 'waiting'
@@ -319,6 +357,15 @@
             initializeLobbyUI(true);
             listenForPlayersInLobby(currentLobbyId);
             listenForLobbyStatus(currentLobbyId);
+        }
+        
+        async function setGameMode(mode) {
+            if(isHost && currentLobbyId) {
+                gameMode = mode;
+                await rtdb.ref(`lobbies/${currentLobbyId}/mode`).set(mode);
+                document.getElementById('versus-btn').classList.toggle('active', mode === 'versus');
+                document.getElementById('teams-btn').classList.toggle('active', mode === 'teams');
+            }
         }
         
         async function startGameFromLobby() {
@@ -344,11 +391,12 @@
                      AudioEngine.playMusic('menu');
                      lobbyScreen.style.display = 'none';
                      arcadeRoom.style.display = 'block';
+                     document.body.classList.add('in-game');
                 }
             });
         }
         
-        window.addEventListener('beforeunload', async () => {
+        async function leaveCurrentLobby() {
              if (currentLobbyId) {
                 if(isHost) {
                      await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
@@ -357,7 +405,9 @@
                     await playerRef.remove();
                 }
             }
-        });
+        }
+
+        window.addEventListener('beforeunload', leaveCurrentLobby);
         
         const games = { tetris: { name: 'Tetris', init: initTetris, music: 'tetris', sort: 'desc' }, spaceInvaders: { name: 'Space Invaders', init: initSpaceInvaders, music: 'spaceInvaders', sort: 'desc' }, pacman: { name: 'Pac-Man', init: initPacman, music: 'pacman', sort: 'desc' }, racing: { name: 'Retro Racer', init: initRacing, music: 'racing', sort: 'desc' }, snake: { name: 'Snake', init: initSnake, music: null, sort: 'desc' }, pong: { name: 'Pong', init: initPong, music: null, sort: 'desc' }, breakout: { name: 'Breakout', init: initBreakout, music: 'breakout', sort: 'desc' }, maze: { name: 'Maze Runner', init: initMaze, music: null, sort: 'asc' } };
 
