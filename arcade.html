@@ -427,7 +427,7 @@
                 const playerCount = Object.keys(players).length;
 
                 if (isHost) {
-                    document.getElementById('play-btn').disabled = playerCount <= 1;
+                    document.getElementById('play-btn').disabled = playerCount < 1;
                 }
 
                 const colors = new Set();
@@ -575,7 +575,9 @@
             const listener = lobbyRef.on('value', (snapshot) => {
                 if (!snapshot.exists()) {
                     if (!isHost) {
-                        stopGame(true);
+                        if (isGameActive) {
+                            stopGame(true); 
+                        }
                         goToStartScreen("Lobby was closed by the host.");
                     }
                     return;
@@ -583,10 +585,12 @@
                 const lobbyData = snapshot.val();
                 currentLobbyData = lobbyData;
 
-                // FIX: Only switch to arcade if status is 'playing' AND we are on the lobby screen.
-                // This prevents being kicked out of a game on a score update.
-                if (lobbyData && lobbyData.status === 'playing' && lobbyScreen.style.display === 'flex') {
-                     switchToArcadeRoom();
+                // *** NEW BUG FIX LOGIC ***
+                // This will only trigger the switch from lobby to arcade ONCE.
+                // It checks if the game should be playing, but makes sure we are not
+                // already in the arcade or actively inside a sub-game.
+                if (lobbyData.status === 'playing' && !isGameActive && arcadeRoom.style.display !== 'flex') {
+                    switchToArcadeRoom();
                 }
             });
             lobbyStateListenerInfo = { ref: lobbyRef, listener: listener };
@@ -985,8 +989,7 @@
 
             checkGauntletWin(gameId, score, hasWon);
 
-            // Part 1: Update the Realtime Database for the current multiplayer lobby session
-            if (gameMode === 'multiplayer') {
+            if (gameMode === 'multiplayer') { 
                 const myColor = currentLobbyData.players[playerName]?.color || '#FFFFFF';
                 const scoreRef = rtdb.ref(`lobbies/${currentLobbyId}/scores/${gameId}/${playerName}`);
                 
@@ -994,51 +997,27 @@
                 const existingData = snapshot.val();
                 const existingScore = existingData ? existingData.score : null;
 
-                const isNewLobbyHighScore = existingScore === null || (games[gameId].sort === 'desc' ? score > existingScore : score < existingScore);
+                let isNewLobbyHighScore = existingScore === null || (games[gameId].sort === 'desc' ? score > existingScore : score < existingScore);
                 
                 if (isNewLobbyHighScore) {
                     await scoreRef.set({ score: score, color: myColor });
                 }
             }
-
-            // Part 2: Update the global Firestore leaderboard if it's a new record
-            // This runs for all modes (solo, gauntlet, multiplayer) for logged-in users
+            
             if (user.isAnonymous) {
                 return;
             }
-
-            const gameInfo = games[gameId];
-            const topScoreQuery = db.collection('arcade_high_scores').doc(gameId).collection('scores')
-                                    .orderBy('score', gameInfo.sort === 'asc' ? 'asc' : 'desc').limit(1);
             
-            try {
-                const topScoreSnapshot = await topScoreQuery.get();
-                let isNewGlobalRecord = false;
+            const gameInfo = games[gameId];
+            const globalTopScore = highScores[gameId] && highScores[gameId][0] ? highScores[gameId][0].score : null;
+            const isNewGlobalRecord = globalTopScore === null || (gameInfo.sort === 'desc' ? score > globalTopScore : score < globalTopScore);
 
-                if (topScoreSnapshot.empty) {
-                    isNewGlobalRecord = true;
-                } else {
-                    const globalTopScore = topScoreSnapshot.docs[0].data().score;
-                    isNewGlobalRecord = (gameInfo.sort === 'desc' ? score > globalTopScore : score < globalTopScore);
-                }
-
-                if (isNewGlobalRecord) {
-                    const collectionRef = db.collection('arcade_high_scores').doc(gameId).collection('scores');
-                    await collectionRef.add({
-                        name: playerName.substring(0, 10),
-                        score: score,
-                        userId: user.uid,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    
-                    // Reload the high scores cache to reflect the new #1 score immediately
-                    await loadHighScoresFromFirestore();
-                    if (isGameActive) {
-                        updateHighScoresDisplay();
-                    }
-                }
-            } catch (error) {
-                console.error("Error saving global high score:", error);
+            if (isNewGlobalRecord) {
+                const globalScoreRef = db.collection('arcade_high_scores').doc(gameId).collection('scores').doc();
+                await globalScoreRef.set({ name: playerName.substring(0, 10), score: score, userId: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+                
+                const newHighScores = await db.collection('arcade_high_scores').doc(gameId).collection('scores').orderBy('score', gameInfo.sort === 'asc' ? 'asc' : 'desc').limit(10).get();
+                highScores[gameId] = newHighScores.docs.map(doc => doc.data());
             }
         }
 
