@@ -70,16 +70,18 @@
         #high-scores-container{position:absolute;top:20px;right:20px;background-color:rgba(0,0,0,0.8);padding:20px;border:2px solid var(--primary-glow);border-radius:10px;display:none;width:250px;}
         #high-scores-list li .name{color:var(--primary-glow);}
         #high-scores-list li .score{color:#ffff00;}
-        #volume-control { position: fixed; bottom: 20px; right: 20px; z-index: 3000; display: none; align-items: center; gap: 10px; background: rgba(0,0,0,0.5); padding: 10px 15px; border-radius: 5px; border: 2px solid var(--secondary-glow); box-shadow: 0 0 10px var(--secondary-glow); }
+        #volume-control { position: fixed; bottom: 20px; right: 20px; z-index: 3000; display: none; align-items: center; gap: 10px; background: rgba(10,10,10,0.7); padding: 10px 15px; border-radius: 5px; border: 3px solid var(--primary-glow); box-shadow: 0 0 10px var(--primary-glow) inset, 0 0 8px var(--primary-glow); backdrop-filter: blur(2px); }
         body.in-game #volume-control { display: flex; }
-        #volume-control label { font-family:'Press Start 2P',cursive; font-size: 1.5em; color: var(--secondary-glow); text-shadow: 0 0 5px var(--secondary-glow); -webkit-text-stroke: 1px var(--secondary-glow); }
-        input[type="range"] { -webkit-appearance: none; appearance: none; width: 150px; height: 16px; background: transparent; cursor: pointer; }
-        input[type="range"]::-webkit-slider-runnable-track { height: 8px; background: linear-gradient(90deg, var(--secondary-glow) 0%, var(--primary-glow) 100%); box-shadow: 0 0 8px var(--primary-glow); border: 2px solid #000;}
-        input[type="range"]::-moz-range-track { height: 8px; background: linear-gradient(90deg, var(--secondary-glow) 0%, var(--primary-glow) 100%); box-shadow: 0 0 8px var(--primary-glow); border: 2px solid #000; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; background-color: #fff; margin-top: -10px; border: 2px solid #000; box-shadow: 0 0 15px #fff; border-radius: 3px; }
-        input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; background-color: #fff; border: 2px solid #000; border-radius: 3px; box-shadow: 0 0 15px #fff; }
+        #volume-control label { font-family:'Press Start 2P',cursive; font-size: 1.2em; color: var(--primary-glow); text-shadow: 0 0 5px var(--primary-glow); }
+        input[type="range"] { -webkit-appearance: none; appearance: none; width: 150px; height: 20px; background: transparent; cursor: pointer; }
+        input[type="range"]::-webkit-slider-runnable-track { height: 20px; background: #111; border: 2px solid #000; box-shadow: inset 0 0 5px #000; }
+        input[type="range"]::-moz-range-track { height: 20px; background: #111; border: 2px solid #000; box-shadow: inset 0 0 5px #000; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 28px; background-color: var(--secondary-glow); margin-top: -6px; border: 2px solid #000; box-shadow: 0 0 15px var(--secondary-glow), inset 0 0 3px #fff; }
+        input[type="range"]::-moz-range-thumb { width: 16px; height: 28px; background-color: var(--secondary-glow); border: 2px solid #000; box-shadow: 0 0 15px var(--secondary-glow), inset 0 0 3px #fff; }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .modal-content { border: 3px solid var(--secondary-glow); padding: 40px; box-shadow: 0 0 25px var(--secondary-glow) inset, 0 0 15px var(--secondary-glow); background: var(--main-bg); animation: flicker-all 5s infinite; }
+        .modal-content { border: 3px solid var(--secondary-glow); padding: 40px; box-shadow: 0 0 25px var(--secondary-glow) inset, 0 0 15px var(--secondary-glow); background: var(--main-bg); animation: flicker-all 5s infinite; position: relative; }
+        .close-modal-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; color: #fff; font-family: 'Press Start 2P', cursive; font-size: 1.5em; cursor: pointer; text-shadow: 0 0 5px red; }
+        .close-modal-btn:hover { color: red; }
         .modal-content h2 { font-size: 2.5em; color: var(--secondary-glow); text-shadow: 0 0 8px var(--secondary-glow); margin-bottom: 20px;}
         #results-list { list-style: none; font-size: 1.2em; text-align: left;}
         #results-list li { margin-bottom: 10px; }
@@ -144,12 +146,13 @@
     </div>
     <div id="high-scores-container"><h2 id="high-scores-title">High Scores</h2><ul id="high-scores-list"></ul></div>
     <div id="volume-control">
-        <label for="volume-slider">🔊</label>
+        <label for="volume-slider">VOL</label>
         <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
     </div>
 
     <div id="winner-modal" class="modal">
         <div class="modal-content">
+            <button id="close-winner-modal" class="close-modal-btn">X</button>
             <h2>WINNER!</h2>
             <p id="winner-name"></p>
             <p>is the Arcade Champion!</p>
@@ -244,10 +247,16 @@
         });
 
         function setupInitialScreen() {
+            AudioEngine.init();
+            const volumeSlider = document.getElementById('volume-slider');
+            const savedVolume = localStorage.getItem('arcadeVolume') || 0.5;
+            volumeSlider.value = savedVolume;
+            AudioEngine.setVolume(savedVolume);
+            volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
+
             document.getElementById('single-player-btn').addEventListener('click', () => {
                 isHost = true;
                 currentLobbyData = null; 
-                AudioEngine.init();
                 AudioEngine.playMusic('menu');
                 startScreen.style.display = 'none';
                 arcadeRoom.style.display = 'flex';
@@ -258,20 +267,18 @@
                      alert("You must be logged in to play multiplayer!");
                      return;
                 }
-                AudioEngine.init(); 
                 startScreen.style.display = 'none';
                 lobbyScreen.style.display = 'flex';
                 setupLobbyPage();
                 switchToJoinMode();
             });
+             document.getElementById('close-winner-modal').addEventListener('click', () => {
+                document.getElementById('winner-modal').style.display = 'none';
+                window.location.reload(); 
+            });
         }
 
         function setupLobbyPage() {
-            const volumeSlider = document.getElementById('volume-slider');
-            const savedVolume = localStorage.getItem('arcadeVolume') || 0.5;
-            volumeSlider.value = savedVolume;
-            volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
-            
             document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
             document.getElementById('host-btn').addEventListener('click', switchToHostMode);
             document.getElementById('join-btn').addEventListener('click', switchToJoinMode);
@@ -392,6 +399,7 @@
                         const li = document.createElement('li');
                         li.textContent = name;
                         li.style.color = playerData.color || '#FFFFFF';
+                        li.style.textShadow = `0 0 5px ${playerData.color || '#FFFFFF'}`;
 
                         if(name === playerName) {
                             renderColorSelector(playerData.color);
@@ -426,12 +434,15 @@
             currentLobbyId = lobbyId;
             isHost = false;
             playerRef = rtdb.ref(`lobbies/${lobbyId}/players/${playerName}`);
-            await playerRef.set({ color: TEAM_COLORS[0] });
+            
+            await playerRef.set({ color: TEAM_COLORS[Math.floor(Math.random() * TEAM_COLORS.length)] });
             playerRef.onDisconnect().remove();
             
-            switchToHostMode(); 
+            document.getElementById('host-view').style.display = 'flex';
+            document.getElementById('join-view').style.display = 'none';
             document.getElementById('host-btn').classList.remove('active');
             document.getElementById('join-btn').classList.add('active');
+
             initializeLobbyUI(false);
             listenForPlayersInLobby(lobbyId);
             listenForLobbyStatus(lobbyId);
@@ -590,12 +601,19 @@
 
                 if (remaining <= 0) {
                     clearInterval(countdownInterval);
+                    countdownDisplay.textContent = "GAME OVER";
                     endArcadeRun();
                 }
             }, 1000);
         }
 
         async function endArcadeRun() {
+            if (gameContainer.style.display === 'flex') {
+                stopGame(false); 
+            }
+            
+            document.querySelectorAll('.game-cabinet').forEach(c => c.onclick = null);
+
             const allScores = lobbyHighScores || {};
             const playerWins = {};
             if (currentLobbyData.players) {
@@ -751,7 +769,7 @@
             currentGameId = null;
             highScoresContainer.style.display = 'none';
             
-            if (currentLobbyData === null) {
+            if (currentLobbyData === null && !isForced) {
                 document.body.classList.remove('in-game');
             }
         }
@@ -777,7 +795,7 @@
                     let scoreDisplay = score.score;
                     if(games[currentGameId].sort === 'asc') scoreDisplay += 's';
 
-                    const nameSpan = `<span class="name" style="color:${score.color || 'var(--primary-glow)'}">${score.name}</span>`;
+                    const nameSpan = `<span class="name" style="color:${score.color || 'var(--primary-glow)'}; text-shadow: 0 0 5px ${score.color || 'var(--primary-glow)'}">${score.name}</span>`;
                     const scoreSpan = `<span class="score">${scoreDisplay}</span>`;
                     
                     li.innerHTML = `${nameSpan} ${scoreSpan}`;
