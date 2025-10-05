@@ -585,10 +585,6 @@
                 const lobbyData = snapshot.val();
                 currentLobbyData = lobbyData;
 
-                // *** NEW BUG FIX LOGIC ***
-                // This will only trigger the switch from lobby to arcade ONCE.
-                // It checks if the game should be playing, but makes sure we are not
-                // already in the arcade or actively inside a sub-game.
                 if (lobbyData.status === 'playing' && !isGameActive && arcadeRoom.style.display !== 'flex') {
                     switchToArcadeRoom();
                 }
@@ -605,6 +601,9 @@
                  if(isGameActive) {
                     updateHighScoresDisplay();
                  }
+                 if (arcadeRoom.style.display === 'flex') {
+                    createGameCabinets();
+                 }
             });
             lobbyScoresListenerInfo = { ref: scoresRef, listener: listener };
         }
@@ -615,6 +614,9 @@
             const progressRef = rtdb.ref(`lobbies/${lobbyId}/gauntletProgress`);
             const listener = progressRef.on('value', (snapshot) => {
                 gauntletProgress = snapshot.val() || {};
+                if (arcadeRoom.style.display === 'flex') {
+                    createGameCabinets();
+                }
             });
             gauntletListenerInfo = { ref: progressRef, listener: listener };
         }
@@ -1009,15 +1011,21 @@
             }
             
             const gameInfo = games[gameId];
-            const globalTopScore = highScores[gameId] && highScores[gameId][0] ? highScores[gameId][0].score : null;
+            const globalTopScore = highScores[gameId] && highScores[gameId].length > 0 ? highScores[gameId][0].score : null;
             const isNewGlobalRecord = globalTopScore === null || (gameInfo.sort === 'desc' ? score > globalTopScore : score < globalTopScore);
 
             if (isNewGlobalRecord) {
                 const globalScoreRef = db.collection('arcade_high_scores').doc(gameId).collection('scores').doc();
                 await globalScoreRef.set({ name: playerName.substring(0, 10), score: score, userId: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
                 
-                const newHighScores = await db.collection('arcade_high_scores').doc(gameId).collection('scores').orderBy('score', gameInfo.sort === 'asc' ? 'asc' : 'desc').limit(10).get();
-                highScores[gameId] = newHighScores.docs.map(doc => doc.data());
+                await loadHighScoresFromFirestore();
+                
+                if (isGameActive) {
+                    updateHighScoresDisplay();
+                }
+                if (arcadeRoom.style.display === 'flex') {
+                    createGameCabinets();
+                }
             }
         }
 
