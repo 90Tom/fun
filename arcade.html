@@ -596,12 +596,9 @@
             const scoresRef = rtdb.ref(`lobbies/${lobbyId}/scores`);
             const listener = scoresRef.on('value', (snapshot) => {
                 lobbyHighScores = snapshot.val() || {};
-                if(!isGameActive && arcadeRoom.style.display === 'flex') {
-                    createGameCabinets(); 
-                }
-                 if(isGameActive && gameContainer.style.display === 'flex' && currentGameId) {
+                 if(isGameActive) {
                     updateHighScoresDisplay();
-                }
+                 }
             });
             lobbyScoresListenerInfo = { ref: scoresRef, listener: listener };
         }
@@ -612,9 +609,6 @@
             const progressRef = rtdb.ref(`lobbies/${lobbyId}/gauntletProgress`);
             const listener = progressRef.on('value', (snapshot) => {
                 gauntletProgress = snapshot.val() || {};
-                 if (!isGameActive && arcadeRoom.style.display === 'flex') {
-                    createGameCabinets();
-                }
             });
             gauntletListenerInfo = { ref: progressRef, listener: listener };
         }
@@ -951,10 +945,11 @@
         }
 
         function updateHighScoresDisplay() {
+            if (!highScoresContainer || !currentGameId) return;
             highScoresList.innerHTML = '';
             let scores = [];
 
-            if (gameMode === 'multiplayer' || currentLobbyData) {
+            if (gameMode === 'multiplayer' || (currentLobbyData && currentLobbyData.mode)) {
                 const gameScores = lobbyHighScores[currentGameId];
                 if (gameScores) {
                     scores = Object.entries(gameScores).map(([name, data]) => ({ name, ...data }));
@@ -1013,9 +1008,6 @@
                         
                         const newHighScores = await db.collection('arcade_high_scores').doc(gameId).collection('scores').orderBy('score', gameInfo.sort === 'asc' ? 'asc' : 'desc').limit(10).get();
                         highScores[gameId] = newHighScores.docs.map(doc => doc.data());
-                         if (!isGameActive && arcadeRoom.style.display === 'flex') {
-                           createGameCabinets();
-                        }
                     }
                 }
                 return;
