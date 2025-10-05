@@ -17,7 +17,7 @@
         #lobby-list li { padding: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s ease; }
         #lobby-list li:hover { background: rgba(0, 229, 255, 0.1); }
         #player-list-container { flex-grow: 1; overflow-y: auto; }
-        #player-list { list-style: none; text-align: left; font-size: 1.2em; color: #ffff00; }
+        #player-list { list-style: none; text-align: left; font-size: 1.2em; }
         #player-list li { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .kick-btn { font-family:'Press Start 2P',cursive; background:none; border:none; color:red; cursor:pointer; font-size: 1em; }
         .kick-btn:hover { color: #ff5555; }
@@ -26,7 +26,7 @@
         .lobby-btn:hover { background: var(--primary-glow); color: var(--main-bg); box-shadow: 0 0 25px var(--primary-glow); }
         .lobby-btn:disabled { color: #555; border-color: #555; text-shadow: none; box-shadow: none; cursor: not-allowed; }
         .host-join-toggle { margin-top: 20px; display: flex; gap: 15px; align-items: center; }
-        .host-settings { margin-top: 20px; display: flex; gap: 10px; align-items: center; font-size: 0.8em; }
+        .host-settings { margin-top: 20px; display: flex; flex-direction:column; gap: 15px; align-items: center; font-size: 0.8em; }
         #time-input { font-family:'Press Start 2P',cursive; background: transparent; color: var(--text-color); border: 2px solid var(--text-color); padding: 5px; font-size: 0.9em; width: 60px; text-align: center;}
         .mode-btn { font-family:'Press Start 2P',cursive; font-size:0.8em; padding: 8px 15px; border: 2px solid var(--text-color); color: var(--text-color); background: transparent; cursor: pointer; }
         .mode-btn.active { background: var(--text-color); color: var(--main-bg); }
@@ -85,6 +85,9 @@
         #results-list li { margin-bottom: 10px; }
         #winner-name { color: #ffff00; font-size: 1.5em; text-shadow: 0 0 8px #ffff00; }
         #countdown-display { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 2.5em; color: var(--primary-glow); text-shadow: 0 0 8px var(--primary-glow); z-index: 4000; display: none; background: rgba(0,0,0,0.5); padding: 5px 15px; border: 2px solid var(--primary-glow); }
+        #color-selection { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
+        .color-box { width: 25px; height: 25px; cursor: pointer; border: 2px solid #555; transition: border-color 0.2s; }
+        .color-box.selected { border-color: #fff; box-shadow: 0 0 10px #fff; }
     </style>
 </head>
 <body>
@@ -109,9 +112,12 @@
                     <ul id="player-list"></ul>
                 </div>
                  <div class="host-settings">
-                    <label for="time-input">Arcade Run Time:</label>
-                    <input type="number" id="time-input" min="1" max="10" value="3">
-                    <span>Mins</span>
+                    <div id="color-selection"></div>
+                    <div>
+                        <label for="time-input">Arcade Run Time:</label>
+                        <input type="number" id="time-input" min="1" max="10" value="3">
+                        <span>Mins</span>
+                    </div>
                 </div>
             </div>
             <div id="join-view" class="lobby-browser">
@@ -156,567 +162,682 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script>
         const firebaseConfig = {
-    apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
-    authDomain: "tom-fun.firebaseapp.com",
-    databaseURL: "https://tom-fun-default-rtdb.firebaseio.com",
-    projectId: "tom-fun",
-    storageBucket: "tom-fun.firebasestorage.app",
-    messagingSenderId: "710857129785",
-    appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
-    measurementId: "G-6MHP8FHQ87"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const rtdb = firebase.database();
-const db = firebase.firestore();
-
-const startScreen = document.getElementById('start-screen');
-const lobbyScreen = document.getElementById('lobby-screen');
-const arcadeRoom = document.getElementById('arcade-room'),
-    gameSelection = document.getElementById('game-selection'),
-    gameContainer = document.getElementById('game-container'),
-    canvas = document.getElementById('game-canvas'),
-    ctx = canvas.getContext('2d'),
-    scoreElement = document.getElementById('score'),
-    levelLivesElement = document.getElementById('level-lives'),
-    backToArcadeButton = document.getElementById('back-to-arcade'),
-    highScoresContainer = document.getElementById('high-scores-container'),
-    highScoresList = document.getElementById('high-scores-list'),
-    highScoresTitle = document.getElementById('high-scores-title');
-    
-let currentGameId = null,
-    gameLoopId = null,
-    highScores = {},
-    currentKeyListener = null,
-    currentMouseListener = null;
-
-let currentLobbyId = null;
-let playerName = 'PLAYER';
-let isHost = false;
-let lobbyStateListenerInfo = null;
-let playerListListenerInfo = null;
-let countdownInterval = null;
-let playerRef = null;
-let currentLobbyData = null;
-
-const AudioEngine = {
-    audioCtx: null, initialized: false, musicNode: null, masterGain: null,
-    N: (note) => 440 * Math.pow(2, (note - 69) / 12),
-    init() { if (!this.initialized) { try { this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); this.masterGain = this.audioCtx.createGain(); this.masterGain.connect(this.audioCtx.destination); this.initialized = true; this.setVolume(localStorage.getItem('arcadeVolume') || 0.5); } catch(e) { console.error("Could not initialize AudioContext:", e); }}},
-    setVolume(value) { if(this.initialized) { this.masterGain.gain.setValueAtTime(parseFloat(value), this.audioCtx.currentTime); localStorage.setItem('arcadeVolume', value); } },
-    playSound(type) { if (!this.initialized) return; const now = this.audioCtx.currentTime; const gain = this.audioCtx.createGain(); gain.connect(this.masterGain); const o = this.audioCtx.createOscillator(); o.connect(gain); switch(type) { case 'shoot': gain.gain.setValueAtTime(0.1, now); o.type = 'square'; o.frequency.setValueAtTime(800, now); o.frequency.exponentialRampToValueAtTime(200, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'hit': gain.gain.setValueAtTime(0.2, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(200, now); o.frequency.exponentialRampToValueAtTime(100, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'score': gain.gain.setValueAtTime(0.15, now); o.type = 'sine'; o.frequency.setValueAtTime(440, now); o.frequency.exponentialRampToValueAtTime(880, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'select': gain.gain.setValueAtTime(0.15, now); o.type = 'triangle'; o.frequency.setValueAtTime(300, now); o.frequency.exponentialRampToValueAtTime(600, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2); o.start(now); o.stop(now + 0.2); break; case 'gameOver': gain.gain.setValueAtTime(0.2, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(400, now); o.frequency.exponentialRampToValueAtTime(100, now + 0.5); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5); o.start(now); o.stop(now + 0.5); break; case 'snakeEat': gain.gain.setValueAtTime(0.15, now); o.type = 'triangle'; o.frequency.setValueAtTime(600, now); o.start(now); o.stop(now + 0.05); break; case 'pongScore': gain.gain.setValueAtTime(0.2, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(523, now); o.frequency.exponentialRampToValueAtTime(1046, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'pongHit': gain.gain.setValueAtTime(0.2, now); o.type = 'square'; o.frequency.setValueAtTime(200, now); o.start(now); o.stop(now + 0.05); break; case 'mazeStep': gain.gain.setValueAtTime(0.05, now); o.type = 'square'; o.frequency.setValueAtTime(150, now); o.start(now); o.stop(now + 0.05); break; case 'mazeBump': gain.gain.setValueAtTime(0.1, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(100, now); o.start(now); o.stop(now + 0.08); break; } },
-    playMusic(track) {
-        if (!this.initialized) return; this.stopMusic(); if (!track) return;
-        const R = 0; const tracks = {
-            menu: { tempo: 180, vol: 0.1, melody: [ {n:60,d:1},{n:64,d:1},{n:67,d:1},{n:72,d:1},{n:67,d:1},{n:64,d:1},{n:60,d:2},{n:55,d:1},{n:59,d:1},{n:62,d:1},{n:67,d:1},{n:62,d:1},{n:59,d:1},{n:55,d:2},{n:R,d:2}, {n:62,d:1},{n:65,d:1},{n:69,d:1},{n:74,d:1},{n:69,d:1},{n:65,d:1},{n:62,d:2},{n:57,d:1},{n:60,d:1},{n:64,d:1},{n:69,d:1},{n:64,d:1},{n:60,d:1},{n:57,d:2},{n:R,d:2}, ] },
-            tetris: { tempo: 220, vol: 0.15, melody: [ {n:76,d:2},{n:71,d:1},{n:72,d:1},{n:74,d:2},{n:72,d:1},{n:71,d:1},{n:69,d:2},{n:69,d:1},{n:72,d:1},{n:76,d:2},{n:74,d:1},{n:72,d:1},{n:71,d:2},{n:71,d:1},{n:72,d:1},{n:74,d:2},{n:76,d:2},{n:72,d:2},{n:69,d:2},{n:69,d:4},{n:R,d:4}, {n:74,d:2},{n:76,d:1},{n:77,d:1},{n:79,d:2},{n:77,d:1},{n:76,d:1},{n:74,d:2},{n:74,d:1},{n:76,d:1},{n:77,d:2},{n:76,d:1},{n:74,d:1},{n:72,d:2},{n:72,d:1},{n:74,d:1},{n:76,d:2},{n:74,d:1},{n:72,d:1},{n:71,d:4} ] },
-            spaceInvaders: { tempo: 140, vol: 0.08, melody: [ {n:48,d:1},{n:R,d:1},{n:48,d:1},{n:R,d:1},{n:48,d:1},{n:R,d:1},{n:48,d:1},{n:R,d:1}, {n:51,d:1},{n:R,d:1},{n:51,d:1},{n:R,d:1}, {n:50,d:2},{n:R,d:2}] },
-            pacman: { tempo: 200, vol: 0.1, melody: [ {n:67,d:1},{n:72,d:1},{n:76,d:1},{n:79,d:1},{n:R,d:1},{n:67,d:1},{n:72,d:1},{n:76,d:1},{n:R,d:2}, {n:69,d:1},{n:74,d:1},{n:77,d:1},{n:81,d:1},{n:R,d:1},{n:69,d:1},{n:74,d:1},{n:77,d:1} ] },
-            racing: { tempo: 200, vol: 0.12, melody: [ {n:48,d:1},{n:51,d:1},{n:55,d:1},{n:51,d:1},{n:60,d:2},{n:55,d:1},{n:51,d:1},{n:48,d:1},{n:51,d:1},{n:55,d:1},{n:51,d:1},{n:63,d:2},{n:60,d:1},{n:55,d:1} ] },
-            breakout: { tempo: 160, vol: 0.09, melody: [ {n:72,d:1},{n:76,d:2},{n:79,d:2},{n:76,d:1},{n:72,d:2},{n:R,d:2}, {n:67,d:1},{n:71,d:2},{n:74,d:2},{n:71,d:1},{n:67,d:2},{n:R,d:2} ] }
+            apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
+            authDomain: "tom-fun.firebaseapp.com",
+            databaseURL: "https://tom-fun-default-rtdb.firebaseio.com",
+            projectId: "tom-fun",
+            storageBucket: "tom-fun.firebasestorage.app",
+            messagingSenderId: "710857129785",
+            appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
+            measurementId: "G-6MHP8FHQ87"
         };
-        const trackData = tracks[track]; if (!trackData) return;
-        const { melody, vol } = trackData; const noteDuration = 60 / trackData.tempo; let time = this.audioCtx.currentTime;
-        this.musicNode = { gain: this.audioCtx.createGain(), oscillators: [], loop: null }; this.musicNode.gain.connect(this.masterGain); this.musicNode.gain.gain.setValueAtTime(vol, time); let totalDuration = 0;
-        melody.forEach(note => { const duration = note.d * noteDuration; if (note.n !== R) { const o = this.audioCtx.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(this.N(note.n), time); o.connect(this.musicNode.gain); o.start(time); o.stop(time + duration * 0.9); this.musicNode.oscillators.push(o); } time += duration; totalDuration += duration; });
-        this.musicNode.loop = setTimeout(() => this.playMusic(track), totalDuration * 1000);
-    },
-    stopMusic() { if (this.musicNode) { clearTimeout(this.musicNode.loop); this.musicNode.gain.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + 0.5); this.musicNode.oscillators.forEach(o => o.stop(this.audioCtx.currentTime + 0.5)); this.musicNode = null; } }
-};
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const rtdb = firebase.database();
+        const db = firebase.firestore();
 
-auth.onAuthStateChanged(user => {
-    if (user) {
-        playerName = (sessionStorage.getItem('loggedInUser') || user.displayName || `GUEST-${user.uid.substring(0,4)}`).toUpperCase();
-        setupInitialScreen();
-    } else {
-        auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
-    }
-});
+        const startScreen = document.getElementById('start-screen');
+        const lobbyScreen = document.getElementById('lobby-screen');
+        const arcadeRoom = document.getElementById('arcade-room'),
+            gameSelection = document.getElementById('game-selection'),
+            gameContainer = document.getElementById('game-container'),
+            canvas = document.getElementById('game-canvas'),
+            ctx = canvas.getContext('2d'),
+            scoreElement = document.getElementById('score'),
+            levelLivesElement = document.getElementById('level-lives'),
+            backToArcadeButton = document.getElementById('back-to-arcade'),
+            highScoresContainer = document.getElementById('high-scores-container'),
+            highScoresList = document.getElementById('high-scores-list'),
+            highScoresTitle = document.getElementById('high-scores-title');
+            
+        let currentGameId = null,
+            gameLoopId = null,
+            highScores = {},
+            lobbyHighScores = {},
+            currentKeyListener = null,
+            currentMouseListener = null;
 
-function setupInitialScreen() {
-    document.getElementById('single-player-btn').addEventListener('click', () => {
-        isHost = true;
-        currentLobbyData = null; 
-        AudioEngine.init();
-        AudioEngine.playMusic('menu');
-        startScreen.style.display = 'none';
-        arcadeRoom.style.display = 'flex';
-        document.body.classList.add('in-game');
-    });
-    document.getElementById('multiplayer-btn').addEventListener('click', () => {
-        if (auth.currentUser.isAnonymous) {
-             alert("You must be logged in to play multiplayer!");
-             return;
+        let currentLobbyId = null;
+        let playerName = 'PLAYER';
+        let isHost = false;
+        let lobbyStateListenerInfo = null;
+        let playerListListenerInfo = null;
+        let lobbyScoresListenerInfo = null;
+        let countdownInterval = null;
+        let playerRef = null;
+        let currentLobbyData = null;
+        
+        const TEAM_COLORS = ['#FF5555', '#55FF55', '#5555FF', '#FFFF55', '#FF55FF', '#55FFFF', '#FFFFFF', '#FFA500'];
+
+        const AudioEngine = {
+            audioCtx: null, initialized: false, musicNode: null, masterGain: null,
+            N: (note) => 440 * Math.pow(2, (note - 69) / 12),
+            init() { if (!this.initialized) { try { this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); this.masterGain = this.audioCtx.createGain(); this.masterGain.connect(this.audioCtx.destination); this.initialized = true; this.setVolume(localStorage.getItem('arcadeVolume') || 0.5); } catch(e) { console.error("Could not initialize AudioContext:", e); }}},
+            setVolume(value) { if(this.initialized) { this.masterGain.gain.setValueAtTime(parseFloat(value), this.audioCtx.currentTime); localStorage.setItem('arcadeVolume', value); } },
+            playSound(type) { if (!this.initialized) return; const now = this.audioCtx.currentTime; const gain = this.audioCtx.createGain(); gain.connect(this.masterGain); const o = this.audioCtx.createOscillator(); o.connect(gain); switch(type) { case 'shoot': gain.gain.setValueAtTime(0.1, now); o.type = 'square'; o.frequency.setValueAtTime(800, now); o.frequency.exponentialRampToValueAtTime(200, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'hit': gain.gain.setValueAtTime(0.2, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(200, now); o.frequency.exponentialRampToValueAtTime(100, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'score': gain.gain.setValueAtTime(0.15, now); o.type = 'sine'; o.frequency.setValueAtTime(440, now); o.frequency.exponentialRampToValueAtTime(880, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'select': gain.gain.setValueAtTime(0.15, now); o.type = 'triangle'; o.frequency.setValueAtTime(300, now); o.frequency.exponentialRampToValueAtTime(600, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2); o.start(now); o.stop(now + 0.2); break; case 'gameOver': gain.gain.setValueAtTime(0.2, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(400, now); o.frequency.exponentialRampToValueAtTime(100, now + 0.5); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5); o.start(now); o.stop(now + 0.5); break; case 'snakeEat': gain.gain.setValueAtTime(0.15, now); o.type = 'triangle'; o.frequency.setValueAtTime(600, now); o.start(now); o.stop(now + 0.05); break; case 'pongScore': gain.gain.setValueAtTime(0.2, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(523, now); o.frequency.exponentialRampToValueAtTime(1046, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'pongHit': gain.gain.setValueAtTime(0.2, now); o.type = 'square'; o.frequency.setValueAtTime(200, now); o.start(now); o.stop(now + 0.05); break; case 'mazeStep': gain.gain.setValueAtTime(0.05, now); o.type = 'square'; o.frequency.setValueAtTime(150, now); o.start(now); o.stop(now + 0.05); break; case 'mazeBump': gain.gain.setValueAtTime(0.1, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(100, now); o.start(now); o.stop(now + 0.08); break; } },
+            playMusic(track) {
+                if (!this.initialized) return; this.stopMusic(); if (!track) return;
+                const R = 0; const tracks = {
+                    menu: { tempo: 180, vol: 0.1, melody: [ {n:60,d:1},{n:64,d:1},{n:67,d:1},{n:72,d:1},{n:67,d:1},{n:64,d:1},{n:60,d:2},{n:55,d:1},{n:59,d:1},{n:62,d:1},{n:67,d:1},{n:62,d:1},{n:59,d:1},{n:55,d:2},{n:R,d:2}, {n:62,d:1},{n:65,d:1},{n:69,d:1},{n:74,d:1},{n:69,d:1},{n:65,d:1},{n:62,d:2},{n:57,d:1},{n:60,d:1},{n:64,d:1},{n:69,d:1},{n:64,d:1},{n:60,d:1},{n:57,d:2},{n:R,d:2}, ] },
+                    tetris: { tempo: 220, vol: 0.15, melody: [ {n:76,d:2},{n:71,d:1},{n:72,d:1},{n:74,d:2},{n:72,d:1},{n:71,d:1},{n:69,d:2},{n:69,d:1},{n:72,d:1},{n:76,d:2},{n:74,d:1},{n:72,d:1},{n:71,d:2},{n:71,d:1},{n:72,d:1},{n:74,d:2},{n:76,d:2},{n:72,d:2},{n:69,d:2},{n:69,d:4},{n:R,d:4}, {n:74,d:2},{n:76,d:1},{n:77,d:1},{n:79,d:2},{n:77,d:1},{n:76,d:1},{n:74,d:2},{n:74,d:1},{n:76,d:1},{n:77,d:2},{n:76,d:1},{n:74,d:1},{n:72,d:2},{n:72,d:1},{n:74,d:1},{n:76,d:2},{n:74,d:1},{n:72,d:1},{n:71,d:4} ] },
+                    spaceInvaders: { tempo: 140, vol: 0.08, melody: [ {n:48,d:1},{n:R,d:1},{n:48,d:1},{n:R,d:1},{n:48,d:1},{n:R,d:1},{n:48,d:1},{n:R,d:1}, {n:51,d:1},{n:R,d:1},{n:51,d:1},{n:R,d:1}, {n:50,d:2},{n:R,d:2}] },
+                    pacman: { tempo: 200, vol: 0.1, melody: [ {n:67,d:1},{n:72,d:1},{n:76,d:1},{n:79,d:1},{n:R,d:1},{n:67,d:1},{n:72,d:1},{n:76,d:1},{n:R,d:2}, {n:69,d:1},{n:74,d:1},{n:77,d:1},{n:81,d:1},{n:R,d:1},{n:69,d:1},{n:74,d:1},{n:77,d:1} ] },
+                    racing: { tempo: 200, vol: 0.12, melody: [ {n:48,d:1},{n:51,d:1},{n:55,d:1},{n:51,d:1},{n:60,d:2},{n:55,d:1},{n:51,d:1},{n:48,d:1},{n:51,d:1},{n:55,d:1},{n:51,d:1},{n:63,d:2},{n:60,d:1},{n:55,d:1} ] },
+                    breakout: { tempo: 160, vol: 0.09, melody: [ {n:72,d:1},{n:76,d:2},{n:79,d:2},{n:76,d:1},{n:72,d:2},{n:R,d:2}, {n:67,d:1},{n:71,d:2},{n:74,d:2},{n:71,d:1},{n:67,d:2},{n:R,d:2} ] }
+                };
+                const trackData = tracks[track]; if (!trackData) return;
+                const { melody, vol } = trackData; const noteDuration = 60 / trackData.tempo; let time = this.audioCtx.currentTime;
+                this.musicNode = { gain: this.audioCtx.createGain(), oscillators: [], loop: null }; this.musicNode.gain.connect(this.masterGain); this.musicNode.gain.gain.setValueAtTime(vol, time); let totalDuration = 0;
+                melody.forEach(note => { const duration = note.d * noteDuration; if (note.n !== R) { const o = this.audioCtx.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(this.N(note.n), time); o.connect(this.musicNode.gain); o.start(time); o.stop(time + duration * 0.9); this.musicNode.oscillators.push(o); } time += duration; totalDuration += duration; });
+                this.musicNode.loop = setTimeout(() => this.playMusic(track), totalDuration * 1000);
+            },
+            stopMusic() { if (this.musicNode) { clearTimeout(this.musicNode.loop); this.musicNode.gain.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + 0.5); this.musicNode.oscillators.forEach(o => o.stop(this.audioCtx.currentTime + 0.5)); this.musicNode = null; } }
+        };
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                playerName = (sessionStorage.getItem('loggedInUser') || user.displayName || `GUEST-${user.uid.substring(0,4)}`).toUpperCase();
+                setupInitialScreen();
+            } else {
+                auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
+            }
+        });
+
+        function setupInitialScreen() {
+            document.getElementById('single-player-btn').addEventListener('click', () => {
+                isHost = true;
+                currentLobbyData = null; 
+                AudioEngine.init();
+                AudioEngine.playMusic('menu');
+                startScreen.style.display = 'none';
+                arcadeRoom.style.display = 'flex';
+                document.body.classList.add('in-game');
+            });
+            document.getElementById('multiplayer-btn').addEventListener('click', () => {
+                if (auth.currentUser.isAnonymous) {
+                     alert("You must be logged in to play multiplayer!");
+                     return;
+                }
+                AudioEngine.init(); 
+                startScreen.style.display = 'none';
+                lobbyScreen.style.display = 'flex';
+                setupLobbyPage();
+                switchToJoinMode();
+            });
         }
-        AudioEngine.init(); 
-        startScreen.style.display = 'none';
-        lobbyScreen.style.display = 'flex';
-        setupLobbyPage();
-        switchToJoinMode();
-    });
-}
 
-function setupLobbyPage() {
-    const volumeSlider = document.getElementById('volume-slider');
-    const savedVolume = localStorage.getItem('arcadeVolume') || 0.5;
-    volumeSlider.value = savedVolume;
-    volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
-    
-    document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
-    document.getElementById('host-btn').addEventListener('click', switchToHostMode);
-    document.getElementById('join-btn').addEventListener('click', switchToJoinMode);
-}
+        function setupLobbyPage() {
+            const volumeSlider = document.getElementById('volume-slider');
+            const savedVolume = localStorage.getItem('arcadeVolume') || 0.5;
+            volumeSlider.value = savedVolume;
+            volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
+            
+            document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
+            document.getElementById('host-btn').addEventListener('click', switchToHostMode);
+            document.getElementById('join-btn').addEventListener('click', switchToJoinMode);
+        }
 
-async function switchToHostMode() {
-    await leaveCurrentLobby();
-    document.getElementById('host-view').style.display = 'flex';
-    document.getElementById('join-view').style.display = 'none';
-    document.getElementById('host-btn').classList.add('active');
-    document.getElementById('join-btn').classList.remove('active');
-    isHost = true;
-    await createLobby();
-}
+        async function switchToHostMode() {
+            await leaveCurrentLobby();
+            document.getElementById('host-view').style.display = 'flex';
+            document.getElementById('join-view').style.display = 'none';
+            document.getElementById('host-btn').classList.add('active');
+            document.getElementById('join-btn').classList.remove('active');
+            isHost = true;
+            await createLobby();
+        }
 
-async function switchToJoinMode() {
-    await leaveCurrentLobby();
-    isHost = false;
-    currentLobbyId = null;
-    document.getElementById('host-view').style.display = 'none';
-    document.getElementById('join-view').style.display = 'flex';
-    document.getElementById('host-btn').classList.remove('active');
-    document.getElementById('join-btn').classList.add('active');
-    initializeLobbyUI(false);
-    listenForLobbies();
-}
+        async function switchToJoinMode() {
+            await leaveCurrentLobby();
+            isHost = false;
+            currentLobbyId = null;
+            document.getElementById('host-view').style.display = 'none';
+            document.getElementById('join-view').style.display = 'flex';
+            document.getElementById('host-btn').classList.remove('active');
+            document.getElementById('join-btn').classList.add('active');
+            initializeLobbyUI(false);
+            listenForLobbies();
+        }
 
-function initializeLobbyUI(isUserHost) {
-    isHost = isUserHost;
-    document.getElementById('play-btn').disabled = !isUserHost;
-    document.getElementById('time-input').disabled = !isUserHost;
-    if(!isUserHost){
-        document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby...</li>`;
-    }
-}
+        function initializeLobbyUI(isUserHost) {
+            isHost = isUserHost;
+            document.getElementById('play-btn').disabled = !isUserHost;
+            document.getElementById('time-input').disabled = !isUserHost;
+            if(!isUserHost){
+                document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby...</li>`;
+                document.getElementById('color-selection').innerHTML = '';
+            }
+        }
 
-function listenForLobbies() {
-    const lobbyList = document.getElementById('lobby-list');
-    rtdb.ref('lobbies').on('value', (snapshot) => {
-        lobbyList.innerHTML = '';
-        let hasLobbies = false;
-        snapshot.forEach((childSnapshot) => {
-            const lobby = childSnapshot.val();
-            if (!lobby || !lobby.players) {
-                rtdb.ref(`lobbies/${childSnapshot.key}`).remove();
+        function listenForLobbies() {
+            const lobbyList = document.getElementById('lobby-list');
+            rtdb.ref('lobbies').on('value', (snapshot) => {
+                lobbyList.innerHTML = '';
+                let hasLobbies = false;
+                if (!snapshot.exists()) {
+                    lobbyList.innerHTML = '<li style="color: grey;">No lobbies found. Host one!</li>';
+                    return;
+                }
+                snapshot.forEach((childSnapshot) => {
+                    const lobby = childSnapshot.val();
+                    if (!lobby || !lobby.players) {
+                        rtdb.ref(`lobbies/${childSnapshot.key}`).remove();
+                        return;
+                    }
+                    if (isHost && childSnapshot.key === currentLobbyId) return;
+                    
+                    hasLobbies = true;
+                    const playerCount = Object.keys(lobby.players).length;
+                    const lobbyEl = document.createElement('li');
+                    lobbyEl.textContent = `${lobby.name} (${playerCount}/8)`;
+                    lobbyEl.dataset.lobbyId = childSnapshot.key;
+                    
+                    if (!isHost && childSnapshot.key === currentLobbyId) {
+                        lobbyEl.textContent += " (Joined)";
+                        lobbyEl.style.color = 'var(--primary-glow)';
+                    }
+
+                    if (playerCount >= 8 || lobby.status === 'playing') {
+                        lobbyEl.style.color = 'grey';
+                        lobbyEl.style.cursor = 'not-allowed';
+                    } else {
+                        lobbyEl.onclick = () => handleLobbyClick(childSnapshot.key);
+                    }
+                    lobbyList.appendChild(lobbyEl);
+                });
+                if (!hasLobbies) {
+                    lobbyList.innerHTML = '<li style="color: grey;">No other lobbies found.</li>';
+                }
+            });
+        }
+
+        async function handleLobbyClick(lobbyId) {
+            if (currentLobbyId === lobbyId) return;
+            await leaveCurrentLobby();
+            joinLobby(lobbyId);
+        }
+        
+        function renderColorSelector(playerColor) {
+            const container = document.getElementById('color-selection');
+            container.innerHTML = '';
+            TEAM_COLORS.forEach(color => {
+                const box = document.createElement('div');
+                box.className = 'color-box';
+                box.style.backgroundColor = color;
+                if(color === playerColor) {
+                    box.classList.add('selected');
+                }
+                box.onclick = () => updatePlayerColor(color);
+                container.appendChild(box);
+            });
+        }
+
+        function updatePlayerColor(color) {
+            if(playerRef) {
+                playerRef.update({ color: color });
+            }
+        }
+
+        function listenForPlayersInLobby(lobbyId) {
+            if (playerListListenerInfo) playerListListenerInfo.ref.off('value', playerListListenerInfo.listener);
+            
+            const playerList = document.getElementById('player-list');
+            const lobbyPlayersRef = rtdb.ref(`lobbies/${lobbyId}/players`);
+            const listener = lobbyPlayersRef.on('value', (snapshot) => {
+                playerList.innerHTML = '';
+                if (snapshot.exists()) {
+                    snapshot.forEach((playerSnapshot) => {
+                        const name = playerSnapshot.key;
+                        const playerData = playerSnapshot.val();
+                        const li = document.createElement('li');
+                        li.textContent = name;
+                        li.style.color = playerData.color || '#FFFFFF';
+
+                        if(name === playerName) {
+                            renderColorSelector(playerData.color);
+                        }
+
+                        if(isHost && name !== playerName) {
+                            const kickBtn = document.createElement('button');
+                            kickBtn.className = 'kick-btn';
+                            kickBtn.textContent = 'X';
+                            kickBtn.onclick = () => kickPlayer(name);
+                            li.appendChild(kickBtn);
+                        }
+                        playerList.appendChild(li);
+                    });
+                }
+            });
+            playerListListenerInfo = { ref: lobbyPlayersRef, listener: listener };
+        }
+
+        async function kickPlayer(playerToKick) {
+            if(isHost && currentLobbyId) {
+                await rtdb.ref(`lobbies/${currentLobbyId}/players/${playerToKick}`).remove();
+            }
+        }
+
+        async function joinLobby(lobbyId) {
+            const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
+            const snapshot = await lobbyRef.get();
+            if (!snapshot.exists() || snapshot.val().status === 'playing') { alert("Cannot join lobby."); return; }
+            await leaveCurrentLobby();
+
+            currentLobbyId = lobbyId;
+            isHost = false;
+            playerRef = rtdb.ref(`lobbies/${lobbyId}/players/${playerName}`);
+            await playerRef.set({ color: TEAM_COLORS[0] });
+            playerRef.onDisconnect().remove();
+            
+            switchToHostMode(); 
+            document.getElementById('host-btn').classList.remove('active');
+            document.getElementById('join-btn').classList.add('active');
+            initializeLobbyUI(false);
+            listenForPlayersInLobby(lobbyId);
+            listenForLobbyStatus(lobbyId);
+            listenForLobbyHighScores(lobbyId);
+
+
+            playerRef.on('value', (snapshot) => {
+                if(!snapshot.exists() && lobbyScreen.style.display !== 'none' && arcadeRoom.style.display === 'none') {
+                    alert("You have been kicked from the lobby.");
+                    window.location.reload();
+                }
+            });
+        }
+
+        async function createLobby() {
+            const newLobbyRef = rtdb.ref('lobbies').push();
+            currentLobbyId = newLobbyRef.key;
+            isHost = true;
+            playerRef = rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`);
+            
+            const initialPlayerData = {};
+            initialPlayerData[playerName] = { color: TEAM_COLORS[0] };
+
+            await newLobbyRef.set({
+                name: `${playerName}'S GAME`,
+                host: playerName,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                players: initialPlayerData,
+                status: 'waiting',
+                scores: {}
+            });
+            newLobbyRef.onDisconnect().remove();
+            
+            initializeLobbyUI(true);
+            listenForPlayersInLobby(currentLobbyId);
+            listenForLobbyStatus(currentLobbyId);
+            listenForLobbyHighScores(currentLobbyId);
+        }
+
+        async function startGameFromLobby() {
+            if (isHost && currentLobbyId) {
+                const durationMins = parseInt(document.getElementById('time-input').value, 10);
+                const durationSecs = durationMins * 60;
+                await rtdb.ref(`lobbies/${currentLobbyId}`).update({ 
+                    status: 'playing',
+                    startTime: firebase.database.ServerValue.TIMESTAMP,
+                    duration: durationSecs
+                });
+            }
+        }
+
+        function switchToArcadeRoom() {
+            if (arcadeRoom.style.display === 'flex') return; 
+            AudioEngine.playMusic('menu');
+            lobbyScreen.style.display = 'none';
+            gameContainer.style.display = 'none';
+            arcadeRoom.style.display = 'flex';
+            document.body.classList.add('in-game');
+            createGameCabinets(); 
+
+            if (currentLobbyData && currentLobbyData.status === 'playing') {
+                startCountdown(currentLobbyData.startTime, currentLobbyData.duration);
+            }
+        }
+
+        function listenForLobbyStatus(lobbyId) {
+            if (lobbyStateListenerInfo) lobbyStateListenerInfo.ref.off('value', lobbyStateListenerInfo.listener);
+            
+            const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
+            const listener = lobbyRef.on('value', (snapshot) => {
+                if (!snapshot.exists()) {
+                    if (!isHost) {
+                        stopGame(true);
+                        alert("Lobby closed by host.");
+                        window.location.reload();
+                    }
+                    return;
+                }
+                const lobbyData = snapshot.val();
+                currentLobbyData = lobbyData;
+
+                if (lobbyData && lobbyData.status === 'playing') {
+                     switchToArcadeRoom();
+                }
+            });
+            lobbyStateListenerInfo = { ref: lobbyRef, listener: listener };
+        }
+        
+        function listenForLobbyHighScores(lobbyId) {
+            if (lobbyScoresListenerInfo) lobbyScoresListenerInfo.ref.off('value', lobbyScoresListenerInfo.listener);
+            
+            const scoresRef = rtdb.ref(`lobbies/${lobbyId}/scores`);
+            const listener = scoresRef.on('value', (snapshot) => {
+                lobbyHighScores = snapshot.val() || {};
+                if(arcadeRoom.style.display === 'flex') {
+                    createGameCabinets(); 
+                }
+                 if(gameContainer.style.display === 'flex' && currentGameId) {
+                    updateHighScoresDisplay();
+                }
+            });
+            lobbyScoresListenerInfo = { ref: scoresRef, listener: listener };
+        }
+
+        async function leaveCurrentLobby() {
+             const listeners = [lobbyStateListenerInfo, playerListListenerInfo, lobbyScoresListenerInfo];
+            listeners.forEach(info => {
+                if (info) {
+                    info.ref.off('value', info.listener);
+                }
+            });
+            lobbyStateListenerInfo = playerListListenerInfo = lobbyScoresListenerInfo = null;
+
+             if (currentLobbyId && playerRef) {
+                await playerRef.onDisconnect().cancel();
+                await playerRef.remove();
+                playerRef = null;
+             }
+             if (currentLobbyId && isHost) {
+                const hostLobbyRef = rtdb.ref(`lobbies/${currentLobbyId}`);
+                await hostLobbyRef.onDisconnect().cancel();
+                await hostLobbyRef.remove();
+             }
+             currentLobbyId = null;
+             currentLobbyData = null;
+             isHost = false;
+             lobbyHighScores = {};
+        }
+
+        window.addEventListener('beforeunload', async () => {
+            if (isHost && currentLobbyId) {
+                await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
+            } else if (playerRef) {
+                await playerRef.remove();
+            }
+        });
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        function startCountdown(startTime, duration) {
+            if (countdownInterval) clearInterval(countdownInterval);
+            const countdownDisplay = document.getElementById('countdown-display');
+            countdownDisplay.style.display = 'block';
+
+            countdownInterval = setInterval(() => {
+                const serverTimeOffset = 0; 
+                const now = Date.now() + serverTimeOffset;
+                const elapsed = (now - startTime) / 1000;
+                const remaining = Math.max(0, duration - elapsed);
+                
+                countdownDisplay.textContent = formatTime(Math.ceil(remaining));
+
+                if (remaining <= 0) {
+                    clearInterval(countdownInterval);
+                    endArcadeRun();
+                }
+            }, 1000);
+        }
+
+        async function endArcadeRun() {
+            const allScores = lobbyHighScores || {};
+            const playerWins = {};
+            if (currentLobbyData.players) {
+                Object.keys(currentLobbyData.players).forEach(p => playerWins[p] = 0);
+            }
+            
+            for (const gameId in allScores) {
+                const gameScores = allScores[gameId];
+                const sortOrder = games[gameId].sort;
+                let bestScore = sortOrder === 'desc' ? -Infinity : Infinity;
+                let winnerForGame = null;
+
+                for (const player in gameScores) {
+                    const score = gameScores[player].score;
+                    if ((sortOrder === 'desc' && score > bestScore) || (sortOrder === 'asc' && score < bestScore)) {
+                        bestScore = score;
+                        winnerForGame = player;
+                    }
+                }
+                if (winnerForGame) {
+                    playerWins[winnerForGame]++;
+                }
+            }
+
+            let overallWinner = 'No one!';
+            let maxWins = 0;
+            let winningColor = '#ffff00';
+            for (const player in playerWins) {
+                if (playerWins[player] > maxWins) {
+                    maxWins = playerWins[player];
+                    overallWinner = player;
+                    if(currentLobbyData.players[player]) {
+                       winningColor = currentLobbyData.players[player].color;
+                    }
+                }
+            }
+            
+            const winnerNameEl = document.getElementById('winner-name');
+            winnerNameEl.textContent = overallWinner;
+            winnerNameEl.style.color = winningColor;
+            winnerNameEl.style.textShadow = `0 0 8px ${winningColor}`;
+            document.getElementById('winner-modal').style.display = 'flex';
+        }
+
+
+        const games = {
+            tetris: { name: 'Tetris', init: initTetris, music: 'tetris', sort: 'desc' },
+            spaceInvaders: { name: 'Space Invaders', init: initSpaceInvaders, music: 'spaceInvaders', sort: 'desc' },
+            pacman: { name: 'Pac-Man', init: initPacman, music: 'pacman', sort: 'desc' },
+            racing: { name: 'Retro Racer', init: initRacing, music: 'racing', sort: 'desc' },
+            snake: { name: 'Snake', init: initSnake, music: null, sort: 'desc' },
+            pong: { name: 'Pong', init: initPong, music: null, sort: 'desc' },
+            breakout: { name: 'Breakout', init: initBreakout, music: 'breakout', sort: 'desc' },
+            maze: { name: 'Maze Runner', init: initMaze, music: null, sort: 'asc' }
+        };
+
+        async function loadHighScoresFromFirestore() {
+            for (const gameId in games) {
+                const game = games[gameId];
+                const query = db.collection('arcade_high_scores').doc(gameId).collection('scores')
+                    .orderBy('score', game.sort === 'asc' ? 'asc' : 'desc').limit(1);
+                
+                try {
+                    const snapshot = await query.get();
+                    if (!snapshot.empty) {
+                        highScores[gameId] = snapshot.docs.map(doc => doc.data());
+                    } else {
+                        highScores[gameId] = [];
+                    }
+                } catch (e) {
+                    console.error(`Could not load high score for ${gameId}:`, e);
+                    highScores[gameId] = [];
+                }
+            }
+            createGameCabinets();
+        }
+
+
+        function createGameCabinets() {
+            gameSelection.innerHTML = '';
+            for (const gameId in games) {
+                const game = games[gameId];
+                let topScoreDisplay = 'NO SCORE';
+
+                if(currentLobbyData) {
+                    const gameScores = lobbyHighScores[gameId];
+                    if (gameScores) {
+                        const sortOrder = games[gameId].sort;
+                        let bestScore = sortOrder === 'desc' ? -Infinity : Infinity;
+                        let topPlayer = null;
+                        
+                        for (const playerName in gameScores) {
+                            const playerData = gameScores[playerName];
+                            if ((sortOrder === 'desc' && playerData.score > bestScore) || (sortOrder === 'asc' && playerData.score < bestScore)) {
+                                bestScore = playerData.score;
+                                topPlayer = { name: playerName, color: playerData.color, score: playerData.score };
+                            }
+                        }
+                        if(topPlayer){
+                             let score = topPlayer.score;
+                             if (game.sort === 'asc') score += 's';
+                             topScoreDisplay = `<span style="color:${topPlayer.color}; text-shadow: 0 0 5px ${topPlayer.color};">${topPlayer.name}</span> - ${score}`;
+                        }
+                    }
+
+                } else {
+                    if (highScores[gameId] && highScores[gameId].length > 0) {
+                        const top = highScores[gameId][0];
+                        let score = top.score;
+                        if (game.sort === 'asc') score += 's';
+                        topScoreDisplay = `${score} - ${top.name}`;
+                    }
+                }
+
+                const cabinet = document.createElement('div');
+                cabinet.className = 'game-cabinet';
+                cabinet.dataset.theme = gameId;
+                cabinet.innerHTML = `<div class="marquee">${game.name}</div><div class="screen-area"><div>TOP SCORE</div><div class="high-score-display">${topScoreDisplay}</div></div><div class="control-panel-base"><div class="control-panel"><div class="joystick"></div><div class="buttons"><div></div><div class="coin-slot"></div></div></div></div>`;
+                cabinet.querySelector('.joystick').innerHTML = '<div class="joystick-base"></div><div class="joystick-stick"></div><div class="joystick-top"></div>';
+                cabinet.onclick = () => startGame(gameId);
+                gameSelection.appendChild(cabinet);
+            }
+        }
+
+        function startGame(gameId) {
+            AudioEngine.playSound('select');
+            AudioEngine.playMusic(games[gameId].music);
+            arcadeRoom.style.display = 'none';
+            gameContainer.style.display = 'flex';
+            highScoresContainer.style.display = 'block';
+            currentGameId = gameId;
+            highScoresTitle.innerText = `${games[currentGameId].name} Scores`;
+            updateHighScoresDisplay();
+            games[gameId].init();
+        }
+
+        function stopGame(isForced = false) {
+            AudioEngine.playMusic('menu');
+            if (gameLoopId) { cancelAnimationFrame(gameLoopId); clearInterval(gameLoopId); gameLoopId = null; }
+            if (currentKeyListener) { document.removeEventListener('keydown', currentKeyListener); document.removeEventListener('keyup', currentKeyListener); currentKeyListener = null; }
+            if (currentMouseListener) { canvas.removeEventListener('mousemove', currentMouseListener); currentMouseListener = null; }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (isForced) {
+                gameContainer.style.display = 'none';
+                arcadeRoom.style.display = 'none';
+                lobbyScreen.style.display = 'flex';
+            } else {
+                gameContainer.style.display = 'none';
+                arcadeRoom.style.display = 'flex';
+                createGameCabinets();
+            }
+            currentGameId = null;
+            highScoresContainer.style.display = 'none';
+            
+            if (currentLobbyData === null) {
+                document.body.classList.remove('in-game');
+            }
+        }
+
+        function updateHighScoresDisplay() {
+            highScoresList.innerHTML = '';
+            let scores = [];
+
+            if (currentLobbyData) {
+                const gameScores = lobbyHighScores[currentGameId];
+                if (gameScores) {
+                    scores = Object.entries(gameScores).map(([name, data]) => ({ name, ...data }));
+                    const sortOrder = games[currentGameId].sort;
+                    scores.sort((a, b) => sortOrder === 'desc' ? b.score - a.score : a.score - b.score);
+                }
+            } else {
+                scores = highScores[currentGameId] || [];
+            }
+            
+            if (scores.length > 0) {
+                scores.slice(0, 5).forEach(score => {
+                    const li = document.createElement('li');
+                    let scoreDisplay = score.score;
+                    if(games[currentGameId].sort === 'asc') scoreDisplay += 's';
+
+                    const nameSpan = `<span class="name" style="color:${score.color || 'var(--primary-glow)'}">${score.name}</span>`;
+                    const scoreSpan = `<span class="score">${scoreDisplay}</span>`;
+                    
+                    li.innerHTML = `${nameSpan} ${scoreSpan}`;
+                    highScoresList.appendChild(li);
+                });
+            } else {
+                highScoresList.innerHTML = '<li>No scores yet!</li>';
+            }
+        }
+
+        async function saveHighScore(score, gameId) {
+            const user = auth.currentUser;
+            if (!user) return;
+
+            if (currentLobbyData) {
+                const myColor = currentLobbyData.players[playerName]?.color || '#FFFFFF';
+                const scoreRef = rtdb.ref(`lobbies/${currentLobbyId}/scores/${gameId}/${playerName}`);
+                
+                const snapshot = await scoreRef.once('value');
+                const existingData = snapshot.val();
+                const existingScore = existingData ? existingData.score : null;
+
+                let isNewHighScore = existingScore === null || (games[gameId].sort === 'desc' ? score > existingScore : score < existingScore);
+                
+                if (isNewHighScore) {
+                    await scoreRef.set({ score: score, color: myColor });
+                }
                 return;
             }
-            if (lobby.host === playerName) return; 
             
-            hasLobbies = true;
-            const playerCount = Object.keys(lobby.players).length;
-            const lobbyEl = document.createElement('li');
-            lobbyEl.textContent = `${lobby.name} (${playerCount}/8)`;
-            lobbyEl.dataset.lobbyId = childSnapshot.key;
-            
-            if (!isHost && childSnapshot.key === currentLobbyId) {
-                lobbyEl.textContent += " (Joined)";
-                lobbyEl.style.color = 'var(--primary-glow)';
+            if (user.isAnonymous) {
+                alert("You must be logged in to save high scores!");
+                return;
             }
 
-            if (playerCount >= 8 || lobby.status === 'playing') {
-                lobbyEl.style.color = 'grey';
-                lobbyEl.style.cursor = 'not-allowed';
-            } else {
-                lobbyEl.onclick = () => handleLobbyClick(childSnapshot.key);
-            }
-            lobbyList.appendChild(lobbyEl);
-        });
-        if (!hasLobbies) {
-            lobbyList.innerHTML = '<li style="color: grey;">No other lobbies found.</li>';
-        }
-    });
-}
-
-async function handleLobbyClick(lobbyId) {
-    if (currentLobbyId === lobbyId) return;
-    await leaveCurrentLobby();
-    joinLobby(lobbyId);
-}
-
-function listenForPlayersInLobby(lobbyId) {
-    if (playerListListenerInfo) playerListListenerInfo.ref.off('value', playerListListenerInfo.listener);
-    
-    const playerList = document.getElementById('player-list');
-    const lobbyPlayersRef = rtdb.ref(`lobbies/${lobbyId}/players`);
-    const listener = lobbyPlayersRef.on('value', (snapshot) => {
-        playerList.innerHTML = '';
-        if (snapshot.exists()) {
-            snapshot.forEach((playerSnapshot) => {
-                const li = document.createElement('li');
-                const name = playerSnapshot.key;
-                li.textContent = name;
-                if(isHost && name !== playerName) {
-                    const kickBtn = document.createElement('button');
-                    kickBtn.className = 'kick-btn';
-                    kickBtn.textContent = 'X';
-                    kickBtn.onclick = () => kickPlayer(name);
-                    li.appendChild(kickBtn);
+            const scoreRef = db.collection('arcade_high_scores').doc(gameId).collection('scores').doc(user.uid);
+            try {
+                const doc = await scoreRef.get();
+                const existingScore = doc.exists ? doc.data().score : null;
+                const isNewHighScore = existingScore === null || (games[gameId].sort === 'desc' ? score > existingScore : score < existingScore);
+                
+                if (isNewHighScore) {
+                    await scoreRef.set({
+                        name: playerName.substring(0, 10),
+                        score: score,
+                        userId: user.uid
+                    });
+                    console.log("New high score saved to Firestore!");
+                    await loadHighScoresFromFirestore();
                 }
-                playerList.appendChild(li);
-            });
-        }
-    });
-    playerListListenerInfo = { ref: lobbyPlayersRef, listener: listener };
-}
-
-async function kickPlayer(playerToKick) {
-    if(isHost && currentLobbyId) {
-        await rtdb.ref(`lobbies/${currentLobbyId}/players/${playerToKick}`).remove();
-    }
-}
-
-async function joinLobby(lobbyId) {
-    const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
-    const snapshot = await lobbyRef.get();
-    if (!snapshot.exists() || snapshot.val().status === 'playing') { alert("Cannot join lobby."); return; }
-    await leaveCurrentLobby();
-
-    currentLobbyId = lobbyId;
-    isHost = false;
-    playerRef = rtdb.ref(`lobbies/${lobbyId}/players/${playerName}`);
-    await playerRef.set(true);
-    playerRef.onDisconnect().remove();
-    
-    initializeLobbyUI(false);
-    listenForPlayersInLobby(lobbyId);
-    listenForLobbyStatus(lobbyId);
-
-    playerRef.on('value', (snapshot) => {
-        if(!snapshot.exists() && lobbyScreen.style.display !== 'none' && arcadeRoom.style.display === 'none') {
-            alert("You have been kicked from the lobby.");
-            window.location.reload();
-        }
-    });
-}
-
-async function createLobby() {
-    const newLobbyRef = rtdb.ref('lobbies').push();
-    currentLobbyId = newLobbyRef.key;
-    isHost = true;
-    playerRef = rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`);
-    await newLobbyRef.set({
-        name: `${playerName}'S GAME`,
-        host: playerName,
-        createdAt: firebase.database.ServerValue.TIMESTAMP,
-        players: { [playerName]: true },
-        status: 'waiting'
-    });
-    newLobbyRef.onDisconnect().remove();
-    
-    initializeLobbyUI(true);
-    listenForPlayersInLobby(currentLobbyId);
-    listenForLobbyStatus(currentLobbyId);
-}
-
-async function startGameFromLobby() {
-    if (isHost && currentLobbyId) {
-        const durationMins = parseInt(document.getElementById('time-input').value, 10);
-        const durationSecs = durationMins * 60;
-        await rtdb.ref(`lobbies/${currentLobbyId}`).update({ 
-            status: 'playing',
-            startTime: firebase.database.ServerValue.TIMESTAMP,
-            duration: durationSecs
-        });
-    }
-}
-
-function switchToArcadeRoom() {
-    if (arcadeRoom.style.display === 'flex') return; 
-    AudioEngine.playMusic('menu');
-    lobbyScreen.style.display = 'none';
-    gameContainer.style.display = 'none';
-    arcadeRoom.style.display = 'flex';
-    document.body.classList.add('in-game');
-
-    if (currentLobbyData && currentLobbyData.status === 'playing') {
-        startCountdown(currentLobbyData.startTime, currentLobbyData.duration);
-    }
-}
-
-function listenForLobbyStatus(lobbyId) {
-    if (lobbyStateListenerInfo) lobbyStateListenerInfo.ref.off('value', lobbyStateListenerInfo.listener);
-    
-    const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
-    const listener = lobbyRef.on('value', (snapshot) => {
-        if (!snapshot.exists()) {
-            if (!isHost) {
-                stopGame(true);
-                alert("Lobby closed by host.");
-                window.location.reload();
-            }
-            return;
-        }
-        const lobbyData = snapshot.val();
-        currentLobbyData = lobbyData;
-
-        if (lobbyData && lobbyData.status === 'playing') {
-             switchToArcadeRoom();
-        }
-    });
-    lobbyStateListenerInfo = { ref: lobbyRef, listener: listener };
-}
-
-async function leaveCurrentLobby() {
-    if (lobbyStateListenerInfo) {
-        lobbyStateListenerInfo.ref.off('value', lobbyStateListenerInfo.listener);
-        lobbyStateListenerInfo = null;
-    }
-    if (playerListListenerInfo) {
-        playerListListenerInfo.ref.off('value', playerListListenerInfo.listener);
-        playerListListenerInfo = null;
-    }
-     if (currentLobbyId && playerRef) {
-        await playerRef.onDisconnect().cancel();
-        await playerRef.remove();
-        playerRef = null;
-     }
-     if (currentLobbyId && isHost) {
-        const hostLobbyRef = rtdb.ref(`lobbies/${currentLobbyId}`);
-        await hostLobbyRef.onDisconnect().cancel();
-        await hostLobbyRef.remove();
-     }
-     currentLobbyId = null;
-     isHost = false;
-}
-
-window.addEventListener('beforeunload', async () => {
-    if (isHost && currentLobbyId) {
-        await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
-    } else if (playerRef) {
-        await playerRef.remove();
-    }
-});
-
-function formatTime(seconds) {
-    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const secs = (seconds % 60).toString().padStart(2, '0');
-    return `${mins}:${secs}`;
-}
-
-function startCountdown(startTime, duration) {
-    if (countdownInterval) clearInterval(countdownInterval);
-    const countdownDisplay = document.getElementById('countdown-display');
-    countdownDisplay.style.display = 'block';
-
-    countdownInterval = setInterval(() => {
-        const serverTimeOffset = 0; 
-        const now = Date.now() + serverTimeOffset;
-        const elapsed = (now - startTime) / 1000;
-        const remaining = Math.max(0, duration - elapsed);
-        
-        countdownDisplay.textContent = formatTime(Math.ceil(remaining));
-
-        if (remaining <= 0) {
-            clearInterval(countdownInterval);
-            endArcadeRun();
-        }
-    }, 1000);
-}
-
-async function endArcadeRun() {
-    const scoresRef = rtdb.ref(`lobbies/${currentLobbyId}/scores`);
-    const snapshot = await scoresRef.once('value');
-    const allScores = snapshot.val() || {};
-
-    const playerWins = {};
-    if (currentLobbyData.players) {
-        Object.keys(currentLobbyData.players).forEach(p => playerWins[p] = 0);
-    }
-    
-    for (const gameId in allScores) {
-        const gameScores = allScores[gameId];
-        const sortOrder = games[gameId].sort;
-        let bestScore = sortOrder === 'desc' ? -Infinity : Infinity;
-        let winnerForGame = null;
-
-        for (const player in gameScores) {
-            const score = gameScores[player];
-            if ((sortOrder === 'desc' && score > bestScore) || (sortOrder === 'asc' && score < bestScore)) {
-                bestScore = score;
-                winnerForGame = player;
+            } catch (e) {
+                console.error("Error saving high score:", e);
             }
         }
-        if (winnerForGame) {
-            playerWins[winnerForGame]++;
-        }
-    }
 
-    let overallWinner = 'No one!';
-    let maxWins = 0;
-    for (const player in playerWins) {
-        if (playerWins[player] > maxWins) {
-            maxWins = playerWins[player];
-            overallWinner = player;
-        }
-    }
-    
-    document.getElementById('winner-name').textContent = overallWinner;
-    document.getElementById('winner-modal').style.display = 'flex';
-}
+        backToArcadeButton.onclick = () => stopGame();
+        loadHighScoresFromFirestore();
 
-
-const games = {
-    tetris: { name: 'Tetris', init: initTetris, music: 'tetris', sort: 'desc' },
-    spaceInvaders: { name: 'Space Invaders', init: initSpaceInvaders, music: 'spaceInvaders', sort: 'desc' },
-    pacman: { name: 'Pac-Man', init: initPacman, music: 'pacman', sort: 'desc' },
-    racing: { name: 'Retro Racer', init: initRacing, music: 'racing', sort: 'desc' },
-    snake: { name: 'Snake', init: initSnake, music: null, sort: 'desc' },
-    pong: { name: 'Pong', init: initPong, music: null, sort: 'desc' },
-    breakout: { name: 'Breakout', init: initBreakout, music: 'breakout', sort: 'desc' },
-    maze: { name: 'Maze Runner', init: initMaze, music: null, sort: 'asc' }
-};
-
-async function loadHighScoresFromFirestore() {
-    for (const gameId in games) {
-        const game = games[gameId];
-        const query = db.collection('arcade_high_scores').doc(gameId).collection('scores')
-            .orderBy('score', game.sort === 'asc' ? 'asc' : 'desc').limit(1);
-        
-        try {
-            const snapshot = await query.get();
-            if (!snapshot.empty) {
-                highScores[gameId] = snapshot.docs.map(doc => doc.data());
-            } else {
-                highScores[gameId] = [];
-            }
-        } catch (e) {
-            console.error(`Could not load high score for ${gameId}:`, e);
-            highScores[gameId] = [];
-        }
-    }
-    createGameCabinets();
-}
-
-
-function createGameCabinets() {
-    gameSelection.innerHTML = '';
-    for (const gameId in games) {
-        const game = games[gameId];
-        let topScoreDisplay = 'NO SCORE';
-        if (highScores[gameId] && highScores[gameId].length > 0) {
-            const top = highScores[gameId][0];
-            let score = top.score;
-            if (game.sort === 'asc') score += 's';
-            topScoreDisplay = `${score} - ${top.name}`;
-        }
-        const cabinet = document.createElement('div');
-        cabinet.className = 'game-cabinet';
-        cabinet.dataset.theme = gameId;
-        cabinet.innerHTML = `<div class="marquee">${game.name}</div><div class="screen-area"><div>TOP SCORE</div><div class="high-score-display">${topScoreDisplay}</div></div><div class="control-panel-base"><div class="control-panel"><div class="joystick"></div><div class="buttons"><div></div><div class="coin-slot"></div></div></div></div>`;
-        cabinet.querySelector('.joystick').innerHTML = '<div class="joystick-base"></div><div class="joystick-stick"></div><div class="joystick-top"></div>';
-        cabinet.onclick = () => startGame(gameId);
-        gameSelection.appendChild(cabinet);
-    }
-}
-
-function startGame(gameId) {
-    AudioEngine.playSound('select');
-    AudioEngine.playMusic(games[gameId].music);
-    arcadeRoom.style.display = 'none';
-    gameContainer.style.display = 'flex';
-    if (!currentLobbyData) highScoresContainer.style.display = 'block';
-    currentGameId = gameId;
-    highScoresTitle.innerText = `${games[currentGameId].name} Scores`;
-    updateHighScoresDisplay();
-    games[gameId].init();
-}
-
-function stopGame(isForced = false) {
-    AudioEngine.playMusic('menu');
-    if (gameLoopId) { cancelAnimationFrame(gameLoopId); clearInterval(gameLoopId); gameLoopId = null; }
-    if (currentKeyListener) { document.removeEventListener('keydown', currentKeyListener); document.removeEventListener('keyup', currentKeyListener); currentKeyListener = null; }
-    if (currentMouseListener) { canvas.removeEventListener('mousemove', currentMouseListener); currentMouseListener = null; }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    if (isForced) {
-        gameContainer.style.display = 'none';
-        arcadeRoom.style.display = 'none';
-        lobbyScreen.style.display = 'flex';
-    } else {
-        gameContainer.style.display = 'none';
-        arcadeRoom.style.display = 'flex';
-        createGameCabinets();
-    }
-    currentGameId = null;
-    highScoresContainer.style.display = 'none';
-    
-    if (currentLobbyData === null) {
-        document.body.classList.remove('in-game');
-    }
-}
-
-function updateHighScoresDisplay() {
-    // This function can be expanded to show a top 5 list from Firestore.
-    // For now, it remains for single-player session score viewing.
-    highScoresList.innerHTML = '';
-    const scores = highScores[currentGameId] || [];
-    if (scores.length > 0) {
-        scores.forEach(score => {
-            const li = document.createElement('li');
-            let scoreDisplay = score.score;
-            if(games[currentGameId].sort === 'asc') scoreDisplay += 's';
-            li.innerHTML = `<span class="name">${score.name}</span> <span class="score">${scoreDisplay}</span>`;
-            highScoresList.appendChild(li);
-        });
-    } else {
-        highScoresList.innerHTML = '<li>No scores yet!</li>';
-    }
-}
-
-async function saveHighScore(score, gameId) {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    if (currentLobbyData) { // Multiplayer score saving to RTDB
-        const currentScoreRef = rtdb.ref(`lobbies/${currentLobbyId}/scores/${gameId}/${playerName}`);
-        const snapshot = await currentScoreRef.once('value');
-        const existingScore = snapshot.val();
-        let isNewHighScore = existingScore === null || (games[gameId].sort === 'desc' ? score > existingScore : score < existingScore);
-        if (isNewHighScore) {
-            await currentScoreRef.set(score);
-        }
-        return; 
-    }
-    
-    // Single Player score saving to Firestore
-    if (user.isAnonymous) {
-        alert("You must be logged in to save high scores!");
-        return;
-    }
-
-    const scoreRef = db.collection('arcade_high_scores').doc(gameId).collection('scores').doc(user.uid);
-    try {
-        const doc = await scoreRef.get();
-        const existingScore = doc.exists ? doc.data().score : null;
-        const isNewHighScore = existingScore === null || (games[gameId].sort === 'desc' ? score > existingScore : score < existingScore);
-        
-        if (isNewHighScore) {
-            await scoreRef.set({
-                name: playerName.substring(0, 10),
-                score: score,
-                userId: user.uid
-            });
-            console.log("New high score saved to Firestore!");
-            await loadHighScoresFromFirestore(); // Reload scores to update cabinets
-        }
-    } catch (e) {
-        console.error("Error saving high score:", e);
-    }
-}
-
-backToArcadeButton.onclick = () => stopGame();
-loadHighScoresFromFirestore();
-
-function initTetris() { canvas.width = 300; canvas.height = 600; let gameOver = false; const COLS = 10, ROWS = 20, BLOCK_SIZE = 30; const COLORS = ['#00FFFF', '#0000FF', '#FFA500', '#FFFF00', '#00FF00', '#800080', '#FF0000']; const SHAPES = [ [], [[1,1,1,1]], [[2,0,0],[2,2,2]], [[0,0,3],[3,3,3]], [[4,4],[4,4]], [[0,5,5],[5,5,0]], [[0,6,0],[6,6,6]], [[7,7,0],[0,7,7]] ]; let arena = Array.from({ length: ROWS }, () => Array(COLS).fill(0)); let player = { pos: { x: 0, y: 0 }, matrix: null, score: 0, level: 1, lines: 0 }; let dropCounter = 0, dropInterval = 1000, lastTime = 0; function playerReset() { const typeId = Math.floor(Math.random() * (SHAPES.length-1)) + 1; player.matrix = SHAPES[typeId]; player.pos.y = 0; player.pos.x = (COLS / 2 | 0) - (player.matrix[0].length / 2 | 0); if (collide(arena, player)) { endGame(); } } function endGame() { if (gameOver) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(player.score, 'tetris'); if (!currentLobbyData) { setTimeout(stopGame, 1000); } else { stopGame(); } } function drawMatrix(matrix, offset, colorOverride = null) { matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) { ctx.fillStyle = colorOverride ? colorOverride : COLORS[value-1]; ctx.fillRect(x + offset.x, y + offset.y, 1, 1); } })); } function drawGhost() { const ghost = { ...player, pos: { ...player.pos }}; while (!collide(arena, ghost)) { ghost.pos.y++; } ghost.pos.y--; drawMatrix(ghost.matrix, ghost.pos, 'rgba(255, 255, 255, 0.2)'); } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.scale(BLOCK_SIZE, BLOCK_SIZE); drawMatrix(arena, { x: 0, y: 0 }); if(!gameOver) drawGhost(); drawMatrix(player.matrix, player.pos); ctx.setTransform(1, 0, 0, 1, 0, 0); } function merge() { player.matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; })); } function collide(arena, player) { const [m, o] = [player.matrix, player.pos]; for (let y = 0; y < m.length; ++y) for (let x = 0; x < m[y].length; ++x) if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true; return false; } function playerDrop() { player.pos.y++; if (collide(arena, player)) { player.pos.y--; merge(); AudioEngine.playSound('hit'); arenaSweep(); playerReset(); } dropCounter = 0; } function playerMove(dir) { player.pos.x += dir; if (collide(arena, player)) player.pos.x -= dir; } function rotate(matrix) { const newMatrix = []; for (let i = 0; i < matrix[0].length; i++) { newMatrix.push([]); }; for (let i = 0; i < matrix.length; i++) { for (let j = 0; j < matrix[0].length; j++) { newMatrix[j].unshift(matrix[i][j]); } } return newMatrix; } function playerRotate() { const originalPos = player.pos.x; const originalMatrix = player.matrix; player.matrix = rotate(player.matrix); let offset = 1; while (collide(arena, player)) { player.pos.x += offset; offset = -(offset + (offset > 0 ? 1 : -1)); if (offset > player.matrix[0].length) { player.pos.x = originalPos; player.matrix = originalMatrix; return; } } } function arenaSweep() { let rowCount = 0; outer: for (let y = arena.length - 1; y > 0; --y) { for (let x = 0; x < arena[y].length; ++x) if (arena[y][x] === 0) continue outer; const row = arena.splice(y, 1)[0].fill(0); arena.unshift(row); ++y; rowCount++; } if (rowCount > 0) { AudioEngine.playSound('score'); player.score += (rowCount * 10) * rowCount * player.level; player.lines += rowCount; player.level = Math.floor(player.lines / 10) + 1; dropInterval = Math.max(100, 1000 * Math.pow(0.85, player.level - 1)); } } function update(time = 0) { if(gameOver) return; const deltaTime = time - lastTime; lastTime = time; dropCounter += deltaTime; if (dropCounter > dropInterval) playerDrop(); draw(); scoreElement.textContent = `Score: ${player.score}`; levelLivesElement.textContent = `Level: ${player.level}`; gameLoopId = requestAnimationFrame(update); } currentKeyListener = event => { if (gameOver) return; if (event.key === 'ArrowLeft') playerMove(-1); else if (event.key === 'ArrowRight') playerMove(1); else if (event.key === 'ArrowDown') playerDrop(); else if (event.key === 'ArrowUp') playerRotate(); }; document.addEventListener('keydown', currentKeyListener); playerReset(); update(); }
+        // --- ALL GAME LOGIC FUNCTIONS (Unchanged) ---
+        function initTetris() { canvas.width = 300; canvas.height = 600; let gameOver = false; const COLS = 10, ROWS = 20, BLOCK_SIZE = 30; const COLORS = ['#00FFFF', '#0000FF', '#FFA500', '#FFFF00', '#00FF00', '#800080', '#FF0000']; const SHAPES = [ [], [[1,1,1,1]], [[2,0,0],[2,2,2]], [[0,0,3],[3,3,3]], [[4,4],[4,4]], [[0,5,5],[5,5,0]], [[0,6,0],[6,6,6]], [[7,7,0],[0,7,7]] ]; let arena = Array.from({ length: ROWS }, () => Array(COLS).fill(0)); let player = { pos: { x: 0, y: 0 }, matrix: null, score: 0, level: 1, lines: 0 }; let dropCounter = 0, dropInterval = 1000, lastTime = 0; function playerReset() { const typeId = Math.floor(Math.random() * (SHAPES.length-1)) + 1; player.matrix = SHAPES[typeId]; player.pos.y = 0; player.pos.x = (COLS / 2 | 0) - (player.matrix[0].length / 2 | 0); if (collide(arena, player)) { endGame(); } } function endGame() { if (gameOver) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(player.score, 'tetris'); if (!currentLobbyData) { setTimeout(stopGame, 1000); } else { stopGame(); } } function drawMatrix(matrix, offset, colorOverride = null) { matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) { ctx.fillStyle = colorOverride ? colorOverride : COLORS[value-1]; ctx.fillRect(x + offset.x, y + offset.y, 1, 1); } })); } function drawGhost() { const ghost = { ...player, pos: { ...player.pos }}; while (!collide(arena, ghost)) { ghost.pos.y++; } ghost.pos.y--; drawMatrix(ghost.matrix, ghost.pos, 'rgba(255, 255, 255, 0.2)'); } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.scale(BLOCK_SIZE, BLOCK_SIZE); drawMatrix(arena, { x: 0, y: 0 }); if(!gameOver) drawGhost(); drawMatrix(player.matrix, player.pos); ctx.setTransform(1, 0, 0, 1, 0, 0); } function merge() { player.matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; })); } function collide(arena, player) { const [m, o] = [player.matrix, player.pos]; for (let y = 0; y < m.length; ++y) for (let x = 0; x < m[y].length; ++x) if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true; return false; } function playerDrop() { player.pos.y++; if (collide(arena, player)) { player.pos.y--; merge(); AudioEngine.playSound('hit'); arenaSweep(); playerReset(); } dropCounter = 0; } function playerMove(dir) { player.pos.x += dir; if (collide(arena, player)) player.pos.x -= dir; } function rotate(matrix) { const newMatrix = []; for (let i = 0; i < matrix[0].length; i++) { newMatrix.push([]); }; for (let i = 0; i < matrix.length; i++) { for (let j = 0; j < matrix[0].length; j++) { newMatrix[j].unshift(matrix[i][j]); } } return newMatrix; } function playerRotate() { const originalPos = player.pos.x; const originalMatrix = player.matrix; player.matrix = rotate(player.matrix); let offset = 1; while (collide(arena, player)) { player.pos.x += offset; offset = -(offset + (offset > 0 ? 1 : -1)); if (offset > player.matrix[0].length) { player.pos.x = originalPos; player.matrix = originalMatrix; return; } } } function arenaSweep() { let rowCount = 0; outer: for (let y = arena.length - 1; y > 0; --y) { for (let x = 0; x < arena[y].length; ++x) if (arena[y][x] === 0) continue outer; const row = arena.splice(y, 1)[0].fill(0); arena.unshift(row); ++y; rowCount++; } if (rowCount > 0) { AudioEngine.playSound('score'); player.score += (rowCount * 10) * rowCount * player.level; player.lines += rowCount; player.level = Math.floor(player.lines / 10) + 1; dropInterval = Math.max(100, 1000 * Math.pow(0.85, player.level - 1)); } } function update(time = 0) { if(gameOver) return; const deltaTime = time - lastTime; lastTime = time; dropCounter += deltaTime; if (dropCounter > dropInterval) playerDrop(); draw(); scoreElement.textContent = `Score: ${player.score}`; levelLivesElement.textContent = `Level: ${player.level}`; gameLoopId = requestAnimationFrame(update); } currentKeyListener = event => { if (gameOver) return; if (event.key === 'ArrowLeft') playerMove(-1); else if (event.key === 'ArrowRight') playerMove(1); else if (event.key === 'ArrowDown') playerDrop(); else if (event.key === 'ArrowUp') playerRotate(); }; document.addEventListener('keydown', currentKeyListener); playerReset(); update(); }
         function initSpaceInvaders() { canvas.width = 600; canvas.height = 600; let score = 0, lives = 3, gameOver = false, gameOverText = '', currentLevel = 0, lastTime = 0, moveAccumulator = 0; const invaderLayouts = [ [[1,1,1,1,1,1,1,1],[2,2,2,2,2,2,2,2],[3,3,3,3,3,3,3,3]], [[0,1,1,0,0,2,2,0],[1,0,0,1,2,0,0,2],[1,1,1,1,2,2,2,2],[0,3,0,3,3,0,3,0]], [[1,1,0,0,0,0,2,2],[1,1,1,0,0,2,2,2],[3,3,3,3,3,3,3,3],[0,1,1,3,3,1,1,0]] ]; const invaderPixels = { 1: [ [0,0,1,1,1,1,0,0], [0,1,1,1,1,1,1,0], [1,1,0,1,1,0,1,1], [1,1,1,1,1,1,1,1], [0,1,0,1,1,0,1,0], [1,0,0,0,0,0,0,1] ], 2: [ [0,1,1,0,0,1,1,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ], 3: [ [0,0,1,1,1,1,0,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ] }; class Player { constructor() { this.x = canvas.width/2; this.y = canvas.height-50; this.width = 32; this.height = 16; this.speed = 250; } draw() { ctx.fillStyle = 'lime'; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillRect(this.x-2, this.y-4, 4, 4);}} class Bullet { constructor(x, y, speed, color) { this.x = x; this.y = y; this.width = 4; this.height = 15; this.speed = speed; this.color = color; } update(dt) { this.y += this.speed * dt; } draw() { ctx.shadowColor = this.color; ctx.shadowBlur = 15; ctx.fillStyle = this.color; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillStyle = 'white'; ctx.fillRect(this.x - 1, this.y + 2, 2, this.height-4); ctx.shadowBlur = 0; }} class Invader { constructor(x, y, type) { this.x = x; this.y = y; this.width = 32; this.height = 24; this.type = type; } draw() { const pixels = invaderPixels[this.type]; ctx.fillStyle='white'; for(let r=0; r<pixels.length; r++) for(let c=0; c<pixels[r].length; c++) if(pixels[r][c]) { ctx.fillRect(this.x+c*4, this.y+r*4, 4, 4); } }} class Bunker { constructor(x) { this.x = x; this.y = canvas.height - 120; this.width = 80; this.height = 40; this.health = 20; } draw() { if(this.health > 0) { ctx.fillStyle = `rgb(0, ${this.health * 12}, 0)`; ctx.fillRect(this.x, this.y, this.width, this.height); } }} let player = new Player(); let keys = {}; let playerBullets = [], invaderBullets = [], invaders = [], bunkers = []; let invaderDirection = 1, invaderDrop = 20, invaderMoveThreshold = 1000; function loadLevel(levelIndex) { invaders = []; const layout = invaderLayouts[levelIndex]; for(let r = 0; r < layout.length; r++) for(let c = 0; c < layout[r].length; c++) if(layout[r][c]) invaders.push(new Invader(80 + c * 50, 50 + r * 40, layout[r][c])); invaderMoveThreshold = 1000 - levelIndex * 150; player.x = canvas.width/2; } function update(dt) { if (gameOver) return; if (keys['ArrowLeft'] && player.x > player.width/2) player.x -= player.speed * dt; if (keys['ArrowRight'] && player.x < canvas.width-player.width/2) player.x += player.speed * dt; playerBullets.forEach((b, i) => { b.update(dt); if(b.y < 0) playerBullets.splice(i, 1); }); invaderBullets.forEach((b, i) => { b.update(dt); if(b.y > canvas.height) invaderBullets.splice(i, 1); }); moveAccumulator += dt * 1000; if(moveAccumulator > invaderMoveThreshold) { moveAccumulator = 0; let wallHit = false; invaders.forEach(invader => { invader.x += 10 * invaderDirection; if (invader.x + invader.width > canvas.width || invader.x < 0) wallHit = true; }); if (wallHit) { invaderDirection *= -1; invaders.forEach(invader => invader.y += invaderDrop); }} if (Math.random() < 0.02 && invaders.length > 0) { const shooter = invaders[Math.floor(Math.random()*invaders.length)]; invaderBullets.push(new Bullet(shooter.x+shooter.width/2, shooter.y+shooter.height, 300, 'red')); } invaders.forEach(invader => { if(invader.y + invader.height >= (bunkers[0]?.y || canvas.height - 50)) endGame('Game Over!'); }); playerBullets.forEach((bullet, bIndex) => { invaders.forEach((invader, iIndex) => { if (bullet.x > invader.x && bullet.x < invader.x + invader.width && bullet.y > invader.y && bullet.y < invader.y + invader.height) { playerBullets.splice(bIndex, 1); invaders.splice(iIndex, 1); score += 100 * (currentLevel+1); AudioEngine.playSound('hit'); } }); bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { playerBullets.splice(bIndex,1); bunker.health--; }}); }); invaderBullets.forEach((bullet, bIndex) => { if (bullet.x > player.x - player.width/2 && bullet.x < player.x + player.width/2 && bullet.y > player.y - player.height/2 && bullet.y < player.y + player.height/2) { invaderBullets.splice(bIndex, 1); lives--; AudioEngine.playSound('hit'); if (lives <= 0) endGame('Game Over!'); } bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { invaderBullets.splice(bIndex,1); bunker.health--; }}); }); if (invaders.length === 0) { currentLevel++; if(currentLevel >= invaderLayouts.length) { endGame('You Win!'); } else { loadLevel(currentLevel); } } } function draw() { ctx.clearRect(0, 0, canvas.width, canvas.height); if (!gameOver) player.draw(); playerBullets.forEach(b => b.draw()); invaderBullets.forEach(b => b.draw()); invaders.forEach(i => i.draw()); bunkers.forEach(b => b.draw()); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Lives: ${lives}`; if(gameOver) { ctx.fillStyle = 'white'; ctx.font = '40px "Press Start 2P"'; ctx.textAlign = 'center'; ctx.fillText(gameOverText, canvas.width/2, canvas.height/2); } } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); if (!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } function endGame(message) { if(gameOver) return; gameOver = true; gameOverText = message; AudioEngine.playSound('gameOver'); saveHighScore(score, 'spaceInvaders'); if (!currentLobbyData) { setTimeout(stopGame, 1000); } else { stopGame(); } } currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; if (e.key === ' ' && e.type === 'keydown' && playerBullets.length < 3) { AudioEngine.playSound('shoot'); playerBullets.push(new Bullet(player.x, player.y, -400, 'yellow')); } }; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); for(let i = 0; i < 4; i++) bunkers.push(new Bunker(70 + i * 120)); loadLevel(0); gameLoopId = requestAnimationFrame(gameLoop); }
         function initPacman() {
             canvas.width = 560; canvas.height = 620; let score = 0, lives = 3; let frame = 0, lastTime = 0, gameOver = false; const TILE_SIZE = 20, PAC_SPEED = 100; const map=[[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1],[1,2,1,1,1,1,2,1,1,2,1,1,1,4,4,1,1,1,2,1,1,2,1,1,1,1,2,1],[1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],[1,1,1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1,1,1],[0,0,0,0,0,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,1,1,1,5,5,1,1,1,0,1,1,2,1,0,0,0,0,0],[1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1],[0,0,0,0,0,0,2,0,0,0,1,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0],[1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1],[0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0],[1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1],[1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],[1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],[1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],[1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],[1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]; let totalPellets = map.flat().filter(tile => tile === 2 || tile === 3).length;
@@ -740,6 +861,7 @@ function initTetris() { canvas.width = 300; canvas.height = 600; let gameOver = 
         function initRacing() { canvas.width = 400; canvas.height = 600; const initialSpeed = 80; let topSpeed = 0; let score = 0; let speed = initialSpeed, gameOver = false, lastTime = 0, enemySpawnTimer = 2; const player = { x: canvas.width/2 - 20, y: canvas.height - 100, width: 40, height: 60, speed: 300 }; const keys = {}; let roadMarkings = [], enemies = [], verges = []; const vehicleTypes = [ {type:'car', w:40, h:60}, {type:'van', w:45, h:70}, {type:'bike', w:20, h:50}, {type:'bus', w:50, h:100}, {type:'limo', w:40, h:120} ]; function spawnEnemyWave() { const laneWidth = (canvas.width-100)/3; const lane = Math.floor(Math.random()*3); const vehicle = vehicleTypes[Math.floor(Math.random()*vehicleTypes.length)]; const x = 50 + lane * laneWidth + (laneWidth/2) - (vehicle.w/2) + (Math.random()-0.5)*(laneWidth/4); const color = ['#FF5555', '#FFFF88', '#88FF88', '#3498db'][Math.floor(Math.random() * 4)]; enemies.push({ x, y: -vehicle.h, ...vehicle, color, speedModifier: Math.random() * 0.2 + 0.85 }); } function update(dt) { if (gameOver) return; if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed * dt; if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed * dt; speed += 8 * dt; roadMarkings.forEach(m => { m.y += speed * 1.1 * dt; }); roadMarkings = roadMarkings.filter(m => m.y < canvas.height); verges.forEach(v => { v.y += speed * 1.1 * dt; }); verges = verges.filter(v => v.y < canvas.height); enemies.forEach(e => { e.y += speed * e.speedModifier * dt; }); enemies = enemies.filter(e => e.y < canvas.height); if(roadMarkings.length === 0 || roadMarkings[roadMarkings.length-1].y > 120) roadMarkings.push({ y: -60, height: 40 }); if(verges.length === 0 || verges[verges.length-1].y > 0) verges.push({ y: -50, height: 52, color: Math.random() < 0.5 ? '#00A000' : '#11BB11' }); enemySpawnTimer -= dt; if(enemySpawnTimer <= 0) { spawnEnemyWave(); enemySpawnTimer = Math.max(0.5, 1.5 - (speed / 500)); } enemies.forEach(enemy => { if (player.x < enemy.x + enemy.w && player.x + player.width > enemy.x && player.y < enemy.y + enemy.h && player.y + player.height > enemy.y) { endGame(); } }); topSpeed = Math.max(topSpeed, (30 + (speed-initialSpeed)/5)); score = Math.floor(topSpeed * 10); } function endGame(){ if(gameOver) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'racing'); if(!currentLobbyData) { setTimeout(stopGame, 1000); } else { stopGame(); }} function drawF1Car(x,y,w,h,color) { ctx.fillStyle = color; ctx.fillRect(x+w*0.2, y, w*0.6, h); ctx.fillRect(x, y+h*0.2, w, h*0.2); ctx.fillRect(x, y+h*0.6, w, h*0.2); ctx.fillStyle = '#111'; ctx.fillRect(x-w*0.1, y+h*0.1, w*0.2, h*0.2); ctx.fillRect(x+w*0.9, y+h*0.1, w*0.2, h*0.2); ctx.fillRect(x-w*0.1, y+h*0.7, w*0.2, h*0.2); ctx.fillRect(x+w*0.9, y+h*0.7, w*0.2, h*0.2); ctx.fillStyle = '#00e5ff'; ctx.fillRect(x+w*0.4, y+h*0.4, w*0.2, h*0.2); } function drawVehicle(x, y, w, h, color, type) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#2c3e50'; if (type === 'car' || type === 'van' || type === 'limo') { ctx.fillRect(x + w*0.1, y + h*0.1, w*0.8, h*0.3); ctx.fillRect(x + w*0.1, y + h*0.6, w*0.8, h*0.3); } else if (type === 'bus') { for(let i=0.1; i < 0.9; i+=0.3) ctx.fillRect(x + w*0.1, y + h*i, w*0.8, h*0.1); } else if (type === 'bike') { ctx.fillStyle = '#333'; ctx.fillRect(x, y+h*0.2, w, h*0.6); ctx.fillStyle=color; ctx.fillRect(x+w*0.3, y, w*0.4, h*0.8); } } function draw() { ctx.fillStyle = '#666'; ctx.fillRect(0, 0, canvas.width, canvas.height); verges.forEach(v => { ctx.fillStyle = v.color; ctx.fillRect(0, v.y, 50, v.height+2); ctx.fillRect(canvas.width-50, v.y, 50, v.height+2); }); ctx.fillStyle = 'yellow'; ctx.fillRect(50,0,5,canvas.height); ctx.fillRect(canvas.width-55,0,5,canvas.height); ctx.fillStyle = 'white'; const laneWidth = (canvas.width-100)/3; roadMarkings.forEach(m => { ctx.fillRect(50 + laneWidth - 2.5, m.y, 5, m.height); ctx.fillRect(50 + 2*laneWidth - 2.5, m.y, 5, m.height); }); enemies.forEach(e => drawVehicle(e.x, e.y, e.w, e.h, e.color, e.type)); drawF1Car(player.x, player.y, player.width, player.height, '#FF0000'); } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Speed: ${Math.floor(topSpeed)}`; if(!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; }; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); gameLoopId = requestAnimationFrame(gameLoop); }
         function initSnake() { canvas.width = 400; canvas.height = 400; const gridSize = 20; let snake = [{ x: 10, y: 10 }]; let food = {}; let direction = {x:1, y:0}; let score = 0; let gameOver = false; let inputQueue = []; let lastTime=0, accumulator=0, interval=0.12; function generateFood() { food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) }; snake.forEach(s => {if(s.x === food.x && s.y === food.y) generateFood();}); } function update() { if(inputQueue.length > 0) { const nextDir = inputQueue.shift(); if((nextDir.x !== -direction.x || nextDir.y !== -direction.y) && (direction.x !==0 || direction.y !==0)) direction = nextDir; } const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y }; if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 || checkCollision(head)) { gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'snake'); if(!currentLobbyData) { setTimeout(stopGame, 1000); } else { stopGame(); } return; } snake.unshift(head); if (head.x === food.x && head.y === food.y) { score++; generateFood(); AudioEngine.playSound('snakeEat'); } else { snake.pop(); } } function checkCollision(head) { for (let i = 1; i < snake.length; i++) if (head.x === snake[i].x && head.y === snake[i].y) return true; return false; } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); snake.forEach((segment, i) => { ctx.fillStyle = i === 0 ? 'lime' : '#00A000'; ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 1, gridSize - 1); }); ctx.shadowColor = 'red'; ctx.shadowBlur = 10; ctx.fillStyle = 'red'; ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1); ctx.shadowBlur = 0; } function gameLoop(time) { if (gameOver) return; accumulator += (time - lastTime) / 1000; lastTime = time; while(accumulator > interval){ update(); accumulator -= interval; } draw(); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = ''; gameLoopId = requestAnimationFrame(gameLoop); } currentKeyListener = e => { if (e.key === 'ArrowUp') inputQueue.push({x:0, y:-1}); else if (e.key === 'ArrowDown') inputQueue.push({x:0, y:1}); else if (e.key === 'ArrowLeft') inputQueue.push({x:-1, y:0}); else if (e.key === 'ArrowRight') inputQueue.push({x:1, y:0}); }; document.addEventListener('keydown', currentKeyListener); generateFood(); lastTime = performance.now(); gameLoopId = requestAnimationFrame(gameLoop); }
         function initPong() { canvas.width = 800; canvas.height = 500; const paddleWidth = 15, paddleHeight = 100; let lastTime = 0, gameOver = false; let player = { x: 10, y: canvas.height/2-paddleHeight/2, width: paddleWidth, height: paddleHeight, score: 0 }; let computer = { x: canvas.width-paddleWidth-10, y: canvas.height/2-paddleHeight/2, width: paddleWidth, height: paddleHeight, score: 0 }; let ball = { x: canvas.width/2, y: canvas.height/2, radius: 10, speed: 500, dx: 1, dy: 1 }; const winScore = 5; function drawRect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); } function drawCircle(x, y, r, color) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.closePath(); ctx.fill(); } function drawNet() { for (let i = 0; i < canvas.height; i += 40) drawRect(canvas.width / 2 - 1, i, 2, 20, "rgba(255,255,255,0.5)"); } function update(dt) { ball.x += ball.dx * ball.speed * dt; ball.y += ball.dy * ball.speed * dt; computer.y += (ball.y - (computer.y + computer.height / 2)) * 4.0 * dt; if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) { ball.dy = -ball.dy; AudioEngine.playSound('pongHit'); } let activePaddle = (ball.dx < 0) ? player : computer; if (ball.x - ball.radius < activePaddle.x + activePaddle.width && ball.x + ball.radius > activePaddle.x && ball.y - ball.radius < activePaddle.y + activePaddle.height && ball.y + ball.radius > activePaddle.y) { let collidePoint = (ball.y - (activePaddle.y + activePaddle.height / 2)) / (activePaddle.height / 2); let angleRad = collidePoint * (Math.PI / 4); ball.dx = -ball.dx; ball.dy = Math.sin(angleRad); AudioEngine.playSound('pongHit'); } if (ball.x - ball.radius < 0) { computer.score++; resetBall(); AudioEngine.playSound('pongScore'); } else if (ball.x + ball.radius > canvas.width) { player.score++; resetBall(); AudioEngine.playSound('pongScore'); } if (player.score >= winScore || computer.score >= winScore) { endGame(); } } function endGame(){ if(gameOver) return; gameOver = true; const winner = player.score >= winScore ? "Player" : "Computer"; saveHighScore(player.score, 'pong'); if(!currentLobbyData) { setTimeout(stopGame, 1000); } else { stopGame(); } } function resetBall() { ball.x = canvas.width/2; ball.y = canvas.height/2; ball.dx = -ball.dx; ball.dy = (Math.random()*2 - 1); } function render() { drawRect(0, 0, canvas.width, canvas.height, '#000'); drawNet(); drawRect(player.x, player.y, player.width, player.height, '#fff'); drawRect(computer.x, computer.y, computer.width, computer.height, '#fff'); drawCircle(ball.x, ball.y, ball.radius, '#fff'); scoreElement.textContent = `Player: ${player.score}`; levelLivesElement.textContent = `Computer: ${computer.score}`; } currentMouseListener = event => { let rect = canvas.getBoundingClientRect(); player.y = event.clientY - rect.top - player.height / 2; }; canvas.addEventListener('mousemove', currentMouseListener); gameLoopId = requestAnimationFrame(function gameLoop(currentTime){ if(gameOver) return; const dt = (currentTime - (lastTime || currentTime))/1000; lastTime = currentTime; update(dt); render(); gameLoopId = requestAnimationFrame(gameLoop); }); }
-function initMaze() { let currentLevel = 1; let player, goal, maze, key, door, princess; let startTime, mazeEnded = false, lastMoveTime = 0, moveDelay = 120; function loadLevel(level) { mazeEnded = false; let mazeSize; if(level === 1) mazeSize = 15; else if(level === 2) mazeSize = 25; else mazeSize = 35; canvas.width = 600; canvas.height = 600; const cellSize = canvas.width / mazeSize; player = { x: 0, y: 0, hasKey: false, hasPrincess: false }; goal = { x: mazeSize - 1, y: mazeSize - 1 }; key = null; door = null; princess = null; if (level === 2) { key = { x: mazeSize-2, y: 1 }; door = { x: mazeSize-2, y: mazeSize-1 };} if (level === 3) { key = { x: 1, y: mazeSize-2 }; door = { x: mazeSize-2, y: mazeSize-1 }; princess = { x: Math.floor(mazeSize/2), y: Math.floor(mazeSize/2) }; goal = {x: mazeSize-1, y: 0}; } function generateMaze() { maze = []; for (let y = 0; y < mazeSize; y++) { maze[y] = []; for (let x = 0; x < mazeSize; x++) maze[y][x] = { n: true, s: true, e: true, w: true, visited: false }; } let stack = [], current = { x: 0, y: 0 }; maze[current.y][current.x].visited = true; stack.push(current); while (stack.length > 0) { current = stack[stack.length - 1]; let neighbors = []; if (current.y > 0 && !maze[current.y - 1][current.x].visited) neighbors.push({ x: 0, y: -1, wall: 'n', opp: 's' }); if (current.y < mazeSize - 1 && !maze[current.y + 1][current.x].visited) neighbors.push({ x: 0, y: 1, wall: 's', opp: 'n' }); if (current.x > 0 && !maze[current.y][current.x - 1].visited) neighbors.push({ x: -1, y: 0, wall: 'w', opp: 'e' }); if (current.x < mazeSize - 1 && !maze[current.y][current.x + 1].visited) neighbors.push({ x: 1, y: 0, wall: 'e', opp: 'w' }); if (neighbors.length > 0) { let nextDir = neighbors[Math.floor(Math.random() * neighbors.length)]; let next = { x: current.x + nextDir.x, y: current.y + nextDir.y }; maze[current.y][current.x][nextDir.wall] = false; maze[next.y][next.x][nextDir.opp] = false; maze[next.y][next.x].visited = true; stack.push(next); } else { stack.pop(); } } if (door) maze[door.y][door.x].e = true; } function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = 'cyan'; ctx.lineWidth = 2; for (let y=0; y<mazeSize; y++) for (let x=0; x<mazeSize; x++) { const c = maze[y][x]; if(c.n) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,y*cellSize);ctx.stroke();} if(c.s) {ctx.beginPath();ctx.moveTo(x*cellSize,(y+1)*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.w) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo(x*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.e) {ctx.beginPath();ctx.moveTo((x+1)*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();}} if(key && !player.hasKey) { ctx.fillStyle = 'yellow'; ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.5, cellSize*0.5, cellSize*0.1); ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.25, cellSize*0.1, cellSize*0.4); } if(door) { ctx.fillStyle = '#8B4513'; ctx.fillRect(door.x * cellSize + cellSize-3, door.y*cellSize, 6, cellSize); ctx.fillStyle = 'yellow'; ctx.fillRect(door.x*cellSize+cellSize-5, door.y*cellSize+cellSize*0.45, 10, 5); } if(goal) { ctx.fillStyle = 'lime'; ctx.fillRect(goal.x * cellSize + 2, goal.y * cellSize + 2, cellSize - 4, cellSize - 4); } if(princess && !player.hasPrincess) { ctx.fillStyle = '#ff00c1'; ctx.fillRect(princess.x*cellSize+cellSize*0.4, princess.y*cellSize+cellSize*0.2, cellSize*0.2, cellSize*0.2); ctx.beginPath(); ctx.moveTo(princess.x*cellSize+cellSize*0.5, princess.y*cellSize+cellSize*0.4); ctx.lineTo(princess.x*cellSize+cellSize*0.3, princess.y*cellSize+cellSize*0.8); ctx.lineTo(princess.x*cellSize+cellSize*0.7, princess.y*cellSize+cellSize*0.8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = player.hasKey ? '#ffeb3b' : '#ffff00'; ctx.fillRect(player.x * cellSize + 2, player.y * cellSize + 2, cellSize - 4, cellSize - 4); if(player.hasPrincess){ctx.fillStyle='#ff00c1'; ctx.fillRect(player.x * cellSize + 3, player.y*cellSize + 3, 4, 4);} let elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2); levelLivesElement.textContent = `Time: ${elapsedTime}s`; } currentKeyListener = e => { if (mazeEnded) return; const now = performance.now(); if(now - lastMoveTime < moveDelay) return; const currentCell = maze[player.y][player.x]; let moved = false, bumped=false; if (e.key === 'ArrowUp') { if(!currentCell.n) {player.y--; moved=true;} else bumped=true; } else if (e.key === 'ArrowDown') { if(!currentCell.s) {player.y++; moved=true;} else bumped=true; } else if (e.key === 'ArrowLeft') { if(!currentCell.w) {player.x--; moved=true;} else bumped=true; } else if (e.key === 'ArrowRight') { if(!currentCell.e) {player.x++; moved=true;} else bumped=true; } if(moved) { AudioEngine.playSound('mazeStep'); lastMoveTime = now; } if(bumped) { AudioEngine.playSound('mazeBump'); lastMoveTime = now; } if (moved && door && player.x === door.x && player.y === door.y && !player.hasKey) { player.x = door.x-1; } if (key && !player.hasKey && player.x === key.x && player.y === key.y) { player.hasKey = true; AudioEngine.playSound('score'); if(door) { maze[door.y][door.x].e = false; AudioEngine.playSound('score'); } } if (princess && !player.hasPrincess && player.x === princess.x && player.y === princess.y) { player.hasPrincess = true; AudioEngine.playSound('score'); } if (goal && player.x === goal.x && player.y === goal.y && (!princess || player.hasPrincess) ) { if(currentLevel < 3){ currentLevel++; AudioEngine.playSound('score'); clearInterval(gameLoopId); loadLevel(currentLevel); } else { mazeEnded = true; const finalTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2)); AudioEngine.playSound('score'); alert(`You finished in ${finalTime} seconds!`); saveHighScore(finalTime, 'maze'); setTimeout(stopGame, 100); } } }; document.addEventListener('keydown', currentKeyListener); generateMaze(); startTime = Date.now(); scoreElement.textContent = `Level ${currentLevel}`; gameLoopId = setInterval(draw, 30); } loadLevel(currentLevel); }    </script>
+        function initMaze() { let currentLevel = 1; let player, goal, maze, key, door, princess; let startTime, mazeEnded = false, lastMoveTime = 0, moveDelay = 120; function loadLevel(level) { mazeEnded = false; let mazeSize; if(level === 1) mazeSize = 15; else if(level === 2) mazeSize = 25; else mazeSize = 35; canvas.width = 600; canvas.height = 600; const cellSize = canvas.width / mazeSize; player = { x: 0, y: 0, hasKey: false, hasPrincess: false }; goal = { x: mazeSize - 1, y: mazeSize - 1 }; key = null; door = null; princess = null; if (level === 2) { key = { x: mazeSize-2, y: 1 }; door = { x: mazeSize-2, y: mazeSize-1 };} if (level === 3) { key = { x: 1, y: mazeSize-2 }; door = { x: mazeSize-2, y: mazeSize-1 }; princess = { x: Math.floor(mazeSize/2), y: Math.floor(mazeSize/2) }; goal = {x: mazeSize-1, y: 0}; } function generateMaze() { maze = []; for (let y = 0; y < mazeSize; y++) { maze[y] = []; for (let x = 0; x < mazeSize; x++) maze[y][x] = { n: true, s: true, e: true, w: true, visited: false }; } let stack = [], current = { x: 0, y: 0 }; maze[current.y][current.x].visited = true; stack.push(current); while (stack.length > 0) { current = stack[stack.length - 1]; let neighbors = []; if (current.y > 0 && !maze[current.y - 1][current.x].visited) neighbors.push({ x: 0, y: -1, wall: 'n', opp: 's' }); if (current.y < mazeSize - 1 && !maze[current.y + 1][current.x].visited) neighbors.push({ x: 0, y: 1, wall: 's', opp: 'n' }); if (current.x > 0 && !maze[current.y][current.x - 1].visited) neighbors.push({ x: -1, y: 0, wall: 'w', opp: 'e' }); if (current.x < mazeSize - 1 && !maze[current.y][current.x + 1].visited) neighbors.push({ x: 1, y: 0, wall: 'e', opp: 'w' }); if (neighbors.length > 0) { let nextDir = neighbors[Math.floor(Math.random() * neighbors.length)]; let next = { x: current.x + nextDir.x, y: current.y + nextDir.y }; maze[current.y][current.x][nextDir.wall] = false; maze[next.y][next.x][nextDir.opp] = false; maze[next.y][next.x].visited = true; stack.push(next); } else { stack.pop(); } } if (door) maze[door.y][door.x].e = true; } function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = 'cyan'; ctx.lineWidth = 2; for (let y=0; y<mazeSize; y++) for (let x=0; x<mazeSize; x++) { const c = maze[y][x]; if(c.n) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,y*cellSize);ctx.stroke();} if(c.s) {ctx.beginPath();ctx.moveTo(x*cellSize,(y+1)*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.w) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo(x*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.e) {ctx.beginPath();ctx.moveTo((x+1)*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();}} if(key && !player.hasKey) { ctx.fillStyle = 'yellow'; ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.5, cellSize*0.5, cellSize*0.1); ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.25, cellSize*0.1, cellSize*0.4); } if(door) { ctx.fillStyle = '#8B4513'; ctx.fillRect(door.x * cellSize + cellSize-3, door.y*cellSize, 6, cellSize); ctx.fillStyle = 'yellow'; ctx.fillRect(door.x*cellSize+cellSize-5, door.y*cellSize+cellSize*0.45, 10, 5); } if(goal) { ctx.fillStyle = 'lime'; ctx.fillRect(goal.x * cellSize + 2, goal.y * cellSize + 2, cellSize - 4, cellSize - 4); } if(princess && !player.hasPrincess) { ctx.fillStyle = '#ff00c1'; ctx.fillRect(princess.x*cellSize+cellSize*0.4, princess.y*cellSize+cellSize*0.2, cellSize*0.2, cellSize*0.2); ctx.beginPath(); ctx.moveTo(princess.x*cellSize+cellSize*0.5, princess.y*cellSize+cellSize*0.4); ctx.lineTo(princess.x*cellSize+cellSize*0.3, princess.y*cellSize+cellSize*0.8); ctx.lineTo(princess.x*cellSize+cellSize*0.7, princess.y*cellSize+cellSize*0.8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = player.hasKey ? '#ffeb3b' : '#ffff00'; ctx.fillRect(player.x * cellSize + 2, player.y * cellSize + 2, cellSize - 4, cellSize - 4); if(player.hasPrincess){ctx.fillStyle='#ff00c1'; ctx.fillRect(player.x * cellSize + 3, player.y*cellSize + 3, 4, 4);} let elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2); levelLivesElement.textContent = `Time: ${elapsedTime}s`; } currentKeyListener = e => { if (mazeEnded) return; const now = performance.now(); if(now - lastMoveTime < moveDelay) return; const currentCell = maze[player.y][player.x]; let moved = false, bumped=false; if (e.key === 'ArrowUp') { if(!currentCell.n) {player.y--; moved=true;} else bumped=true; } else if (e.key === 'ArrowDown') { if(!currentCell.s) {player.y++; moved=true;} else bumped=true; } else if (e.key === 'ArrowLeft') { if(!currentCell.w) {player.x--; moved=true;} else bumped=true; } else if (e.key === 'ArrowRight') { if(!currentCell.e) {player.x++; moved=true;} else bumped=true; } if(moved) { AudioEngine.playSound('mazeStep'); lastMoveTime = now; } if(bumped) { AudioEngine.playSound('mazeBump'); lastMoveTime = now; } if (moved && door && player.x === door.x && player.y === door.y && !player.hasKey) { player.x = door.x-1; } if (key && !player.hasKey && player.x === key.x && player.y === key.y) { player.hasKey = true; AudioEngine.playSound('score'); if(door) { maze[door.y][door.x].e = false; AudioEngine.playSound('score'); } } if (princess && !player.hasPrincess && player.x === princess.x && player.y === princess.y) { player.hasPrincess = true; AudioEngine.playSound('score'); } if (goal && player.x === goal.x && player.y === goal.y && (!princess || player.hasPrincess) ) { if(currentLevel < 3){ currentLevel++; AudioEngine.playSound('score'); clearInterval(gameLoopId); loadLevel(currentLevel); } else { mazeEnded = true; const finalTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2)); AudioEngine.playSound('score'); alert(`You finished in ${finalTime} seconds!`); saveHighScore(finalTime, 'maze'); setTimeout(stopGame, 100); } } }; document.addEventListener('keydown', currentKeyListener); generateMaze(); startTime = Date.now(); scoreElement.textContent = `Level ${currentLevel}`; gameLoopId = setInterval(draw, 30); } loadLevel(currentLevel); }
+    </script>
 </body>
 </html>
