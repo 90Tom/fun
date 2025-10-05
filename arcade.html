@@ -46,7 +46,7 @@
         #game-selection{display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:50px; width: 100%; max-width: 1100px; justify-content: center;}
         .game-cabinet{width:200px;height:280px;border-radius:10px;position:relative;cursor:pointer;transition:transform 0.2s ease;display:flex;flex-direction:column;align-items:center;box-shadow:inset 0 0 10px #000, 5px 5px 15px #000; background-color: var(--cab-color-light); border: 4px solid var(--cab-color-dark);}
         .game-cabinet:hover{transform:translateY(-10px);}
-        .completion-light { position: absolute; top: 8px; right: 8px; width: 15px; height: 15px; border-radius: 50%; background: #222; border: 2px solid #000; box-shadow: inset 0 0 4px #000; display: none; }
+        .completion-light { position: absolute; top: 50px; right: 12px; width: 15px; height: 15px; border-radius: 50%; background: #222; border: 2px solid #000; box-shadow: inset 0 0 4px #000; display: none; z-index: 5; }
         .completion-light.active { background: #00ff00; box-shadow: 0 0 10px #00ff00, 0 0 15px #00ff00, inset 0 0 3px #fff; }
         .marquee{width:100%;height:45px;background:#111;color:white;border-top-left-radius:5px;border-top-right-radius:5px;display:flex;justify-content:center;align-items:center;text-align:center;font-size:1em;text-shadow:0 0 5px var(--primary-glow);}
         .screen-area{width:85%;height:110px;background:#080808;margin-top:10px;border:10px solid var(--cab-color-dark);box-shadow:inset 0 0 10px #000;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:5px;color:#ffff00; font-size: 0.7em; line-height: 1.4; text-align: center;}
@@ -534,10 +534,8 @@
 
                 if (isCoop) {
                     updates.mode = 'gauntlet';
-                    gameMode = 'gauntlet';
                 } else {
                     updates.mode = 'competitive';
-                    gameMode = 'multiplayer';
                     const durationMins = parseInt(document.getElementById('time-input').value, 10);
                     updates.duration = durationMins * 60;
                 }
@@ -553,7 +551,6 @@
             gameContainer.style.display = 'none';
             arcadeRoom.style.display = 'flex';
             document.body.classList.add('in-game');
-            createGameCabinets(); 
 
             if (currentLobbyData && currentLobbyData.status === 'playing') {
                 if(currentLobbyData.mode === 'gauntlet') {
@@ -564,6 +561,7 @@
                     startGameTimer(false, currentLobbyData.startTime, currentLobbyData.duration);
                 }
             }
+            createGameCabinets();
         }
 
         function listenForLobbyStatus(lobbyId) {
@@ -672,8 +670,10 @@
                     const remaining = Math.max(0, duration - elapsed);
                     timerDisplay.textContent = formatTime(Math.ceil(remaining));
                     if (remaining <= 0) {
-                        timerDisplay.textContent = "GAME OVER";
-                        endArcadeRun();
+                        if (gameTimerInterval) {
+                            timerDisplay.textContent = "GAME OVER";
+                            endArcadeRun();
+                        }
                     }
                 }
             }, 1000);
@@ -685,7 +685,6 @@
             const timerDisplay = document.getElementById('game-timer');
             if (timerDisplay) {
                 timerDisplay.style.display = 'none';
-                timerDisplay.textContent = '';
             }
         }
 
@@ -808,6 +807,9 @@
                     highScores[gameId] = [];
                 }
             }
+            if (arcadeRoom.style.display === 'flex') {
+                createGameCabinets();
+            }
         }
 
 
@@ -877,7 +879,7 @@
             if (goal.type === 'score' && score >= goal.value) goalMet = true;
             if (goal.type === 'win' && hasWon) goalMet = true;
             
-            const progress = isLobbyGauntlet ? (currentLobbyData.gauntletProgress || {}) : gauntletProgress;
+            const progress = isLobbyGauntlet ? (gauntletProgress || {}) : gauntletProgress;
 
             if (goalMet && !progress[gameId]) {
                 AudioEngine.playSound('score');
@@ -958,7 +960,7 @@
             }
             
             if (scores.length > 0) {
-                scores.slice(0, 5).forEach(score => {
+                scores.slice(0, 10).forEach(score => {
                     const li = document.createElement('li');
                     let scoreDisplay = score.score;
                     if(games[currentGameId].sort === 'asc') scoreDisplay += 's';
@@ -996,8 +998,8 @@
 
                 if (!user.isAnonymous) {
                     const gameInfo = games[gameId];
-                    const globalHighScore = highScores[gameId] && highScores[gameId][0] ? highScores[gameId][0].score : null;
-                    const isNewGlobalRecord = globalHighScore === null || (gameInfo.sort === 'desc' ? score > globalHighScore : score < globalHighScore);
+                    const globalTopScore = highScores[gameId] && highScores[gameId][0] ? highScores[gameId][0].score : null;
+                    const isNewGlobalRecord = globalTopScore === null || (gameInfo.sort === 'desc' ? score > globalTopScore : score < globalTopScore);
 
                     if (isNewGlobalRecord) {
                         const globalScoreRef = db.collection('arcade_high_scores').doc(gameId).collection('scores').doc();
@@ -1073,7 +1075,7 @@
                 goal = {x: mazeSize-1, y: 0}; 
             }
             function draw() { if(mazeEnded) return; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = 'cyan'; ctx.lineWidth = 2; for (let y=0; y<mazeSize; y++) for (let x=0; x<mazeSize; x++) { const c = maze[y][x]; if(c.n) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,y*cellSize);ctx.stroke();} if(c.s) {ctx.beginPath();ctx.moveTo(x*cellSize,(y+1)*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.w) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo(x*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.e) {ctx.beginPath();ctx.moveTo((x+1)*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();}} if(key && !player.hasKey) { ctx.fillStyle = 'yellow'; ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.5, cellSize*0.5, cellSize*0.1); ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.25, cellSize*0.1, cellSize*0.4); } if(door) { ctx.fillStyle = '#8B4513'; const wall = maze[door.y][door.x].s ? 's' : 'e'; if(wall === 's') { ctx.fillRect(door.x*cellSize, door.y*cellSize+cellSize-3, cellSize, 6); ctx.fillStyle = 'yellow'; ctx.fillRect(door.x*cellSize+cellSize*0.45, door.y*cellSize+cellSize-5, 5, 10); } } if(goal) { ctx.fillStyle = 'lime'; ctx.fillRect(goal.x * cellSize + 2, goal.y * cellSize + 2, cellSize - 4, cellSize - 4); } if(princess && !player.hasPrincess) { ctx.fillStyle = '#ff00c1'; ctx.fillRect(princess.x*cellSize+cellSize*0.4, princess.y*cellSize+cellSize*0.2, cellSize*0.2, cellSize*0.2); ctx.beginPath(); ctx.moveTo(princess.x*cellSize+cellSize*0.5, princess.y*cellSize+cellSize*0.4); ctx.lineTo(princess.x*cellSize+cellSize*0.3, princess.y*cellSize+cellSize*0.8); ctx.lineTo(princess.x*cellSize+cellSize*0.7, princess.y*cellSize+cellSize*0.8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = player.hasKey ? '#ffeb3b' : '#ffff00'; ctx.fillRect(player.x * cellSize + 2, player.y * cellSize + 2, cellSize - 4, cellSize - 4); if(player.hasPrincess){ctx.fillStyle='#ff00c1'; ctx.fillRect(player.x * cellSize + 3, player.y*cellSize + 3, 4, 4);} let elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2); levelLivesElement.textContent = `Time: ${elapsedTime}s`; } 
-            currentKeyListener = e => { if (mazeEnded) return; const now = performance.now(); if(now - lastMoveTime < moveDelay) return; const currentCell = maze[player.y][player.x]; let moved = false, bumped=false; if (e.key === 'ArrowUp') { if(!currentCell.n) {player.y--; moved=true;} else bumped=true; } else if (e.key === 'ArrowDown') { if(!currentCell.s) {player.y++; moved=true;} else bumped=true; } else if (e.key === 'ArrowLeft') { if(!currentCell.w) {player.x--; moved=true;} else bumped=true; } else if (e.key === 'ArrowRight') { if(!currentCell.e) {player.x++; moved=true;} else bumped=true; } if(moved) { AudioEngine.playSound('mazeStep'); lastMoveTime = now; } if(bumped) { AudioEngine.playSound('mazeBump'); lastMoveTime = now; } if (key && !player.hasKey && player.x === key.x && player.y === key.y) { player.hasKey = true; AudioEngine.playSound('score'); if(door) { maze[door.y][door.x].s = false; maze[door.y+1] && (maze[door.y+1][door.x].n = false); AudioEngine.playSound('score'); } } if (princess && !player.hasPrincess && player.x === princess.x && player.y === princess.y) { player.hasPrincess = true; AudioEngine.playSound('score'); } if (goal && player.x === goal.x && player.y === goal.y && (!princess || player.hasPrincess) ) { if(currentLevel < 3){ currentLevel++; AudioEngine.playSound('score'); clearInterval(gameLoopId); document.removeEventListener('keydown', currentKeyListener); loadLevel(currentLevel); } else { mazeEnded = true; const finalTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2)); AudioEngine.playSound('score'); saveHighScore(finalTime, 'maze', true); if(gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { alert(`You finished in ${finalTime} seconds!`); setTimeout(stopGame, 100); } else { stopGame(); } } } }; document.addEventListener('keydown', currentKeyListener); startTime = Date.now(); scoreElement.textContent = `Level ${currentLevel}`; gameLoopId = setInterval(draw, 30); } loadLevel(currentLevel); }
+            function keydownHandler(e) { if (mazeEnded) return; const now = performance.now(); if(now - lastMoveTime < moveDelay) return; const currentCell = maze[player.y][player.x]; let moved = false, bumped=false; if (e.key === 'ArrowUp') { if(!currentCell.n) {player.y--; moved=true;} else bumped=true; } else if (e.key === 'ArrowDown') { if(!currentCell.s) {player.y++; moved=true;} else bumped=true; } else if (e.key === 'ArrowLeft') { if(!currentCell.w) {player.x--; moved=true;} else bumped=true; } else if (e.key === 'ArrowRight') { if(!currentCell.e) {player.x++; moved=true;} else bumped=true; } if(moved) { AudioEngine.playSound('mazeStep'); lastMoveTime = now; } if(bumped) { AudioEngine.playSound('mazeBump'); lastMoveTime = now; } if (key && !player.hasKey && player.x === key.x && player.y === key.y) { player.hasKey = true; AudioEngine.playSound('score'); if(door) { maze[door.y][door.x].s = false; maze[door.y+1] && (maze[door.y+1][door.x].n = false); AudioEngine.playSound('score'); } } if (princess && !player.hasPrincess && player.x === princess.x && player.y === princess.y) { player.hasPrincess = true; AudioEngine.playSound('score'); } if (goal && player.x === goal.x && player.y === goal.y && (!princess || player.hasPrincess) ) { if(currentLevel < 3){ currentLevel++; AudioEngine.playSound('score'); clearInterval(gameLoopId); document.removeEventListener('keydown', currentKeyListener); loadLevel(currentLevel); } else { mazeEnded = true; const finalTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2)); AudioEngine.playSound('score'); saveHighScore(finalTime, 'maze', true); if(gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { alert(`You finished in ${finalTime} seconds!`); setTimeout(stopGame, 100); } else { stopGame(); } } } }; currentKeyListener = keydownHandler; document.addEventListener('keydown', currentKeyListener); startTime = Date.now(); scoreElement.textContent = `Level ${currentLevel}`; gameLoopId = setInterval(draw, 30); } loadLevel(currentLevel); }
     </script>
 </body>
 </html>
