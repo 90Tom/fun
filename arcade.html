@@ -277,6 +277,7 @@
                     arcadeRoom.style.display = 'flex';
                     document.body.classList.add('in-game');
                     AudioEngine.playMusic('menu');
+                    createGameCabinets();
                 });
             });
              document.getElementById('speedrun-btn').addEventListener('click', () => {
@@ -295,10 +296,12 @@
                      return;
                 }
                 gameMode = 'multiplayer';
-                startScreen.style.display = 'none';
-                lobbyScreen.style.display = 'flex';
-                setupLobbyPage();
-                switchToJoinMode();
+                loadHighScoresFromFirestore().then(() => {
+                    startScreen.style.display = 'none';
+                    lobbyScreen.style.display = 'flex';
+                    setupLobbyPage();
+                    switchToJoinMode();
+                });
             });
              document.getElementById('close-winner-modal').addEventListener('click', () => {
                 document.getElementById('winner-modal').style.display = 'none';
@@ -1006,11 +1009,10 @@
                         const globalScoreRef = db.collection('arcade_high_scores').doc(gameId).collection('scores').doc();
                         await globalScoreRef.set({ name: playerName.substring(0, 10), score: score, userId: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
                         
-                        // New fix: just update the local data, don't reload everything
                         const newHighScores = await db.collection('arcade_high_scores').doc(gameId).collection('scores').orderBy('score', gameInfo.sort === 'asc' ? 'asc' : 'desc').limit(10).get();
                         highScores[gameId] = newHighScores.docs.map(doc => doc.data());
-                        if (arcadeRoom.style.display === 'flex') {
-                            createGameCabinets();
+                        if (arcadeRoom.style.display === 'flex' && gameContainer.style.display === 'none') {
+                           createGameCabinets();
                         }
                     }
                 }
@@ -1019,7 +1021,6 @@
             
             if (gameMode === 'solo') {
                 if (user.isAnonymous) {
-                    alert("You must be logged in to save high scores!");
                     return;
                 }
                 
@@ -1082,7 +1083,7 @@
                      goal = afterDoorReachable[Math.floor(Math.random() * afterDoorReachable.length)];
                 } else { // Level 3
                      princess = afterDoorReachable[Math.floor(Math.random() * afterDoorReachable.length)];
-                     goal = {x: mazeSize-1, y: 0};
+                     goal = {x: mazeSize-1, y: 0}; 
                 }
             }
             function draw() { if(mazeEnded) return; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = 'cyan'; ctx.lineWidth = 2; for (let y=0; y<mazeSize; y++) for (let x=0; x<mazeSize; x++) { const c = maze[y][x]; if(c.n) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,y*cellSize);ctx.stroke();} if(c.s) {ctx.beginPath();ctx.moveTo(x*cellSize,(y+1)*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.w) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo(x*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.e) {ctx.beginPath();ctx.moveTo((x+1)*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();}} if(key && !player.hasKey) { ctx.fillStyle = 'yellow'; ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.5, cellSize*0.5, cellSize*0.1); ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.25, cellSize*0.1, cellSize*0.4); } if(door) { ctx.fillStyle = '#8B4513'; ctx.fillRect(door.x * cellSize + cellSize - 2, door.y * cellSize, 4, cellSize); ctx.fillStyle = 'yellow'; ctx.fillRect(door.x * cellSize + cellSize - 4, door.y * cellSize + cellSize*0.45, 8, 5); } if(goal) { ctx.fillStyle = 'lime'; ctx.fillRect(goal.x * cellSize + 2, goal.y * cellSize + 2, cellSize - 4, cellSize - 4); } if(princess && !player.hasPrincess) { ctx.fillStyle = '#ff00c1'; ctx.fillRect(princess.x*cellSize+cellSize*0.4, princess.y*cellSize+cellSize*0.2, cellSize*0.2, cellSize*0.2); ctx.beginPath(); ctx.moveTo(princess.x*cellSize+cellSize*0.5, princess.y*cellSize+cellSize*0.4); ctx.lineTo(princess.x*cellSize+cellSize*0.3, princess.y*cellSize+cellSize*0.8); ctx.lineTo(princess.x*cellSize+cellSize*0.7, princess.y*cellSize+cellSize*0.8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = player.hasKey ? '#ffeb3b' : '#ffff00'; ctx.fillRect(player.x * cellSize + 2, player.y * cellSize + 2, cellSize - 4, cellSize - 4); if(player.hasPrincess){ctx.fillStyle='#ff00c1'; ctx.fillRect(player.x * cellSize + 3, player.y*cellSize + 3, 4, 4);} let elapsedTime = ((Date.now() - startTime) / 1000).toFixed(2); levelLivesElement.textContent = `Time: ${elapsedTime}s`; } 
