@@ -955,18 +955,27 @@
         function updateHighScoresDisplay() {
             if (!highScoresContainer || !currentGameId) return;
             highScoresList.innerHTML = '';
-            let scores = [];
+            let allScores = [];
 
             if (gameMode === 'multiplayer' || (currentLobbyData && currentLobbyData.mode)) {
                 const gameScores = lobbyHighScores[currentGameId];
                 if (gameScores) {
-                    scores = Object.entries(gameScores).map(([name, data]) => ({ name, ...data }));
-                    const sortOrder = games[currentGameId].sort;
-                    scores.sort((a, b) => sortOrder === 'desc' ? b.score - a.score : a.score - b.score);
+                    allScores = Object.entries(gameScores).map(([name, data]) => ({ name, ...data }));
                 }
-            } else { // solo mode
-                scores = highScores[currentGameId] || [];
+            } else { 
+                allScores = highScores[currentGameId] || [];
             }
+            
+            // *** NEW: Filter for unique best scores per player ***
+            const bestScores = {};
+            const sortOrder = games[currentGameId].sort;
+            for (const s of allScores) {
+                if (!bestScores[s.name] || (sortOrder === 'desc' ? s.score > bestScores[s.name].score : s.score < bestScores[s.name].score)) {
+                    bestScores[s.name] = s;
+                }
+            }
+            let scores = Object.values(bestScores);
+            scores.sort((a, b) => sortOrder === 'desc' ? b.score - a.score : a.score - b.score);
             
             if (scores.length > 0) {
                 scores.slice(0, 10).forEach(score => {
