@@ -19,8 +19,8 @@
         #player-list-container { flex-grow: 1; overflow-y: auto; }
         #player-list { list-style: none; text-align: left; font-size: 1.2em; }
         #player-list li { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .kick-btn { font-family:'Press Start 2P',cursive; background:none; border:none; color:red; cursor:pointer; font-size: 1em; }
-        .kick-btn:hover { color: #ff5555; }
+        .kick-btn { font-family:'Press Start 2P',cursive; background:none; border:none; color:red; cursor:pointer; font-size: 1em; text-shadow: 0 0 4px red;}
+        .kick-btn:hover { color: #ff5555; text-shadow: 0 0 8px #ff5555;}
         .lobby-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-top: 30px; }
         .lobby-btn { font-family:'Press Start 2P',cursive; font-size:1.5em; padding: 15px 30px; border: 3px solid var(--primary-glow); color: var(--primary-glow); background: transparent; text-shadow: 0 0 8px var(--primary-glow); box-shadow: 0 0 15px var(--primary-glow) inset; cursor: pointer; transition: all 0.2s ease; }
         .lobby-btn:hover { background: var(--primary-glow); color: var(--main-bg); box-shadow: 0 0 25px var(--primary-glow); }
@@ -33,9 +33,8 @@
         #start-screen h1 { font-size: 4em; color: var(--secondary-glow); text-shadow: 0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow); margin-bottom: 60px; animation: flicker-all 8s infinite; }
         #start-screen h1 span { display: inline-block; animation: flicker-small 4s infinite; }
         #start-screen h1 span:nth-child(2), #start-screen h1 span:nth-child(7) { animation-delay: 0.2s; } #start-screen h1 span:nth-child(3), #start-screen h1 span:nth-child(9) { animation-delay: 0.5s; } #start-screen h1 span:nth-child(5) { animation-delay: 1.1s; }
-        #arcade-room, #game-container { text-align: center; display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: center; }
-        #arcade-room { padding: 20px; }
-        #game-container { justify-content: flex-start; padding-top: 5vh; }
+        #arcade-room { text-align: center; display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 10vh; padding-bottom: 5vh; }
+        #game-container { text-align: center; display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 5vh; }
         h1{font-size:3.5em;color:var(--secondary-glow);text-shadow:0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow);margin-bottom:60px; animation: flicker-all 8s infinite;}
         h1 span { display: inline-block; animation: flicker-small 4s infinite; }
         h1 span:nth-child(2), h1 span:nth-child(7) { animation-delay: 0.2s; } h1 span:nth-child(3), h1 span:nth-child(9) { animation-delay: 0.5s; } h1 span:nth-child(5) { animation-delay: 1.1s; }
@@ -155,7 +154,7 @@
             <button id="close-winner-modal" class="close-modal-btn">X</button>
             <h2>WINNER!</h2>
             <p id="winner-name"></p>
-            <p>is the Arcade Champion!</p>
+            <p id="winner-text">is the Arcade Champion!</p>
         </div>
     </div>
 
@@ -246,6 +245,16 @@
             }
         });
 
+        function goToStartScreen(message) {
+            if (message) alert(message);
+            leaveCurrentLobby();
+            lobbyScreen.style.display = 'none';
+            arcadeRoom.style.display = 'none';
+            gameContainer.style.display = 'none';
+            startScreen.style.display = 'flex';
+            document.body.classList.remove('in-game');
+        }
+
         function setupInitialScreen() {
             AudioEngine.init();
             const volumeSlider = document.getElementById('volume-slider');
@@ -274,7 +283,7 @@
             });
              document.getElementById('close-winner-modal').addEventListener('click', () => {
                 document.getElementById('winner-modal').style.display = 'none';
-                window.location.reload(); 
+                goToStartScreen(); 
             });
         }
 
@@ -450,9 +459,8 @@
 
 
             playerRef.on('value', (snapshot) => {
-                if(!snapshot.exists() && lobbyScreen.style.display !== 'none' && arcadeRoom.style.display === 'none') {
-                    alert("You have been kicked from the lobby.");
-                    window.location.reload();
+                if(!snapshot.exists() && (lobbyScreen.style.display !== 'none' || arcadeRoom.style.display !== 'none')) {
+                    goToStartScreen("You have been kicked from the lobby.");
                 }
             });
         }
@@ -516,8 +524,7 @@
                 if (!snapshot.exists()) {
                     if (!isHost) {
                         stopGame(true);
-                        alert("Lobby closed by host.");
-                        window.location.reload();
+                        goToStartScreen("Lobby was closed by the host.");
                     }
                     return;
                 }
@@ -611,7 +618,6 @@
             if (gameContainer.style.display === 'flex') {
                 stopGame(false); 
             }
-            
             document.querySelectorAll('.game-cabinet').forEach(c => c.onclick = null);
 
             const allScores = lobbyHighScores || {};
@@ -624,37 +630,53 @@
                 const gameScores = allScores[gameId];
                 const sortOrder = games[gameId].sort;
                 let bestScore = sortOrder === 'desc' ? -Infinity : Infinity;
-                let winnerForGame = null;
+                let winnersForGame = [];
 
                 for (const player in gameScores) {
                     const score = gameScores[player].score;
                     if ((sortOrder === 'desc' && score > bestScore) || (sortOrder === 'asc' && score < bestScore)) {
                         bestScore = score;
-                        winnerForGame = player;
+                        winnersForGame = [player];
+                    } else if (score === bestScore) {
+                        winnersForGame.push(player);
                     }
                 }
-                if (winnerForGame) {
-                    playerWins[winnerForGame]++;
-                }
+                winnersForGame.forEach(winner => {
+                    if (playerWins[winner] !== undefined) {
+                        playerWins[winner]++;
+                    }
+                });
             }
 
-            let overallWinner = 'No one!';
+            let overallWinners = [];
             let maxWins = 0;
-            let winningColor = '#ffff00';
             for (const player in playerWins) {
                 if (playerWins[player] > maxWins) {
                     maxWins = playerWins[player];
-                    overallWinner = player;
-                    if(currentLobbyData.players[player]) {
-                       winningColor = currentLobbyData.players[player].color;
+                }
+            }
+
+            if (maxWins > 0) {
+                for (const player in playerWins) {
+                    if (playerWins[player] === maxWins) {
+                        const playerData = currentLobbyData.players[player];
+                        overallWinners.push({ name: player, color: playerData ? playerData.color : '#FFFFFF' });
                     }
                 }
             }
             
             const winnerNameEl = document.getElementById('winner-name');
-            winnerNameEl.textContent = overallWinner;
-            winnerNameEl.style.color = winningColor;
-            winnerNameEl.style.textShadow = `0 0 8px ${winningColor}`;
+            const winnerTextEl = document.getElementById('winner-text');
+            if (overallWinners.length > 1) {
+                winnerNameEl.innerHTML = overallWinners.map(w => `<span style="color:${w.color}; text-shadow: 0 0 8px ${w.color};">${w.name}</span>`).join(' & ');
+                winnerTextEl.textContent = "are the Arcade Champions!";
+            } else if (overallWinners.length === 1) {
+                winnerNameEl.innerHTML = `<span style="color:${overallWinners[0].color}; text-shadow: 0 0 8px ${overallWinners[0].color};">${overallWinners[0].name}</span>`;
+                winnerTextEl.textContent = "is the Arcade Champion!";
+            } else {
+                winnerNameEl.textContent = "No winners this time...";
+                winnerTextEl.textContent = "Better luck next time!";
+            }
             document.getElementById('winner-modal').style.display = 'flex';
         }
 
@@ -810,7 +832,7 @@
             const user = auth.currentUser;
             if (!user) return;
 
-            if (currentLobbyData) {
+            if (currentLobbyData) { // Multiplayer score saving
                 const myColor = currentLobbyData.players[playerName]?.color || '#FFFFFF';
                 const scoreRef = rtdb.ref(`lobbies/${currentLobbyId}/scores/${gameId}/${playerName}`);
                 
@@ -818,14 +840,29 @@
                 const existingData = snapshot.val();
                 const existingScore = existingData ? existingData.score : null;
 
-                let isNewHighScore = existingScore === null || (games[gameId].sort === 'desc' ? score > existingScore : score < existingScore);
+                let isNewLobbyHighScore = existingScore === null || (games[gameId].sort === 'desc' ? score > existingScore : score < existingScore);
                 
-                if (isNewHighScore) {
+                if (isNewLobbyHighScore) {
                     await scoreRef.set({ score: score, color: myColor });
+                }
+
+                // NEW: Check if it's a global record
+                if (!user.isAnonymous) {
+                    const gameInfo = games[gameId];
+                    const globalHighScore = highScores[gameId] && highScores[gameId][0] ? highScores[gameId][0].score : null;
+                    const isNewGlobalRecord = globalHighScore === null || (gameInfo.sort === 'desc' ? score > globalHighScore : score < globalHighScore);
+
+                    if (isNewGlobalRecord) {
+                        console.log(`NEW GLOBAL RECORD from multiplayer by ${playerName} in ${gameId}! Score: ${score}`);
+                        const globalScoreRef = db.collection('arcade_high_scores').doc(gameId).collection('scores').doc(user.uid);
+                        await globalScoreRef.set({ name: playerName.substring(0, 10), score: score, userId: user.uid }, { merge: true });
+                        await loadHighScoresFromFirestore(); // Refresh global high scores
+                    }
                 }
                 return;
             }
             
+            // Single Player score saving to Firestore
             if (user.isAnonymous) {
                 alert("You must be logged in to save high scores!");
                 return;
