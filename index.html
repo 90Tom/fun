@@ -112,6 +112,7 @@
         #language-switcher-btn .lang-target { opacity: 0.7; }
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
         .modal-content { position: relative; background-color: var(--modal-bg); color: var(--text-color); padding: 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 500px; text-align: center; transition: all 0.3s ease; }
+        #leaderboard-modal .modal-content { max-width: 800px; } /* Wider modal for leaderboards */
         .modal-content h1 { color: red; margin-bottom: 25px; font-weight: 600; }
         .input-group { margin-bottom: 20px; text-align: left; }
         .input-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #d90429; }
@@ -203,17 +204,11 @@
         body.dark-mode #login-btn { color: #ff4d4d; }
         body.dark-mode #login-btn:hover { color: #ff8a8a; }
         
-        /* --- NEW GAUNTLET LEADERBOARD STYLES --- */
-        #gauntlet-leaderboard-modal .modal-content { max-width: 800px; }
         #leaderboard-filters { margin-bottom: 20px; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
-        .leaderboard-filter-btn { font-family: 'Poppins', sans-serif; font-size: 0.9em; padding: 8px 12px; border: 1px solid var(--input-border); color: var(--text-color); background-color: var(--button-bg); border-radius: 6px; cursor: pointer; }
+        .leaderboard-filter-btn { font-family: 'Poppins', sans-serif; font-size: 0.9em; padding: 8px 12px; border: 1px solid var(--input-border); color: var(--text-color); background-color: var(--button-bg); border-radius: 6px; cursor: pointer; transition: all 0.2s ease; }
         .leaderboard-filter-btn:hover { background-color: var(--button-hover-bg); }
         .leaderboard-filter-btn.active { background-color: red; color: white; border-color: red; }
         body.dark-mode .leaderboard-filter-btn.active { background-color: #c00; border-color: #c00; }
-        #gauntlet-leaderboard-table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 20px; }
-        #gauntlet-leaderboard-table th, #gauntlet-leaderboard-table td { padding: 10px; border-bottom: 1px solid var(--input-border); text-align: left; }
-        #gauntlet-leaderboard-table th { background-color: var(--table-header-bg); }
-        #gauntlet-leaderboard-table tr:hover { background-color: var(--table-row-hover); }
 
         @media (max-height: 800px) {
             header h1 { font-size: 2.5em; padding-right: 45px;}
@@ -248,7 +243,6 @@
                     <p data-translate-key="arcadeDesc">A collection of classic arcade games. Join a lobby and play!</p>
                 </div>
             </a>
-            <!-- THIS IS THE NEW LEADERBOARD BUTTON FOR THE ARCADE -->
             <button class="leaderboard-btn" data-game="arcade" title="Leaderboard">🏆</button>
         </div>
         <div class="game-card">
@@ -374,39 +368,13 @@
         <div class="modal-content">
             <span class="close-btn">&times;</span>
             <h1 id="leaderboard-title">Leaderboard</h1>
+            <div id="leaderboard-filters-container"></div> <!-- Container for filter buttons -->
             <table id="leaderboard-table">
                 <thead id="leaderboard-head"></thead>
                 <tbody id="leaderboard-body"></tbody>
             </table>
         </div>
     </div>
-    
-    <!-- NEW: GAUNTLET LEADERBOARD MODAL -->
-    <div id="gauntlet-leaderboard-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h1>Gauntlet Leaderboard</h1>
-             <div id="leaderboard-filters">
-                <button class="leaderboard-filter-btn active" data-count="1">Solo</button>
-                <button class="leaderboard-filter-btn" data-count="2">Duos</button>
-                <button class="leaderboard-filter-btn" data-count="3">Trios</button>
-                <button class="leaderboard-filter-btn" data-count="4">4-8 Players</button>
-            </div>
-            <table id="gauntlet-leaderboard-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Player(s)</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody id="gauntlet-leaderboard-body">
-                    <tr><td colspan="3">Loading...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
 
     <div id="profile-modal" class="modal">
         <div class="modal-content">
@@ -622,13 +590,96 @@
                 console.error("Error deleting document: ", error);
             }
         }
+
+        function clearLeaderboardContent() {
+            document.getElementById('leaderboard-filters-container').innerHTML = '';
+            document.getElementById('leaderboard-head').innerHTML = '';
+            document.getElementById('leaderboard-body').innerHTML = '<tr><td colspan="5">Načítání...</td></tr>';
+        }
+
+        // --- NEW UNIFIED GAUNTLET LEADERBOARD FUNCTION ---
+        async function showGauntletLeaderboard(playerCountFilter = 1) {
+            const modal = document.getElementById('leaderboard-modal');
+            const titleEl = document.getElementById('leaderboard-title');
+            const headEl = document.getElementById('leaderboard-head');
+            const bodyEl = document.getElementById('leaderboard-body');
+            const filtersContainer = document.getElementById('leaderboard-filters-container');
+
+            titleEl.textContent = 'Gauntlet Leaderboard';
+            
+            // Create and append filters only if they don't exist
+            if (!filtersContainer.hasChildNodes()) {
+                const filtersHTML = `
+                    <div id="leaderboard-filters">
+                        <button class="leaderboard-filter-btn" data-count="1">Solo</button>
+                        <button class="leaderboard-filter-btn" data-count="2">Duos</button>
+                        <button class="leaderboard-filter-btn" data-count="3">Trios</button>
+                        <button class="leaderboard-filter-btn" data-count="4">4-8 Players</button>
+                    </div>`;
+                filtersContainer.innerHTML = filtersHTML;
+                filtersContainer.querySelectorAll('.leaderboard-filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        showGauntletLeaderboard(parseInt(e.target.dataset.count, 10));
+                    });
+                });
+            }
+
+            // Update active filter button
+            filtersContainer.querySelectorAll('.leaderboard-filter-btn').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.dataset.count, 10) === playerCountFilter);
+            });
+
+            headEl.innerHTML = '<tr><th>#</th><th>Player(s)</th><th>Time</th></tr>';
+            bodyEl.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
+            modal.style.display = 'flex';
+            
+            let query;
+            const collectionRef = db.collection('arcade_gauntlet_leaderboard');
+            if (playerCountFilter >= 4) {
+                 query = collectionRef.where('playerCount', '>=', 4).orderBy('playerCount', 'asc').orderBy('time', 'asc');
+            } else {
+                 query = collectionRef.where('playerCount', '==', playerCountFilter).orderBy('time', 'asc');
+            }
+
+            try {
+                const snapshot = await query.limit(15).get();
+                if (snapshot.empty) {
+                    bodyEl.innerHTML = '<tr><td colspan="3">No scores yet for this category!</td></tr>';
+                    return;
+                }
+                bodyEl.innerHTML = '';
+                snapshot.forEach((doc, index) => {
+                    const data = doc.data();
+                    const mins = Math.floor(data.time / 60).toString().padStart(2, '0');
+                    const secs = (Math.floor(data.time) % 60).toString().padStart(2, '0');
+                    const time = `${mins}:${secs}`;
+                    const players = data.players.join(', ');
+
+                    const row = `<tr><td>${index + 1}</td><td>${players}</td><td>${time}</td></tr>`;
+                    bodyEl.innerHTML += row;
+                });
+            } catch (e) {
+                console.error("Error fetching Gauntlet leaderboard:", e);
+                bodyEl.innerHTML = '<tr><td colspan="3">Error loading scores.</td></tr>';
+            }
+        }
         
        async function showLeaderboard(gameId) {
             if (typeof db === 'undefined') { return; }
+            
+            // --- REDIRECT TO GAUNTLET LEADERBOARD ---
+            if (gameId === 'arcade') {
+                showGauntletLeaderboard(1); // Default to Solo
+                return;
+            }
+
             const leaderboardModal = document.getElementById('leaderboard-modal');
             const titleEl = document.getElementById('leaderboard-title');
             const headEl = document.getElementById('leaderboard-head');
             const bodyEl = document.getElementById('leaderboard-body');
+            
+            clearLeaderboardContent(); // Clear old content, including filters
+
             const currentUser = auth.currentUser;
             const isAdmin = currentUser && currentUser.displayName === '90Tom';
             const gameData = {
@@ -638,21 +689,21 @@
             };
             const { title, fields, query } = gameData[gameId];
             titleEl.textContent = `Žebříček: ${title}`;
-            bodyEl.innerHTML = '<tr><td colspan="5">Načítání...</td></tr>';
             leaderboardModal.style.display = 'flex';
             try {
                 const querySnapshot = await query.limit(10).get();
                 const scores = querySnapshot.docs.map(doc => doc.data());
-                headEl.innerHTML = '';
-                bodyEl.innerHTML = '';
+                
                 let headers = '<th>#</th><th>Hráč</th>';
                 fields.forEach(field => headers += `<th>${field}</th>`);
                 if (isAdmin) headers += '<th>Akce</th>';
                 headEl.innerHTML = `<tr>${headers}</tr>`;
+
                 if (scores.length === 0) {
                     const colspan = isAdmin ? fields.length + 3 : fields.length + 2;
                     bodyEl.innerHTML = `<tr><td colspan="${colspan}">Zatím žádné výsledky!</td></tr>`;
                 } else {
+                    bodyEl.innerHTML = ''; // Clear loading text
                     scores.forEach((score, index) => {
                         let row = `<td>${index + 1}</td><td>${score.user}</td>`;
                         if (gameId === 'milan') {
@@ -672,54 +723,6 @@
             } catch (error) {
                  console.error("Error fetching leaderboard:", error);
                  bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku.</td></tr>`;
-            }
-        }
-        
-        // --- NEW GAUNTLET LEADERBOARD FUNCTIONS ---
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const secs = (seconds % 60).toString().padStart(2, '0');
-            return `${mins}:${secs}`;
-        }
-        
-        async function showGauntletLeaderboard(playerCountFilter) {
-            const modal = document.getElementById('gauntlet-leaderboard-modal');
-            const tbody = document.getElementById('gauntlet-leaderboard-body');
-            tbody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
-            modal.style.display = 'flex';
-            
-            let query;
-            const collectionRef = db.collection('arcade_gauntlet_leaderboard');
-            if (playerCountFilter >= 4) {
-                 query = collectionRef.where('playerCount', '>=', 4).orderBy('playerCount', 'asc').orderBy('time', 'asc');
-            } else {
-                 query = collectionRef.where('playerCount', '==', playerCountFilter).orderBy('time', 'asc');
-            }
-
-            try {
-                const snapshot = await query.limit(15).get();
-                if (snapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="3">No scores yet for this category!</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = '';
-                snapshot.forEach((doc, index) => {
-                    const data = doc.data();
-                    const time = formatTime(Math.floor(data.time));
-                    const players = data.players.join(', ');
-
-                    const row = `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td>${players}</td>
-                            <td>${time}</td>
-                        </tr>
-                    `;
-                    tbody.innerHTML += row;
-                });
-            } catch (e) {
-                console.error("Error fetching Gauntlet leaderboard:", e);
-                tbody.innerHTML = '<tr><td colspan="3">Error loading scores.</td></tr>';
             }
         }
 
@@ -1322,29 +1325,12 @@
             document.getElementById('show-register-link').addEventListener('click', (e) => { e.preventDefault(); loginView.style.display = 'none'; registerView.style.display = 'block'; });
             document.getElementById('show-login-link').addEventListener('click', (e) => { e.preventDefault(); registerView.style.display = 'none'; loginView.style.display = 'block'; });
             
-            // --- UPDATED LEADERBOARD BUTTON LOGIC ---
             document.querySelectorAll('.leaderboard-btn').forEach(button => { 
                 button.addEventListener('click', (e) => { 
                     e.stopPropagation(); 
-                    const gameId = e.currentTarget.dataset.game; 
-                    if (gameId === 'arcade') {
-                        // Default to showing "Solo" scores
-                        showGauntletLeaderboard(1);
-                    } else {
-                        showLeaderboard(gameId);
-                    }
+                    showLeaderboard(e.currentTarget.dataset.game);
                 }); 
             });
-
-            // --- NEW GAUNTLET LEADERBOARD FILTER LOGIC ---
-            document.querySelectorAll('.leaderboard-filter-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.leaderboard-filter-btn').forEach(b => b.classList.remove('active'));
-                    e.target.classList.add('active');
-                    showGauntletLeaderboard(parseInt(e.target.dataset.count, 10));
-                });
-            });
-
 
             document.getElementById('leaderboard-modal').addEventListener('click', function(e) {
                 if (e.target.classList.contains('delete-score-btn')) {
