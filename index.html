@@ -188,7 +188,6 @@
         .achievement img { width: 50px; height: 50px; margin-right: 15px; }
         .achievement-info h4 { margin: 0; font-size: 1em; }
         .achievement-info p { margin: 0; font-size: 0.85em; color: var(--text-color-light); }
-
         .typing-indicator { display: flex; align-items: center; font-size: 0.9em; color: var(--text-color-light); }
         .typing-indicator .pfp-container { width: 20px; height: 20px; margin-right: 8px; }
         .typing-indicator .pfp-container .initials { font-size: 10px; }
@@ -197,14 +196,24 @@
         .typing-dots span:nth-child(2) { animation-delay: -0.15s; }
         @keyframes typing-bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
         #typing-indicator-container { padding: 5px 15px; min-height: 32px; display: flex; flex-direction: column; gap: 4px; }
-
         #admin-modal .modal-content { max-width: 800px; height: 80%; }
         .admin-log-container { height: calc(50% - 60px); overflow-y: auto; text-align: left; border: 1px solid var(--input-border); border-radius: 8px; padding: 10px; margin-top: 10px; }
         .admin-log-entry { padding: 8px; border-bottom: 1px solid var(--input-border); font-size: 0.9em; }
         .admin-log-entry small { color: var(--text-color-light); }
-
         body.dark-mode #login-btn { color: #ff4d4d; }
         body.dark-mode #login-btn:hover { color: #ff8a8a; }
+        
+        /* --- NEW GAUNTLET LEADERBOARD STYLES --- */
+        #gauntlet-leaderboard-modal .modal-content { max-width: 800px; }
+        #leaderboard-filters { margin-bottom: 20px; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+        .leaderboard-filter-btn { font-family: 'Poppins', sans-serif; font-size: 0.9em; padding: 8px 12px; border: 1px solid var(--input-border); color: var(--text-color); background-color: var(--button-bg); border-radius: 6px; cursor: pointer; }
+        .leaderboard-filter-btn:hover { background-color: var(--button-hover-bg); }
+        .leaderboard-filter-btn.active { background-color: red; color: white; border-color: red; }
+        body.dark-mode .leaderboard-filter-btn.active { background-color: #c00; border-color: #c00; }
+        #gauntlet-leaderboard-table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 20px; }
+        #gauntlet-leaderboard-table th, #gauntlet-leaderboard-table td { padding: 10px; border-bottom: 1px solid var(--input-border); text-align: left; }
+        #gauntlet-leaderboard-table th { background-color: var(--table-header-bg); }
+        #gauntlet-leaderboard-table tr:hover { background-color: var(--table-row-hover); }
 
         @media (max-height: 800px) {
             header h1 { font-size: 2.5em; padding-right: 45px;}
@@ -239,6 +248,8 @@
                     <p data-translate-key="arcadeDesc">A collection of classic arcade games. Join a lobby and play!</p>
                 </div>
             </a>
+            <!-- THIS IS THE NEW LEADERBOARD BUTTON FOR THE ARCADE -->
+            <button class="leaderboard-btn" data-game="arcade" title="Leaderboard">🏆</button>
         </div>
         <div class="game-card">
             <a href="MILAN/MILAN.html" class="game-link">
@@ -369,6 +380,33 @@
             </table>
         </div>
     </div>
+    
+    <!-- NEW: GAUNTLET LEADERBOARD MODAL -->
+    <div id="gauntlet-leaderboard-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1>Gauntlet Leaderboard</h1>
+             <div id="leaderboard-filters">
+                <button class="leaderboard-filter-btn active" data-count="1">Solo</button>
+                <button class="leaderboard-filter-btn" data-count="2">Duos</button>
+                <button class="leaderboard-filter-btn" data-count="3">Trios</button>
+                <button class="leaderboard-filter-btn" data-count="4">4-8 Players</button>
+            </div>
+            <table id="gauntlet-leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Player(s)</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="gauntlet-leaderboard-body">
+                    <tr><td colspan="3">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 
     <div id="profile-modal" class="modal">
         <div class="modal-content">
@@ -636,6 +674,54 @@
                  bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku.</td></tr>`;
             }
         }
+        
+        // --- NEW GAUNTLET LEADERBOARD FUNCTIONS ---
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+        
+        async function showGauntletLeaderboard(playerCountFilter) {
+            const modal = document.getElementById('gauntlet-leaderboard-modal');
+            const tbody = document.getElementById('gauntlet-leaderboard-body');
+            tbody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
+            modal.style.display = 'flex';
+            
+            let query;
+            const collectionRef = db.collection('arcade_gauntlet_leaderboard');
+            if (playerCountFilter >= 4) {
+                 query = collectionRef.where('playerCount', '>=', 4).orderBy('playerCount', 'asc').orderBy('time', 'asc');
+            } else {
+                 query = collectionRef.where('playerCount', '==', playerCountFilter).orderBy('time', 'asc');
+            }
+
+            try {
+                const snapshot = await query.limit(15).get();
+                if (snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="3">No scores yet for this category!</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = '';
+                snapshot.forEach((doc, index) => {
+                    const data = doc.data();
+                    const time = formatTime(Math.floor(data.time));
+                    const players = data.players.join(', ');
+
+                    const row = `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${players}</td>
+                            <td>${time}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch (e) {
+                console.error("Error fetching Gauntlet leaderboard:", e);
+                tbody.innerHTML = '<tr><td colspan="3">Error loading scores.</td></tr>';
+            }
+        }
 
         function displayChatMessage(msg, container) {
             // Main message container
@@ -683,15 +769,12 @@
                 textElement.classList.add('message-deleted');
                 textElement.textContent = '[tato zpráva byla smazána]';
             } else {
-                // *** SECURITY FIX: Use textContent instead of innerHTML to prevent XSS ***
                 textElement.textContent = msg.text;
             }
             
-            // Assemble the meta section
             metaElement.appendChild(authorElement);
             metaElement.appendChild(timestampElement);
 
-            // Add delete button if applicable
             const isMyMessage = auth.currentUser && msg.userId === auth.currentUser.uid;
             const isAdmin = currentUserData && currentUserData.displayName === '90Tom';
 
@@ -701,14 +784,12 @@
                 deleteBtn.innerHTML = '🗑️';
                 if (currentChatMode === 'public') {
                     deleteBtn.onclick = () => deletePublicChatMessage(msg.id);
-                } else { // It's a DM
+                } else {
                     deleteBtn.onclick = () => deleteDmMessage(msg.id);
                 }
-                // Add the button next to the timestamp
                 metaElement.insertBefore(deleteBtn, timestampElement.nextSibling); 
             }
 
-            // Assemble the final message element
             contentElement.appendChild(metaElement);
             contentElement.appendChild(textElement);
             messageElement.appendChild(pfpContainer);
@@ -1240,7 +1321,31 @@
             });
             document.getElementById('show-register-link').addEventListener('click', (e) => { e.preventDefault(); loginView.style.display = 'none'; registerView.style.display = 'block'; });
             document.getElementById('show-login-link').addEventListener('click', (e) => { e.preventDefault(); registerView.style.display = 'none'; loginView.style.display = 'block'; });
-            document.querySelectorAll('.leaderboard-btn').forEach(button => { button.addEventListener('click', (e) => { e.stopPropagation(); const gameId = e.currentTarget.dataset.game; showLeaderboard(gameId); }); });
+            
+            // --- UPDATED LEADERBOARD BUTTON LOGIC ---
+            document.querySelectorAll('.leaderboard-btn').forEach(button => { 
+                button.addEventListener('click', (e) => { 
+                    e.stopPropagation(); 
+                    const gameId = e.currentTarget.dataset.game; 
+                    if (gameId === 'arcade') {
+                        // Default to showing "Solo" scores
+                        showGauntletLeaderboard(1);
+                    } else {
+                        showLeaderboard(gameId);
+                    }
+                }); 
+            });
+
+            // --- NEW GAUNTLET LEADERBOARD FILTER LOGIC ---
+            document.querySelectorAll('.leaderboard-filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.leaderboard-filter-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    showGauntletLeaderboard(parseInt(e.target.dataset.count, 10));
+                });
+            });
+
+
             document.getElementById('leaderboard-modal').addEventListener('click', function(e) {
                 if (e.target.classList.contains('delete-score-btn')) {
                     const userToDelete = e.target.dataset.user;
