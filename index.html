@@ -638,43 +638,107 @@
         }
 
         function displayChatMessage(msg, container) {
+            // Main message container
             const messageElement = document.createElement('div');
             messageElement.className = 'chat-message';
+
+            // PFP container
             const pfpContainer = document.createElement('div');
             pfpContainer.className = 'pfp-container';
-            if (currentChatMode !== 'public') {
-                pfpContainer.style.cursor = 'default';
-            } else {
+            if (currentChatMode === 'public') {
                 pfpContainer.onclick = () => showUserProfile(msg.userId);
+            } else {
+                pfpContainer.style.cursor = 'default';
             }
             renderPfp(pfpContainer, { ...msg });
 
-            const authorStyle = msg.pfpColor ? `style="color: ${msg.pfpColor}"` : '';
-            const deleteBtn = (currentUserData && currentUserData.displayName === '90Tom' && currentChatMode === 'public') ? 
-                `<button class="delete-msg-btn" onclick="deleteChatMessage('${msg.id}')">🗑️</button>` : '';
-            
-            const timestamp = msg.createdAt ? msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            // Content container
+            const contentElement = document.createElement('div');
+            contentElement.className = 'message-content';
 
-            messageElement.innerHTML = `
-                ${pfpContainer.outerHTML}
-                <div class="message-content">
-                    <div class="message-meta">
-                        <span class="message-author" ${authorStyle} ${currentChatMode === 'public' ? `onclick="showUserProfile('${msg.userId}')"` : ''}>${msg.displayName || 'Anonym'}</span>
-                        <span class="message-timestamp">${timestamp}</span>
-                        ${deleteBtn}
-                    </div>
-                    <span class="message-text ${msg.deleted ? 'message-deleted' : ''}">
-                        ${msg.deleted ? '[tato zpráva byla smazána]' : msg.text}
-                    </span>
-                </div>
-            `;
+            // Meta container (author, time, delete button)
+            const metaElement = document.createElement('div');
+            metaElement.className = 'message-meta';
+
+            // Author's name
+            const authorElement = document.createElement('span');
+            authorElement.className = 'message-author';
+            if (msg.pfpColor) {
+                authorElement.style.color = msg.pfpColor;
+            }
+            authorElement.textContent = msg.displayName || 'Anonym';
+            if (currentChatMode === 'public') {
+                authorElement.onclick = () => showUserProfile(msg.userId);
+            }
+
+            // Timestamp
+            const timestampElement = document.createElement('span');
+            timestampElement.className = 'message-timestamp';
+            timestampElement.textContent = msg.createdAt ? msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            
+            // Text of the message
+            const textElement = document.createElement('span');
+            textElement.className = 'message-text';
+            if (msg.deleted) {
+                textElement.classList.add('message-deleted');
+                textElement.textContent = '[tato zpráva byla smazána]';
+            } else {
+                // *** SECURITY FIX: Use textContent instead of innerHTML to prevent XSS ***
+                textElement.textContent = msg.text;
+            }
+            
+            // Assemble the meta section
+            metaElement.appendChild(authorElement);
+            metaElement.appendChild(timestampElement);
+
+            // Add delete button if applicable
+            const isMyMessage = auth.currentUser && msg.userId === auth.currentUser.uid;
+            const isAdmin = currentUserData && currentUserData.displayName === '90Tom';
+
+            if ((currentChatMode === 'public' && isAdmin) || (currentChatMode === 'dm' && isMyMessage)) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-msg-btn';
+                deleteBtn.innerHTML = '🗑️';
+                if (currentChatMode === 'public') {
+                    deleteBtn.onclick = () => deletePublicChatMessage(msg.id);
+                } else { // It's a DM
+                    deleteBtn.onclick = () => deleteDmMessage(msg.id);
+                }
+                // Add the button next to the timestamp
+                metaElement.insertBefore(deleteBtn, timestampElement.nextSibling); 
+            }
+
+            // Assemble the final message element
+            contentElement.appendChild(metaElement);
+            contentElement.appendChild(textElement);
+            messageElement.appendChild(pfpContainer);
+            messageElement.appendChild(contentElement);
             container.appendChild(messageElement);
         }
 
-        async function deleteChatMessage(msgId) {
-            if (currentUserData.displayName !== '90Tom') return;
+        async function deletePublicChatMessage(msgId) {
+            if (!currentUserData || currentUserData.displayName !== '90Tom') return;
             if (confirm('Opravdu smazat tuto zprávu?')) {
-                await db.collection('chat').doc(msgId).update({ text: '', deleted: true });
+                try {
+                    await db.collection('chat').doc(msgId).update({ text: '', deleted: true });
+                } catch (error) {
+                    console.error("Error deleting public message:", error);
+                }
+            }
+        }
+
+        async function deleteDmMessage(msgId) {
+            if (!auth.currentUser || !currentDmPartnerId) return;
+            const myId = auth.currentUser.uid;
+            const convoId = [myId, currentDmPartnerId].sort().join('_');
+            
+            if (confirm('Opravdu smazat tuto zprávu?')) {
+                try {
+                    const msgRef = db.collection('dms').doc(convoId).collection('messages').doc(msgId);
+                    await msgRef.update({ text: '', deleted: true });
+                } catch(error) {
+                    console.error("Error deleting DM:", error);
+                }
             }
         }
         
