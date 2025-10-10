@@ -621,20 +621,8 @@
                 arcade: {
                     title: "Žebříček: Arcade Gauntlet",
                     fields: ['Hráči', 'Čas'],
-                    query: (filter) => {
-                        let q = db.collection("arcade_gauntlet_leaderboard");
-                        if (filter >= 4) {
-                            // FIX: Firestore has limitations on complex queries. You cannot use a range filter (like '>=')
-                            // on one field and then order by a different field without a special composite index.
-                            // This query is simplified to prevent the error. It now sorts by player count and then time.
-                            // This requires a composite index on (playerCount, time). If it still fails, the index must be created.
-                            // A simpler, no-index-needed fix would be to remove .orderBy('time', 'asc'), but that provides a worse user experience.
-                            // We will assume the user can create the index if prompted by a Firestore console error link.
-                            return q.where('playerCount', '>=', 4).orderBy('playerCount', 'asc').orderBy('time', 'asc');
-                        } else {
-                            return q.where('playerCount', '==', filter).orderBy('time', 'asc');
-                        }
-                    }
+                    // This query is intentionally simple for definition, complex logic is handled below
+                    query: (filter) => db.collection("arcade_gauntlet_leaderboard").where('playerCount', '==', filter).orderBy('time', 'asc')
                 },
                 milan: { title: "Žebříček: Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: () => db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
                 krumptezic: { title: "Žebříček: KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: () => db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
@@ -664,23 +652,39 @@
             leaderboardModal.style.display = 'flex';
 
             try {
-                const query = game.query(filterOption);
-                const querySnapshot = await query.limit(10).get();
-                const scores = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                let scores;
+
+                // *** FIX STARTS HERE ***
+                // Special handling for the problematic query that requires a composite index.
+                if (gameId === 'arcade' && filterOption >= 4) {
+                    // This query is valid without a custom index. We fetch more than we need.
+                    const query = db.collection("arcade_gauntlet_leaderboard")
+                                  .where('playerCount', '>=', 4)
+                                  .orderBy('playerCount', 'asc') 
+                                  .limit(50); 
+                    const querySnapshot = await query.get();
+                    let fetchedScores = querySnapshot.docs.map(doc => doc.data());
+                    
+                    // Now, we perform the second sort (by time) on the client side.
+                    fetchedScores.sort((a, b) => a.time - b.time);
+                    
+                    // And take the top 10 results.
+                    scores = fetchedScores.slice(0, 10);
+                } else {
+                    // Original, working logic for all other cases.
+                    const query = game.query(filterOption);
+                    const querySnapshot = await query.limit(10).get();
+                    scores = querySnapshot.docs.map(doc => doc.data());
+                }
+                // *** FIX ENDS HERE ***
                 
                 let headers = '<th>#</th>';
-                if(gameId !== 'milan' && gameId !== 'krumptezic' && gameId !== 'ptak2') {
-                    game.fields.forEach(field => headers += `<th>${field}</th>`);
-                } else {
-                    headers += `<th>Hráč</th>`;
-                    game.fields.forEach(field => headers += `<th>${field}</th>`);
-                }
-
+                game.fields.forEach(field => headers += `<th>${field}</th>`);
                 if (isAdmin && gameId !== 'arcade') headers += '<th>Akce</th>';
                 headEl.innerHTML = `<tr>${headers}</tr>`;
 
                 if (scores.length === 0) {
-                    const colspan = game.fields.length + 1 + (isAdmin && gameId !== 'arcade' ? 2 : 1);
+                    const colspan = game.fields.length + 1 + (isAdmin && gameId !== 'arcade' ? 1 : 0);
                     bodyEl.innerHTML = `<tr><td colspan="${colspan}">Zatím žádné výsledky!</td></tr>`;
                 } else {
                     bodyEl.innerHTML = '';
