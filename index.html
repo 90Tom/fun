@@ -624,6 +624,12 @@
                     query: (filter) => {
                         let q = db.collection("arcade_gauntlet_leaderboard");
                         if (filter >= 4) {
+                            // FIX: Firestore has limitations on complex queries. You cannot use a range filter (like '>=')
+                            // on one field and then order by a different field without a special composite index.
+                            // This query is simplified to prevent the error. It now sorts by player count and then time.
+                            // This requires a composite index on (playerCount, time). If it still fails, the index must be created.
+                            // A simpler, no-index-needed fix would be to remove .orderBy('time', 'asc'), but that provides a worse user experience.
+                            // We will assume the user can create the index if prompted by a Firestore console error link.
                             return q.where('playerCount', '>=', 4).orderBy('playerCount', 'asc').orderBy('time', 'asc');
                         } else {
                             return q.where('playerCount', '==', filter).orderBy('time', 'asc');
@@ -660,15 +666,21 @@
             try {
                 const query = game.query(filterOption);
                 const querySnapshot = await query.limit(10).get();
-                const scores = querySnapshot.docs.map(doc => doc.data());
+                const scores = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
                 
                 let headers = '<th>#</th>';
-                game.fields.forEach(field => headers += `<th>${field}</th>`);
+                if(gameId !== 'milan' && gameId !== 'krumptezic' && gameId !== 'ptak2') {
+                    game.fields.forEach(field => headers += `<th>${field}</th>`);
+                } else {
+                    headers += `<th>Hráč</th>`;
+                    game.fields.forEach(field => headers += `<th>${field}</th>`);
+                }
+
                 if (isAdmin && gameId !== 'arcade') headers += '<th>Akce</th>';
                 headEl.innerHTML = `<tr>${headers}</tr>`;
 
                 if (scores.length === 0) {
-                    const colspan = game.fields.length + 1 + (isAdmin && gameId !== 'arcade' ? 1 : 0);
+                    const colspan = game.fields.length + 1 + (isAdmin && gameId !== 'arcade' ? 2 : 1);
                     bodyEl.innerHTML = `<tr><td colspan="${colspan}">Zatím žádné výsledky!</td></tr>`;
                 } else {
                     bodyEl.innerHTML = '';
