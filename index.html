@@ -621,12 +621,12 @@
                 arcade: {
                     title: "Žebříček: Arcade Gauntlet",
                     fields: ['Hráči', 'Čas'],
-                    // This query is intentionally simple for definition, complex logic is handled below
-                    query: (filter) => db.collection("arcade_gauntlet_leaderboard").where('playerCount', '==', filter).orderBy('time', 'asc')
+                    // This is just a placeholder, the actual query logic is handled inside the function now
+                    query: () => db.collection("arcade_gauntlet_leaderboard")
                 },
-                milan: { title: "Žebříček: Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: () => db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
-                krumptezic: { title: "Žebříček: KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: () => db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
-                ptak2: { title: "Žebříček: PTAK 2", fields: ['Úroveň', 'Čas'], query: () => db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
+                milan: { title: "Žebříček: Milanovy Klobásy", fields: ['Hráč', 'Objednávky', 'Čas Přežití'], query: () => db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
+                krumptezic: { title: "Žebříček: KrumpTezic", fields: ['Hráč', 'Nejvyšší Počet Bloků', 'Čas Výhry'], query: () => db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
+                ptak2: { title: "Žebříček: PTAK 2", fields: ['Hráč', 'Úroveň', 'Čas'], query: () => db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
             };
 
             const game = gameData[gameId];
@@ -654,25 +654,30 @@
             try {
                 let scores;
 
-                // *** FIX STARTS HERE ***
-                // Special handling for the problematic query that requires a composite index.
-                if (gameId === 'arcade' && filterOption >= 4) {
-                    // This query is valid without a custom index. We fetch more than we need.
-                    const query = db.collection("arcade_gauntlet_leaderboard")
+                // *** FINAL FIX STARTS HERE ***
+                // This logic now applies to ALL arcade filters to avoid needing composite indexes.
+                if (gameId === 'arcade') {
+                    let query;
+                    // Build a simple query that Firestore can handle without a custom index.
+                    if (filterOption >= 4) {
+                        query = db.collection("arcade_gauntlet_leaderboard")
                                   .where('playerCount', '>=', 4)
-                                  .orderBy('playerCount', 'asc') 
-                                  .limit(50); 
+                                  .limit(50); // Fetch more than needed
+                    } else {
+                        query = db.collection("arcade_gauntlet_leaderboard")
+                                  .where('playerCount', '==', filterOption)
+                                  .limit(50); // Fetch more than needed
+                    }
                     const querySnapshot = await query.get();
                     let fetchedScores = querySnapshot.docs.map(doc => doc.data());
                     
-                    // Now, we perform the second sort (by time) on the client side.
+                    // Now, perform the crucial sort by time on the client-side (in the browser).
                     fetchedScores.sort((a, b) => a.time - b.time);
                     
-                    // And take the top 10 results.
-                    scores = fetchedScores.slice(0, 10);
+                    scores = fetchedScores.slice(0, 10); // Take the top 10 after sorting
                 } else {
-                    // Original, working logic for all other cases.
-                    const query = game.query(filterOption);
+                    // Original logic for other games (Milan, etc.) which is already correct.
+                    const query = game.query();
                     const querySnapshot = await query.limit(10).get();
                     scores = querySnapshot.docs.map(doc => doc.data());
                 }
@@ -684,7 +689,7 @@
                 headEl.innerHTML = `<tr>${headers}</tr>`;
 
                 if (scores.length === 0) {
-                    const colspan = game.fields.length + 1 + (isAdmin && gameId !== 'arcade' ? 1 : 0);
+                    const colspan = game.fields.length + (isAdmin && gameId !== 'arcade' ? 2 : 1);
                     bodyEl.innerHTML = `<tr><td colspan="${colspan}">Zatím žádné výsledky!</td></tr>`;
                 } else {
                     bodyEl.innerHTML = '';
