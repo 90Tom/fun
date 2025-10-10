@@ -1,1228 +1,1371 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Arcade Deluxe</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        :root{--main-bg:#0d0d0d;--primary-glow:#00e5ff;--secondary-glow:#ff00c1;--text-color:#ffffff;}
-        body{background-color:var(--main-bg);background-image:linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);background-size:20px 20px, 20px 20px;color:var(--text-color);font-family:'Press Start 2P',cursive;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;overflow:hidden;}
-        #start-screen, #lobby-screen {position:absolute;top:0;left:0;width:100%;height:100%;background:var(--main-bg);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;}
-        .start-buttons { display: flex; flex-direction: column; gap: 25px; align-items: center; margin-top: -20px;}
-        .start-buttons .lobby-btn { width: 400px; text-align: center; }
-        #lobby-screen { display: none; }
-        .lobby-container { display: flex; gap: 40px; width: 100%; max-width: 900px; height: 400px; }
-        .lobby-browser, .lobby-details { border: 3px solid var(--primary-glow); padding: 20px; box-shadow: 0 0 15px var(--primary-glow) inset; width: 100%; display: flex; flex-direction: column; }
-        .lobby-browser h2, .lobby-details h2 { font-size: 1.5em; color: var(--secondary-glow); text-shadow: 0 0 8px var(--secondary-glow); margin-bottom: 20px; text-align: left;}
-        #lobby-list { list-style: none; overflow-y: auto; flex-grow: 1; text-align: left; }
-        #lobby-list li { padding: 10px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s ease; }
-        #lobby-list li:hover { background: rgba(0, 229, 255, 0.1); }
-        #player-list-container { flex-grow: 1; overflow-y: auto; }
-        #player-list { list-style: none; text-align: left; font-size: 1.2em; }
-        #player-list li { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .kick-btn { font-family:'Press Start 2P',cursive; background:none; border:none; color:red; cursor:pointer; font-size: 1em; text-shadow: 0 0 4px red;}
-        .kick-btn:hover { color: #ff5555; text-shadow: 0 0 8px #ff5555;}
-        .lobby-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin-top: 30px; }
-        .lobby-btn { font-family:'Press Start 2P',cursive; font-size:1.5em; padding: 15px 30px; border: 3px solid var(--primary-glow); color: var(--primary-glow); background: transparent; text-shadow: 0 0 8px var(--primary-glow); box-shadow: 0 0 15px var(--primary-glow) inset; cursor: pointer; transition: all 0.2s ease; }
-        .lobby-btn:hover { background: var(--primary-glow); color: var(--main-bg); box-shadow: 0 0 25px var(--primary-glow); }
-        .lobby-btn:disabled { color: #555; border-color: #555; text-shadow: none; box-shadow: none; cursor: not-allowed; }
-        .host-join-toggle { margin-top: 20px; display: flex; gap: 15px; align-items: center; }
-        .host-settings { margin-top: 20px; display: flex; flex-direction:column; gap: 15px; align-items: center; font-size: 0.8em; }
-        #time-input { font-family:'Press Start 2P',cursive; background: transparent; color: var(--text-color); border: 2px solid var(--text-color); padding: 5px; font-size: 0.9em; width: 60px; text-align: center;}
-        .mode-btn { font-family:'Press Start 2P',cursive; font-size:0.8em; padding: 8px 15px; border: 2px solid var(--text-color); color: var(--text-color); background: transparent; cursor: pointer; }
-        .mode-btn.active { background: var(--text-color); color: var(--main-bg); }
-        #start-screen h1 { font-size: 4em; color: var(--secondary-glow); text-shadow: 0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow); margin-bottom: 60px; animation: flicker-all 8s infinite; }
-        #start-screen h1 span { display: inline-block; animation: flicker-small 4s infinite; }
-        #start-screen h1 span:nth-child(2), #start-screen h1 span:nth-child(7) { animation-delay: 0.2s; } #start-screen h1 span:nth-child(3), #start-screen h1 span:nth-child(9) { animation-delay: 0.5s; } #start-screen h1 span:nth-child(5) { animation-delay: 1.1s; }
-        #arcade-room { text-align: center; display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 5vh; }
-        #game-container { text-align: center; display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 5vh; }
-        h1{font-size:3.5em;color:var(--secondary-glow);text-shadow:0 0 8px var(--secondary-glow), 0 0 12px var(--secondary-glow);margin-bottom:40px; animation: flicker-all 8s infinite;}
-        h1 span { display: inline-block; animation: flicker-small 4s infinite; }
-        h1 span:nth-child(2), h1 span:nth-child(7) { animation-delay: 0.2s; } h1 span:nth-child(3), h1 span:nth-child(9) { animation-delay: 0.5s; } h1 span:nth-child(5) { animation-delay: 1.1s; }
-        @keyframes flicker-big{0%,100%{text-shadow:0 0 10px var(--primary-glow);opacity:1;} 50%{text-shadow:0 0 20px var(--primary-glow);opacity:0.8;}}
-        @keyframes flicker-small{0%, 49.9%{opacity:1;} 50%{opacity:0.4;} 50.5%{opacity:1;} 70%, 100%{opacity:1;} 70.5%{opacity:0.6;} 71%{opacity:1;}}
-        @keyframes flicker-all{0%, 100%{opacity:1;} 60%{opacity:1;} 60.5%{opacity:0.2; text-shadow:none;} 61.5%{opacity:1;}}
-        #game-selection{display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:50px; width: 100%; max-width: 1100px; justify-content: center;}
-        .game-cabinet{width:200px;height:280px;border-radius:10px;position:relative;cursor:pointer;transition:transform 0.2s ease;display:flex;flex-direction:column;align-items:center;box-shadow:inset 0 0 10px #000, 5px 5px 15px #000; background-color: var(--cab-color-light); border: 4px solid var(--cab-color-dark);}
-        .game-cabinet:hover{transform:translateY(-10px);}
-        .completion-light { position: absolute; top: 8px; right: 8px; width: 15px; height: 15px; border-radius: 50%; background: #222; border: 2px solid #000; box-shadow: inset 0 0 4px #000; display: none; z-index: 5;}
-        .completion-light.active { background: #00ff00; box-shadow: 0 0 10px #00ff00, 0 0 15px #00ff00, inset 0 0 3px #fff; }
-        .marquee{width:100%;height:45px;background:#111;color:white;border-top-left-radius:5px;border-top-right-radius:5px;display:flex;justify-content:center;align-items:center;text-align:center;font-size:1em;text-shadow:0 0 5px var(--primary-glow); padding: 5px; line-height: 1.2;}
-        .screen-area{width:85%;height:110px;background:#080808;margin-top:10px;border:10px solid var(--cab-color-dark);box-shadow:inset 0 0 10px #000;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:5px;color:#ffff00; font-size: 0.7em; line-height: 1.4; text-align: center;}
-        .control-panel-base{width:100%; height:110px; margin-top:auto; border-bottom-left-radius:5px; border-bottom-right-radius:5px; display:flex;justify-content:center;align-items:center; background-color: var(--cab-color-dark);}
-        .game-cabinet[data-theme="tetris"]{--cab-color-light:#2c3e50; --cab-color-dark:#34495e;}
-        .game-cabinet[data-theme="pacman"]{--cab-color-light:#f1c40f; --cab-color-dark:#f39c12;}
-        .game-cabinet[data-theme="spaceInvaders"]{--cab-color-light:#1a1a1a; --cab-color-dark:#333;}
-        .game-cabinet[data-theme="racing"]{--cab-color-light:#c0392b; --cab-color-dark:#e74c3c;}
-        .game-cabinet[data-theme="snake"]{--cab-color-light:#27ae60; --cab-color-dark:#2ecc71;}
-        .game-cabinet[data-theme="pong"]{--cab-color-light:#7f8c8d; --cab-color-dark:#95a5a6;}
-        .game-cabinet[data-theme="breakout"]{--cab-color-light:#8e44ad; --cab-color-dark:#9b59b6;}
-        .game-cabinet[data-theme="maze"]{--cab-color-light:#2980b9; --cab-color-dark:#3498db;}
-        .control-panel{width:90%;height:80px;background:#1a1a1a;border-radius:5px;display:flex;justify-content:space-around;align-items:center;padding:10px;}
-        .joystick{position:relative;height:55px;width:35px;}
-        .joystick-base{width:35px;height:20px;background:#222;border-radius:3px;position:absolute;bottom:0;left:50%;transform:translateX(-50%);}
-        .joystick-stick{width:8px;height:40px;background:silver;position:absolute;bottom:10px;left:50%;transform:translateX(-50%);}
-        .joystick-top{width:20px;height:20px;background:red;border-radius:50%;position:absolute;top:0;left:50%;transform:translateX(-50%);}
-        .buttons{display:flex; gap:15px; align-items:center;}
-        .buttons div{width:25px;height:25px;border-radius:50%;background:blue;box-shadow:inset 0 0 5px rgba(0,0,0,0.5);}
-        .coin-slot{width:3px; height:25px; background:black;}
-        #game-canvas{background-color:#000;border:5px solid #333;box-shadow:0 0 25px var(--primary-glow), inset 0 0 15px rgba(0, 255, 255, 0.3);}
-        #game-info{display:flex;justify-content:space-around;align-items:center;width:100%;max-width:800px;margin-top:20px;font-size:1.2em;padding:0 10px;}
-        #back-to-arcade{margin-top:20px;padding:15px 30px;font-family:'Press Start 2P',cursive;font-size:1em;color:var(--main-bg);background-color:var(--primary-glow);border:none;cursor:pointer;}
-        #high-scores-container{position:absolute;top:20px;right:20px;background-color:rgba(0,0,0,0.8);padding:20px;border:2px solid var(--primary-glow);border-radius:10px;display:none;width:250px;}
-        #high-scores-list li .name{color:var(--primary-glow);}
-        #high-scores-list li .score{color:#ffff00;}
-        #volume-control { position: fixed; bottom: 20px; right: 20px; z-index: 3000; display: none; align-items: center; gap: 10px; background: rgba(10,10,10,0.7); padding: 10px 15px; border-radius: 5px; border: 3px solid var(--primary-glow); box-shadow: 0 0 10px var(--primary-glow) inset, 0 0 8px var(--primary-glow); backdrop-filter: blur(2px); }
-        body.in-game #volume-control { display: flex; }
-        #volume-control label { font-family:'Press Start 2P',cursive; font-size: 1.2em; color: var(--primary-glow); text-shadow: 0 0 5px var(--primary-glow); }
-        input[type="range"] { -webkit-appearance: none; appearance: none; width: 150px; height: 20px; background: transparent; cursor: pointer; }
-        input[type="range"]::-webkit-slider-runnable-track { height: 20px; background: #111; border: 2px solid #000; box-shadow: inset 0 0 5px #000; }
-        input[type="range"]::-moz-range-track { height: 20px; background: #111; border: 2px solid #000; box-shadow: inset 0 0 5px #000; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 28px; background-color: var(--secondary-glow); margin-top: -6px; border: 2px solid #000; box-shadow: 0 0 15px var(--secondary-glow), inset 0 0 3px #fff; }
-        input[type="range"]::-moz-range-thumb { width: 16px; height: 28px; background-color: var(--secondary-glow); border: 2px solid #000; box-shadow: 0 0 15px var(--secondary-glow), inset 0 0 3px #fff; }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .modal-content { border: 3px solid var(--secondary-glow); padding: 40px; box-shadow: 0 0 25px var(--secondary-glow) inset, 0 0 15px var(--secondary-glow); background: var(--main-bg); animation: flicker-all 5s infinite; position: relative; }
-        .close-modal-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; color: #fff; font-family: 'Press Start 2P', cursive; font-size: 1.5em; cursor: pointer; text-shadow: 0 0 5px red; }
-        .close-modal-btn:hover { color: red; }
-        .modal-content h2 { font-size: 2.5em; color: var(--secondary-glow); text-shadow: 0 0 8px var(--secondary-glow); margin-bottom: 20px;}
-        #results-list { list-style: none; font-size: 1.2em; text-align: left;}
-        #results-list li { margin-bottom: 10px; }
-        #winner-name { color: #ffff00; font-size: 1.5em; text-shadow: 0 0 8px #ffff00; }
-        #game-timer { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 2.5em; color: var(--primary-glow); text-shadow: 0 0 8px var(--primary-glow); z-index: 4000; display: none; background: rgba(0,0,0,0.5); padding: 5px 15px; border: 2px solid var(--primary-glow); }
-        #color-selection { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
-        .color-box { width: 25px; height: 25px; cursor: pointer; border: 2px solid #555; transition: border-color 0.2s; }
-        .color-box.selected { border-color: #fff; box-shadow: 0 0 10px #fff; }
+    <title>90Tom fun!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-        /* --- NEW LEADERBOARD STYLES --- */
-        #gauntlet-leaderboard-modal .modal-content { width: 90%; max-width: 800px; }
-        #leaderboard-filters { margin-bottom: 20px; display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; }
-        .leaderboard-filter-btn { font-family: 'Press Start 2P', cursive; font-size: 0.8em; padding: 10px 15px; border: 2px solid var(--primary-glow); color: var(--primary-glow); background: transparent; cursor: pointer; text-shadow: 0 0 4px var(--primary-glow); }
-        .leaderboard-filter-btn:hover { background: var(--primary-glow); color: var(--main-bg); }
-        .leaderboard-filter-btn.active { background: var(--primary-glow); color: var(--main-bg); box-shadow: 0 0 15px var(--primary-glow); }
-        #gauntlet-leaderboard-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8em; }
-        #gauntlet-leaderboard-table th, #gauntlet-leaderboard-table td { padding: 10px 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.2); }
-        #gauntlet-leaderboard-table th { color: var(--secondary-glow); }
-        #gauntlet-leaderboard-table td:first-child { color: var(--primary-glow); }
-        #gauntlet-leaderboard-table td:last-child { text-align: right; color: #ffff00; }
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
+        authDomain: "tom-fun.firebaseapp.com",
+        databaseURL: "https://tom-fun-default-rtdb.firebaseio.com",
+        projectId: "tom-fun",
+        storageBucket: "tom-fun.appspot.com",
+        messagingSenderId: "710857129785",
+        appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
+        measurementId: "G-6MHP8FHQ87"
+      };
+
+      let db, auth, rtdb;
+      try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+        rtdb = firebase.database();
+      } catch (e) {
+        console.error("Firebase initialization failed:", e);
+        alert("CRITICAL ERROR: Could not connect to the kingdom's database. The leaderboards will not work.");
+      }
+    </script>
+
+    <style>
+        :root {
+            --body-bg-overlay: rgba(255, 255, 255, 0.7);
+            --text-color: #333;
+            --text-color-light: #666;
+            --header-bg: rgba(255, 255, 255, 0.6);
+            --card-bg: #ffffff;
+            --card-h2-color: #0056b3;
+            --footer-bg: rgba(255, 255, 255, 0.6);
+            --modal-bg: #fefefe;
+            --input-bg: #ffffff;
+            --input-border: #ddd;
+            --table-header-bg: #f2f2f2;
+            --table-row-hover: #f9f9f9;
+            --button-bg: rgba(250, 250, 250, 0.65);
+            --button-border: rgba(0, 0, 0, 0.15);
+            --button-hover-bg: rgba(255, 255, 255, 0.85);
+            --button-hover-border: rgba(0, 0, 0, 0.25);
+            --card-border: transparent;
+        }
+
+        body.dark-mode {
+            --body-bg-overlay: rgba(18, 18, 18, 0.85);
+            --text-color: #f0f0f0;
+            --text-color-light: #a0a0a0;
+            --header-bg: rgba(30, 30, 30, 0.75);
+            --card-bg: #1e1e1e;
+            --card-h2-color: #58a6ff;
+            --footer-bg: rgba(30, 30, 30, 0.75);
+            --modal-bg: #2c2c2c;
+            --input-bg: #252525;
+            --input-border: #444;
+            --table-header-bg: #1f1f1f;
+            --table-row-hover: #3a3a3a;
+            --button-bg: rgba(45, 45, 45, 0.7);
+            --button-border: rgba(255, 255, 255, 0.1);
+            --button-hover-bg: rgba(60, 60, 60, 0.8);
+            --button-hover-border: rgba(255, 255, 255, 0.2);
+            --card-border: rgba(255, 255, 255, 0.1);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body { font-family: 'Poppins', sans-serif; color: var(--text-color); line-height: 1.6; background-image: url('IndexImages/backgroundindex.png'); background-size: cover; background-position: center center; background-attachment: fixed; display: flex; flex-direction: column; align-items: center; padding: 10px; position: relative; z-index: 1; transition: color 0.3s ease; }
+        body::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--body-bg-overlay); z-index: -1; transition: background-color 0.3s ease; }
+        header { text-align: center; margin-bottom: 20px; margin-top: 10px; max-width: 800px; width: 100%; background-color: var(--header-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); position: relative; transition: background-color 0.3s ease; flex-shrink: 0; }
+        header h1 { color: red; font-weight: 700; font-size: 3em; margin-bottom: 5px; position: relative; display: inline-block; padding-right: 50px; }
+        .splash-text { position: absolute; bottom: 0px; right: 20px; font-size: 0.4em; font-weight: 600; color: #FFD700; padding: 2px 8px; border-radius: 4px; transform: rotate(-15deg); animation: splash-pulse 2s infinite alternate ease-in-out; white-space: nowrap; pointer-events: none; }
+        @keyframes splash-pulse { from { transform: rotate(-22deg) scale(1.1); } to { transform: rotate(-16deg) scale(1.3); } }
+        header p { color: var(--text-color); font-size: 1em; transition: color 0.3s ease; }
+        .game-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; max-width: 1000px; width: 100%; flex-grow: 1; justify-content: center; overflow-y: auto; padding: 10px; }
+        .game-card { background-color: var(--card-bg); border-radius: 12px; color: var(--text-color); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; display: flex; flex-direction: column; text-align: center; overflow: hidden; border: 1px solid var(--card-border); opacity: 0; transform: translateY(20px); aspect-ratio: 1 / 1; position: relative; }
+        .game-card .game-link { display: flex; flex-direction: column; flex-grow: 1; text-decoration: none; color: inherit; height: 100%; }
+        .game-card img { display: block; width: 100%; height: 60%; object-fit: cover; transition: transform 0.3s ease, filter 0.3s ease; }
+        .game-card .content { padding: 10px; width: 100%; display: flex; flex-direction: column; justify-content: center; flex-grow: 1; overflow: hidden; }
+        .game-card:hover { transform: translateY(-8px) scale(1.04); box-shadow: 0 10px 30px rgba(232, 62, 140, 0.25); border-color: #e83e8c; }
+        .game-card:hover img { transform: scale(1.03); filter: brightness(1.05); }
+        .game-card h2 { margin-bottom: 5px; color: var(--card-h2-color); font-size: 1.1em; font-weight: 600; }
+        .game-card p { color: var(--text-color-light); font-size: 0.8em; line-height: 1.3; }
+        .leaderboard-btn { position: absolute; top: 10px; right: 10px; background-color: rgba(240, 240, 240, 0.8); border: 1px solid rgba(221, 221, 221, 0.8); border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 16px; line-height: 28px; text-align: center; transition: all 0.2s ease; z-index: 5; backdrop-filter: blur(2px); }
+        .leaderboard-btn:hover { background-color: #e83e8c; color: white; transform: scale(1.1); }
+        footer { text-align: center; margin-top: 20px; padding: 10px; color: var(--text-color-light); font-size: 0.9em; width: 100%; max-width: 800px; background-color: var(--footer-bg); border-radius: 8px; transition: all 0.3s ease; flex-shrink: 0; }
+        footer p { color: red; }
+        footer p:first-of-type { margin-bottom: 5px; color: var(--text-color-light); }
+        #top-actions-container { position: fixed; top: 15px; right: 20px; z-index: 1001; display: flex; gap: 10px; align-items: center; }
+        #theme-switcher-btn, #language-switcher-btn, #login-btn, #chat-toggle-btn, #admin-panel-btn { background-color: var(--button-bg); color: var(--text-color); border: 1px solid var(--button-border); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; font-size: 0.9em; transition: all 0.2s ease; outline: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+        #profile-btn-pfp { display: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid var(--button-border); background-color: var(--button-bg); background-size: cover; background-position: center; overflow: hidden; flex-shrink: 0; }
+        #profile-btn-pfp:hover { border-color: var(--button-hover-border); }
+        #login-btn { color: red; font-weight: 600; }
+        #theme-switcher-btn:hover, #language-switcher-btn:hover, #login-btn:hover, #chat-toggle-btn:hover, #admin-panel-btn:hover { background-color: var(--button-hover-bg); border-color: var(--button-hover-border); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #login-btn:hover { color: #c00; }
+        #language-switcher-btn .lang-current { font-weight: 600; }
+        #language-switcher-btn .lang-separator { margin: 0 5px; opacity: 0.6; }
+        #language-switcher-btn .lang-target { opacity: 0.7; }
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
+        .modal-content { position: relative; background-color: var(--modal-bg); color: var(--text-color); padding: 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 500px; text-align: center; transition: all 0.3s ease; }
+        .modal-content h1 { color: red; margin-bottom: 25px; font-weight: 600; }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #d90429; }
+        .input-group input { width: 100%; padding: 12px 15px; border-radius: 6px; border: 1px solid var(--input-border); font-family: 'Poppins', sans-serif; font-size: 1em; transition: border-color 0.3s ease, background-color 0.3s, color 0.3s; background-color: var(--input-bg); color: var(--text-color); }
+        .input-group input:focus { outline: none; border-color: red; }
+        .action-button { width: 100%; padding: 12px; border: none; background-color: red; color: white; font-size: 1.1em; font-weight: 600; border-radius: 6px; cursor: pointer; transition: background-color 0.3s ease; }
+        .action-button:hover { background-color: #c00; }
+        .logout-button { background-color: #a9a9a9; margin-top: 10px; }
+        .logout-button:hover { background-color: #8b0000; }
+        body.dark-mode .logout-button { background-color: #555; }
+        body.dark-mode .logout-button:hover { background-color: #777; }
+        .error-message { color: red; margin-top: 15px; height: 20px; font-weight: 500; font-size: 0.9em; }
+        .close-btn { color: #aaa; position: absolute; top: 10px; right: 20px; font-size: 28px; font-weight: bold; cursor: pointer; transition: color 0.3s ease;}
+        .close-btn:hover, .close-btn:focus { color: var(--text-color); text-decoration: none; }
+        .form-switch-text { margin-top: 20px; font-size: 0.9em; color: #d90429; }
+        .form-switch-text a { color: red; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .form-switch-text a:hover { text-decoration: underline; }
+        #register-view { display: none; }
+        #leaderboard-table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        #leaderboard-table th, #leaderboard-table td { padding: 10px; border-bottom: 1px solid var(--input-border); text-align: left; }
+        #leaderboard-table th { background-color: var(--table-header-bg); }
+        #leaderboard-table tr:hover { background-color: var(--table-row-hover); }
+        .delete-score-btn { background: #ff5c5c; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; line-height: 25px; font-size: 14px; }
+        .delete-score-btn:hover { background: #ff1c1c; }
+        .pfp-display { display: flex; justify-content: center; align-items: center; width: 150px; height: 150px; border-radius: 50%; margin: 0 auto 20px auto; border: 4px solid var(--card-border); overflow: hidden; }
+        .pfp-display img { width: 100%; height: 100%; object-fit: cover; }
+        .initials { font-weight: bold; color: white; }
+        .pfp-display .initials { font-size: 50px; }
+        .chat-message .initials { font-size: 16px; }
+        #profile-btn-pfp .initials { font-size: 16px; }
+        #profile-info p, #user-view-info p { margin-bottom: 10px; }
+        .pfp-choices { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--input-border); }
+        .pfp-choices h3 { font-size: 1em; margin-bottom: 10px; color: var(--text-color-light); }
+        .avatar-grid, .color-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        .avatar-choice { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; object-fit: cover; display: flex; justify-content: center; align-items: center; background-color: #ccc; }
+        body.dark-mode .avatar-choice { background-color: #444; }
+        .avatar-choice.selected, .color-choice.selected { border-color: red; }
+        .color-choice { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; }
+        #chat-popup { position: fixed; top: 0; left: 0; width: 350px; height: 100%; background-color: var(--card-bg); z-index: 1999; box-shadow: 5px 0 15px rgba(0,0,0,0.1); transform: translateX(-100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; border-right: 1px solid var(--card-border); }
+        #chat-popup.open { transform: translateX(0); }
+        .chat-view { display: none; height: 100%; flex-direction: column; }
+        .chat-view.active { display: flex; }
+        .chat-header { padding: 15px; border-bottom: 1px solid var(--input-border); display: flex; justify-content: space-between; align-items: center; }
+        .chat-header h2 { font-size: 1.2em; }
+        .chat-header .back-btn { font-size: 24px; cursor: pointer; background: none; border: none; color: var(--text-color); margin-right: 10px; }
+        .chat-header .close-btn { font-size: 24px; cursor: pointer; background: none; border: none; color: var(--text-color); }
+        .chat-messages { flex-grow: 1; overflow-y: auto; padding: 15px; }
+        #dm-list-container { padding: 0; }
+        .chat-form { padding: 15px; border-top: 1px solid var(--input-border); display: flex; gap: 10px; }
+        .chat-input { flex-grow: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-color); }
+        .chat-send-btn { padding: 10px 15px; background-color: red; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .chat-message { display: flex; align-items: center; margin-bottom: 15px; }
+        .pfp-container { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; display: flex; justify-content: center; align-items: center; flex-shrink: 0; overflow: hidden; cursor: pointer; }
+        .pfp-container img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-message .message-content { display: flex; flex-direction: column; flex-grow: 1; }
+        .chat-message .message-author { font-weight: 600; color: var(--card-h2-color); cursor: pointer; }
+        .chat-message .message-text { word-break: break-word; }
+        .message-deleted { color: var(--text-color-light); font-style: italic; }
+        .message-meta { display: flex; align-items: center; justify-content: space-between; width: 100%;}
+        .message-author-time { display: flex; align-items: center; }
+        .message-timestamp { font-size: 0.75em; color: var(--text-color-light); margin-left: 8px; }
+        .delete-msg-btn { background: none; border: none; color: var(--text-color-light); cursor: pointer; font-size: 14px; margin-left: 10px; }
+        .delete-msg-btn:hover { color: red; }
+        .dm-list-item, .public-chat-btn, .user-search-result { display: flex; align-items: center; padding: 10px 15px; cursor: pointer; border-bottom: 1px solid var(--input-border); }
+        .dm-list-item:hover, .public-chat-btn:hover, .user-search-result:hover { background-color: var(--table-row-hover); }
+        .dm-list-item .pfp-container, .user-search-result .pfp-container { margin-right: 15px; }
+        .dm-info { display: flex; flex-direction: column; flex-grow: 1; }
+        .dm-info-name { font-weight: bold; color: var(--text-color); }
+        .dm-info-lastmsg { font-size: 0.9em; color: var(--text-color-light); }
+        #dm-search-bar { width: calc(100% - 30px); margin: 15px; padding: 8px; border-radius: 6px; border: 1px solid var(--input-border); background-color: var(--input-bg); color: var(--text-color); }
+        .achievements-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--input-border); }
+        .achievements-section h3 { font-size: 1.2em; margin-bottom: 10px; }
+        .achievement { display: flex; align-items: center; margin-bottom: 10px; text-align: left; }
+        .achievement img { width: 50px; height: 50px; margin-right: 15px; }
+        .achievement-info h4 { margin: 0; font-size: 1em; }
+        .achievement-info p { margin: 0; font-size: 0.85em; color: var(--text-color-light); }
+
+        .typing-indicator { display: flex; align-items: center; font-size: 0.9em; color: var(--text-color-light); }
+        .typing-indicator .pfp-container { width: 20px; height: 20px; margin-right: 8px; }
+        .typing-indicator .pfp-container .initials { font-size: 10px; }
+        .typing-dots span { display: inline-block; width: 4px; height: 4px; background-color: var(--text-color-light); border-radius: 50%; margin: 0 1px; animation: typing-bounce 1.2s infinite ease-in-out; }
+        .typing-dots span:nth-child(1) { animation-delay: -0.3s; }
+        .typing-dots span:nth-child(2) { animation-delay: -0.15s; }
+        @keyframes typing-bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+        #typing-indicator-container { padding: 5px 15px; min-height: 32px; display: flex; flex-direction: column; gap: 4px; }
+
+        #admin-modal .modal-content { max-width: 800px; height: 80%; }
+        .admin-log-container { height: calc(50% - 60px); overflow-y: auto; text-align: left; border: 1px solid var(--input-border); border-radius: 8px; padding: 10px; margin-top: 10px; }
+        .admin-log-entry { padding: 8px; border-bottom: 1px solid var(--input-border); font-size: 0.9em; }
+        .admin-log-entry small { color: var(--text-color-light); }
+
+        body.dark-mode #login-btn { color: #ff4d4d; }
+        body.dark-mode #login-btn:hover { color: #ff8a8a; }
+
+        @media (max-height: 800px) {
+            header h1 { font-size: 2.5em; padding-right: 45px;}
+            .game-card img { height: 55%; }
+            .game-card .content { padding: 8px; }
+        }
     </style>
 </head>
 <body>
-    <div id="game-timer"></div>
-    <div id="start-screen">
-        <h1><span>R</span><span>E</span><span>T</span><span>R</span><span>O</span> <span>A</span><span>R</span><span>C</span><span>A</span><span>D</span><span>E</span></h1>
-        <div class="start-buttons">
-            <button id="solo-arcade-btn" class="lobby-btn">SOLO ARCADE</button>
-            <button id="speedrun-btn" class="lobby-btn">GAUNTLET</button>
-            <button id="multiplayer-btn" class="lobby-btn">MULTIPLAYER</button>
-            <button id="leaderboard-btn" class="lobby-btn" style="font-size: 1.2em; width: 300px;">LEADERBOARD</button>
+    <div id="top-actions-container">
+        <button id="chat-toggle-btn" style="display: none;">💬</button>
+        <button id="admin-panel-btn" style="display: none;">👑</button>
+        <button id="theme-switcher-btn">🌙</button>
+        <button id="language-switcher-btn">
+            <span class="lang-current">CS</span><span class="lang-separator">⇌</span><span class="lang-target">EN</span>
+        </button>
+        <a href="#" id="login-btn" data-translate-key="loginButtonText">Login</a>
+        <div id="profile-btn-pfp"></div>
+    </div>
+
+    <header>
+        <h1>90Tom<span class="splash-text">fun!</span></h1>
+        <p data-translate-key="welcomeMessage">Vítám Vás! Vyberte si nějakou hru níže a užijte si!</p>
+    </header>
+
+    <main class="game-grid">
+         <div class="game-card">
+            <a href="arcade.html" class="game-link" id="arcade-link">
+                <img src="IndexImages/arcade.png" alt="Retro Arcade Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="arcadeTitle">Retro Arcade</h2>
+                    <p data-translate-key="arcadeDesc">A collection of classic arcade games. Join a lobby and play!</p>
+                </div>
+            </a>
+        </div>
+        <div class="game-card">
+            <a href="MILAN/MILAN.html" class="game-link">
+                <img src="MILAN/milanbg.png" alt="Milanovy klobásy Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="milanTitle">Milanovy klobásy</h2>
+                    <p data-translate-key="milanDesc">Připravujte výtečná jídla v očích prémiového kuchaře Milana.</p>
+                </div>
+            </a>
+            <button class="leaderboard-btn" data-game="milan" title="Leaderboard">🏆</button>
+        </div>
+        <div class="game-card">
+            <a href="bloonstdaitst.html" class="game-link">
+                <img src="IndexImages/blonkytm.png" alt="BlónkyTM Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="blonkyTitle">Blónky TM</h2>
+                    <p data-translate-key="blonkyDesc">Předělání známé hry Bloons TD.</p>
+                </div>
+            </a>
+        </div>
+        <div class="game-card">
+            <a href="KrumpTezic/KrumpTezic.html" class="game-link">
+                <img src="IndexImages/krumptezic.png" alt="KrumpTezic Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="krumptezicTitle">KrumpTezic</h2>
+                    <p data-translate-key="krumptezicDesc">Zábavné těžení bloků z Minecraftu inspirováno hrou PickCrafter.</p>
+                </div>
+            </a>
+            <button class="leaderboard-btn" data-game="krumptezic" title="Leaderboard">🏆</button>
+        </div>
+        <div class="game-card">
+            <a href="PTAK 2/PTAK 2.html" class="game-link">
+                <img src="IndexImages/ptak2.png" alt="PTAK 2 Game Preview">
+                <div class="content">
+                    <h2 data-translate-key="ptak2Title">PTAK 2</h2>
+                    <p data-translate-key="ptak2DescLine1">Druhé vydání z ságy PTAK pro p. Kořínka,</p>
+                    <p data-translate-key="ptak2DescLine2">dobrodružství ptáka, kočky a psa.</p>
+                </div>
+            </a>
+            <button class="leaderboard-btn" data-game="ptak2" title="Leaderboard">🏆</button>
+        </div>
+    </main>
+
+    <div id="chat-popup">
+        <div id="dm-list-view" class="chat-view active">
+            <div class="chat-header">
+                <h2>Zprávy</h2>
+                <button class="close-btn" id="chat-close-btn">&times;</button>
+            </div>
+            <input type="text" id="dm-search-bar" placeholder="Hledat uživatele...">
+            <div class="chat-messages" id="dm-list-container">
+            </div>
+        </div>
+
+        <div id="chat-view-container" class="chat-view">
+            <div class="chat-header">
+                <button class="back-btn" id="chat-back-btn">←</button>
+                <h2 id="chat-with-name"></h2>
+            </div>
+            <div class="chat-messages" id="chat-messages-container"></div>
+            <div id="typing-indicator-container"></div>
+            <form class="chat-form" id="chat-form">
+                <input type="text" class="chat-input" id="chat-input" placeholder="Napište zprávu..." autocomplete="off" required>
+                <button type="submit" class="chat-send-btn">Odeslat</button>
+            </form>
         </div>
     </div>
     
-    <div id="lobby-screen">
-         <div class="host-join-toggle">
-            <button id="host-btn" class="mode-btn">HOST</button>
-            <button id="join-btn" class="mode-btn active">JOIN</button>
-        </div>
-        <div class="lobby-container">
-            <div id="host-view" class="lobby-details" style="display: none;">
-                <h2>IN LOBBY:</h2>
-                <div id="player-list-container">
-                    <ul id="player-list"></ul>
-                </div>
-                 <div class="host-settings">
-                    <div id="color-selection"></div>
-                    <div id="time-setting-container">
-                        <label for="time-input">Arcade Run Time:</label>
-                        <input type="number" id="time-input" min="1" max="10" value="3">
-                        <span>Mins</span>
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div id="login-view">
+                <h1 data-translate-key="modalLoginTitle">Přihlásit se</h1>
+                <form id="login-form">
+                    <div class="input-group">
+                        <label for="login-username" data-translate-key="modalUsernameLabel">Jméno nebo Email</label>
+                        <input type="text" id="login-username" required>
                     </div>
-                </div>
+                    <div class="input-group">
+                        <label for="login-password" data-translate-key="modalPasswordLabel">Heslo</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="action-button" data-translate-key="modalLoginButton">Přihlásit se</button>
+                    <div id="login-error-message" class="error-message"></div>
+                </form>
+                <p class="form-switch-text">
+                    <span data-translate-key="modalNoAccount">Nemáte účet?</span>
+                    <a id="show-register-link" data-translate-key="modalRegisterLink">Zaregistrujte se</a>
+                </p>
             </div>
-            <div id="join-view" class="lobby-browser">
-                <h2>LOBBIES</h2>
-                <ul id="lobby-list"><li style="color: grey;">Authenticating...</li></ul>
+            <div id="register-view">
+                <h1 data-translate-key="modalRegisterTitle">Registrace</h1>
+                <form id="register-form">
+                     <div class="input-group">
+                        <label for="register-displayname">Zobrazované jméno</label>
+                        <input type="text" id="register-displayname" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="register-email" data-translate-key="modalUsernameLabel">Email</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="register-password" data-translate-key="modalPasswordLabel">Heslo</label>
+                        <input type="password" id="register-password" required>
+                    </div>
+                     <div class="input-group">
+                        <label for="confirm-password" data-translate-key="modalConfirmPasswordLabel">Potvrďte heslo</label>
+                        <input type="password" id="confirm-password" required>
+                    </div>
+                    <button type="submit" class="action-button" data-translate-key="modalRegisterButton">Zaregistrovat</button>
+                    <div id="register-error-message" class="error-message"></div>
+                </form>
+                <p class="form-switch-text">
+                    <span data-translate-key="modalHaveAccount">Máte již účet?</span>
+                    <a id="show-login-link" data-translate-key="modalLoginLink">Přihlaste se</a>
+                </p>
             </div>
-        </div>
-        <div class="lobby-controls">
-            <button id="play-btn" class="lobby-btn" disabled>PLAY</button>
         </div>
     </div>
 
-    <div id="arcade-room">
-        <h1><span>R</span><span>E</span><span>T</span><span>R</span><span>O</span> <span>A</span><span>R</span><span>C</span><span>A</span><span>D</span><span>E</span></h1>
-        <div id="game-selection"></div>
-    </div>
-    <div id="game-container">
-        <canvas id="game-canvas"></canvas>
-        <div id="game-info">
-            <span id="score">Score: 0</span>
-            <span id="level-lives">Level: 1</span>
-        </div>
-        <button id="back-to-arcade">Back to Arcade</button>
-    </div>
-    <div id="high-scores-container"><h2 id="high-scores-title">High Scores</h2><ul id="high-scores-list"></ul></div>
-    <div id="volume-control">
-        <label for="volume-slider">VOL</label>
-        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
-    </div>
-
-    <div id="winner-modal" class="modal">
+    <div id="leaderboard-modal" class="modal">
         <div class="modal-content">
-            <button class="close-modal-btn">X</button>
-            <h2 id="winner-title">WINNER!</h2>
-            <p id="winner-name"></p>
-            <p id="winner-text">is the Arcade Champion!</p>
-        </div>
-    </div>
-    
-    <!-- NEW: GAUNTLET LEADERBOARD MODAL -->
-    <div id="gauntlet-leaderboard-modal" class="modal">
-        <div class="modal-content">
-            <button class="close-modal-btn">X</button>
-            <h2>GAUNTLET LEADERBOARD</h2>
-            <div id="leaderboard-filters">
-                <button class="leaderboard-filter-btn active" data-count="1">Solo</button>
-                <button class="leaderboard-filter-btn" data-count="2">Duos</button>
-                <button class="leaderboard-filter-btn" data-count="3">Trios</button>
-                <button class="leaderboard-filter-btn" data-count="4">4-8 Players</button>
-            </div>
-            <table id="gauntlet-leaderboard-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Player(s)</th>
-                        <th>Time</th>
-                    </tr>
-                </thead>
-                <tbody id="gauntlet-leaderboard-body">
-                    <tr><td colspan="3">Loading...</td></tr>
-                </tbody>
+            <span class="close-btn">&times;</span>
+            <h1 id="leaderboard-title">Leaderboard</h1>
+            <table id="leaderboard-table">
+                <thead id="leaderboard-head"></thead>
+                <tbody id="leaderboard-body"></tbody>
             </table>
         </div>
     </div>
 
+    <div id="profile-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1>Profil</h1>
+            <div class="pfp-display" id="profile-pfp-container"></div>
+            <div id="profile-info"></div>
+            <div class="pfp-choices">
+                <h3>Vyberte si avatara</h3>
+                <div class="avatar-grid" id="avatar-grid-choices"></div>
+                <h3>Vyberte si barvu jména</h3>
+                <div class="color-grid" id="color-grid-choices"></div>
+            </div>
+            <button id="save-profile-btn" class="action-button" style="margin-top: 20px;">Uložit změny</button>
+            <button id="logout-btn" class="action-button logout-button">Odhlásit se</button>
+        </div>
+    </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyDNzjX6dmx2fGPhLW-ZIADhNigsfwMY3Ng",
-            authDomain: "tom-fun.firebaseapp.com",
-            databaseURL: "https://tom-fun-default-rtdb.firebaseio.com",
-            projectId: "tom-fun",
-            storageBucket: "tom-fun.firebasestorage.app",
-            messagingSenderId: "710857129785",
-            appId: "1:710857129785:web:5f2cdebe736577ea0e72e8",
-            measurementId: "G-6MHP8FHQ87"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const rtdb = firebase.database();
-        const db = firebase.firestore();
+    <div id="user-view-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1 id="user-view-title">Profil hráče</h1>
+            <div class="pfp-display" id="user-view-pfp-container"></div>
+            <div id="user-view-info"></div>
+            <button id="send-dm-btn" class="action-button" style="margin-top: 15px; display: none;">Poslat zprávu</button>
+            <div class="achievements-section">
+                <h3>Odznaky</h3>
+                <div id="user-view-achievements"></div>
+            </div>
+        </div>
+    </div>
 
-        const startScreen = document.getElementById('start-screen');
-        const lobbyScreen = document.getElementById('lobby-screen');
-        const arcadeRoom = document.getElementById('arcade-room'),
-            gameSelection = document.getElementById('game-selection'),
-            gameContainer = document.getElementById('game-container'),
-            canvas = document.getElementById('game-canvas'),
-            ctx = canvas.getContext('2d'),
-            scoreElement = document.getElementById('score'),
-            levelLivesElement = document.getElementById('level-lives'),
-            backToArcadeButton = document.getElementById('back-to-arcade'),
-            highScoresContainer = document.getElementById('high-scores-container'),
-            highScoresList = document.getElementById('high-scores-list'),
-            highScoresTitle = document.getElementById('high-scores-title');
-            
-        let currentGameId = null, gameLoopId = null, highScores = {}, lobbyHighScores = {}, currentKeyListener = null, currentMouseListener = null;
-        let currentLobbyId = null, playerName = 'PLAYER', isHost = false;
-        let lobbyStateListenerInfo = null, playerListListenerInfo = null, lobbyScoresListenerInfo = null, gauntletListenerInfo = null;
-        let gameTimerInterval = null, playerRef = null, currentLobbyData = null;
-        let gameMode = 'solo', isGameActive = false;
-        let gauntletProgress = {};
-        let gauntletStartTime = 0;
-        
-        const TEAM_COLORS = ['#FF5555', '#55FF55', '#5555FF', '#FFFF55', '#FF55FF', '#55FFFF', '#FFFFFF', '#FFA500'];
-        const GAUNTLET_GOALS = {
-            tetris: { type: 'score', value: 2000, text: 'Score 2000' },
-            spaceInvaders: { type: 'win', text: 'Win Game' },
-            pacman: { type: 'win', text: 'Win Game' },
-            racing: { type: 'score', value: 2000, text: 'Score 2000' },
-            snake: { type: 'score', value: 50, text: 'Score 50' },
-            pong: { type: 'win', text: 'Win Game' },
-            breakout: { type: 'win', text: 'Win Game' },
-            maze: { type: 'win', text: 'Win Game' }
-        };
+    <div id="admin-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h1>Admin Panel</h1>
+            <h2>Veřejný Chat Log</h2>
+            <div id="admin-public-log" class="admin-log-container">Načítání...</div>
+            <h2>DM Konverzace</h2>
+            <div id="admin-dm-log-list" class="admin-log-container">Načítání...</div>
+        </div>
+    </div>
 
-        const AudioEngine = {
-            audioCtx: null, initialized: false, musicNode: null, masterGain: null,
-            N: (note) => 440 * Math.pow(2, (note - 69) / 12),
-            init() { if (!this.initialized) { try { this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); this.masterGain = this.audioCtx.createGain(); this.masterGain.connect(this.audioCtx.destination); this.initialized = true; this.setVolume(localStorage.getItem('arcadeVolume') || 0.5); } catch(e) { console.error("Could not initialize AudioContext:", e); }}},
-            setVolume(value) { if(this.initialized) { this.masterGain.gain.setValueAtTime(parseFloat(value), this.audioCtx.currentTime); localStorage.setItem('arcadeVolume', value); } },
-            playSound(type) { if (!this.initialized) return; const now = this.audioCtx.currentTime; const gain = this.audioCtx.createGain(); gain.connect(this.masterGain); const o = this.audioCtx.createOscillator(); o.connect(gain); switch(type) { case 'shoot': gain.gain.setValueAtTime(0.1, now); o.type = 'square'; o.frequency.setValueAtTime(800, now); o.frequency.exponentialRampToValueAtTime(200, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'hit': gain.gain.setValueAtTime(0.2, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(200, now); o.frequency.exponentialRampToValueAtTime(100, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'score': gain.gain.setValueAtTime(0.15, now); o.type = 'sine'; o.frequency.setValueAtTime(440, now); o.frequency.exponentialRampToValueAtTime(880, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'select': gain.gain.setValueAtTime(0.15, now); o.type = 'triangle'; o.frequency.setValueAtTime(300, now); o.frequency.exponentialRampToValueAtTime(600, now + 0.1); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2); o.start(now); o.stop(now + 0.2); break; case 'gameOver': gain.gain.setValueAtTime(0.2, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(400, now); o.frequency.exponentialRampToValueAtTime(100, now + 0.5); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5); o.start(now); o.stop(now + 0.5); break; case 'snakeEat': gain.gain.setValueAtTime(0.15, now); o.type = 'triangle'; o.frequency.setValueAtTime(600, now); o.start(now); o.stop(now + 0.05); break; case 'pongScore': gain.gain.setValueAtTime(0.2, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(523, now); o.frequency.exponentialRampToValueAtTime(1046, now + 0.1); o.start(now); o.stop(now + 0.1); break; case 'pongHit': gain.gain.setValueAtTime(0.2, now); o.type = 'square'; o.frequency.setValueAtTime(200, now); o.start(now); o.stop(now + 0.05); break; case 'mazeStep': gain.gain.setValueAtTime(0.05, now); o.type = 'square'; o.frequency.setValueAtTime(150, now); o.start(now); o.stop(now + 0.05); break; case 'mazeBump': gain.gain.setValueAtTime(0.1, now); o.type = 'sawtooth'; o.frequency.setValueAtTime(100, now); o.start(now); o.stop(now + 0.08); break; } },
-            playMusic(track) {
-                if (!this.initialized) return; this.stopMusic(); if (!track) return;
-                const R = 0; const tracks = {
-                    menu: { tempo: 180, vol: 0.1, melody: [ {n:60,d:1},{n:64,d:1},{n:67,d:1},{n:72,d:1},{n:67,d:1},{n:64,d:1},{n:60,d:2},{n:55,d:1},{n:59,d:1},{n:62,d:1},{n:67,d:1},{n:62,d:1},{n:59,d:1},{n:55,d:2},{n:R,d:2}, {n:62,d:1},{n:65,d:1},{n:69,d:1},{n:74,d:1},{n:69,d:1},{n:65,d:1},{n:62,d:2},{n:57,d:1},{n:60,d:1},{n:64,d:1},{n:69,d:1},{n:64,d:1},{n:60,d:1},{n:57,d:2},{n:R,d:2}, ] },
-                    tetris: { tempo: 220, vol: 0.15, melody: [ {n:76,d:2},{n:71,d:1},{n:72,d:1},{n:74,d:2},{n:72,d:1},{n:71,d:1},{n:69,d:2},{n:69,d:1},{n:72,d:1},{n:76,d:2},{n:74,d:1},{n:72,d:1},{n:71,d:2},{n:71,d:1},{n:72,d:1},{n:74,d:2},{n:76,d:2},{n:72,d:2},{n:69,d:2},{n:69,d:4},{n:R,d:4}, {n:74,d:2},{n:76,d:1},{n:77,d:1},{n:79,d:2},{n:77,d:1},{n:76,d:1},{n:74,d:2},{n:74,d:1},{n:76,d:1},{n:77,d:2},{n:76,d:1},{n:74,d:1},{n:72,d:2},{n:72,d:1},{n:74,d:1},{n:76,d:2},{n:74,d:1},{n:72,d:1},{n:71,d:4} ] },
-                    spaceInvaders: { tempo: 140, vol: 0.08, melody: [ {n:48,d:1},{n:R,d:1},{n:48,d:1},{n:R,d:1},{n:48,d:1},{n:R,d:1},{n:48,d:1},{n:R,d:1}, {n:51,d:1},{n:R,d:1},{n:51,d:1},{n:R,d:1}, {n:50,d:2},{n:R,d:2}] },
-                    pacman: { tempo: 200, vol: 0.1, melody: [ {n:67,d:1},{n:72,d:1},{n:76,d:1},{n:79,d:1},{n:R,d:1},{n:67,d:1},{n:72,d:1},{n:76,d:1},{n:R,d:2}, {n:69,d:1},{n:74,d:1},{n:77,d:1},{n:81,d:1},{n:R,d:1},{n:69,d:1},{n:74,d:1},{n:77,d:1} ] },
-                    racing: { tempo: 200, vol: 0.12, melody: [ {n:48,d:1},{n:51,d:1},{n:55,d:1},{n:51,d:1},{n:60,d:2},{n:55,d:1},{n:51,d:1},{n:48,d:1},{n:51,d:1},{n:55,d:1},{n:51,d:1},{n:63,d:2},{n:60,d:1},{n:55,d:1} ] },
-                    breakout: { tempo: 160, vol: 0.09, melody: [ {n:72,d:1},{n:76,d:2},{n:79,d:2},{n:76,d:1},{n:72,d:2},{n:R,d:2}, {n:67,d:1},{n:71,d:2},{n:74,d:2},{n:71,d:1},{n:67,d:2},{n:R,d:2} ] }
-                };
-                const trackData = tracks[track]; if (!trackData) return;
-                const { melody, vol } = trackData; const noteDuration = 60 / trackData.tempo; let time = this.audioCtx.currentTime;
-                this.musicNode = { gain: this.audioCtx.createGain(), oscillators: [], loop: null }; this.musicNode.gain.connect(this.masterGain); this.musicNode.gain.gain.setValueAtTime(vol, time); let totalDuration = 0;
-                melody.forEach(note => { const duration = note.d * noteDuration; if (note.n !== R) { const o = this.audioCtx.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(this.N(note.n), time); o.connect(this.musicNode.gain); o.start(time); o.stop(time + duration * 0.9); this.musicNode.oscillators.push(o); } time += duration; totalDuration += duration; });
-                this.musicNode.loop = setTimeout(() => this.playMusic(track), totalDuration * 1000);
+    <footer>
+        <p>Online: <span id="online-users-count">0</span></p>
+        <p data-translate-key="footerText">Vytvořil s ❤️ 90Tom</p>
+    </footer>
+
+    <script type="text/javascript">
+        const translations = {
+            cs: {
+                welcomeMessage: "Vítám Vás! Vyberte si nějakou hru níže a užijte si!",
+                arcadeTitle: "Retro Arkáda",
+                arcadeDesc: "Sbírka klasických arkádových her. Připojte se do lobby a hrajte!",
+                blonkyTitle: "Blónky TM",
+                blonkyDesc: "Předělání známé hry Bloons TD.",
+                krumptezicTitle: "KrumpTezic",
+                krumptezicDesc: "Zábavné těžení bloků z Minecraftu inspirováno hrou PickCrafter.",
+                ptak2Title: "PTAK 2",
+                ptak2DescLine1: "Druhé vydání z ságy PTAK pro p. Kořínka,",
+                ptak2DescLine2: "dobrodružství ptáka, kočky a psa.",
+                milanTitle: "Milanovy klobásy",
+                milanDesc: "Připravujte výtečná jídla v očích prémiového kuchaře Milana.",
+                footerText: "Vytvořil s ❤️ 90Tom",
+                loginButtonText: "Přihlásit se",
+                logoutButtonText: "Odhlásit se",
+                modalLoginTitle: "Přihlásit se",
+                modalRegisterTitle: "Registrace",
+                modalUsernameLabel: "Uživatelské jméno (Email)",
+                modalPasswordLabel: "Heslo",
+                modalConfirmPasswordLabel: "Potvrďte heslo",
+                modalLoginButton: "Přihlásit se",
+                modalRegisterButton: "Zaregistrovat",
+                modalNoAccount: "Nemáte účet?",
+                modalRegisterLink: "Zaregistrujte se",
+                modalHaveAccount: "Máte již účet?",
+                modalLoginLink: "Přihlaste se",
             },
-            stopMusic() { if (this.musicNode) { clearTimeout(this.musicNode.loop); this.musicNode.gain.gain.exponentialRampToValueAtTime(0.0001, this.audioCtx.currentTime + 0.5); this.musicNode.oscillators.forEach(o => o.stop(this.audioCtx.currentTime + 0.5)); this.musicNode = null; } }
+            en: {
+                welcomeMessage: "Welcome! Choose a game below and enjoy!",
+                arcadeTitle: "Retro Arcade",
+                arcadeDesc: "A collection of classic arcade games. Join a lobby and play!",
+                blonkyTitle: "Blónky TM",
+                blonkyDesc: "A remake of the well-known game Bloons TD.",
+                krumptezicTitle: "KrumpTezic",
+                krumptezicDesc: "Fun mining of Minecraft blocks inspired by the game PickCrafter.",
+                ptak2Title: "PTAK 2",
+                ptak2DescLine1: "Second edition of the PTAK saga for Mr. Kořínek,",
+                ptak2DescLine2: "Adventures of a bird, a cat, and a dog.",
+                milanTitle: "Milan's Sausages",
+                milanDesc: "Prepare delicious meals in the eyes of the premium chef Milan.",
+                footerText: "Made with ❤️ by 90Tom",
+                loginButtonText: "Login",
+                logoutButtonText: "Logout",
+                modalLoginTitle: "Login",
+                modalRegisterTitle: "Register",
+                modalUsernameLabel: "Username (Email)",
+                modalPasswordLabel: "Password",
+                modalConfirmPasswordLabel: "Confirm Password",
+                modalLoginButton: "Login",
+                modalRegisterButton: "Register",
+                modalNoAccount: "Don't have an account?",
+                modalRegisterLink: "Register here",
+                modalHaveAccount: "Already have an account?",
+                modalLoginLink: "Login here",
+            }
         };
 
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                playerName = (sessionStorage.getItem('loggedInUser') || user.displayName || `GUEST-${user.uid.substring(0,4)}`).toUpperCase();
-                setupInitialScreen();
-            } else {
-                auth.signInAnonymously().catch(e => console.error("Anonymous sign-in failed:", e));
-            }
-        });
+        let currentLang = localStorage.getItem('selectedLanguage') || 'cs';
+        let currentTheme = localStorage.getItem('selectedTheme') || 'light';
+        let currentUserData = null;
+        let activeChatListener = null;
+        let activeDmListListener = null;
+        let currentChatMode = 'dm-list';
+        let currentDmPartnerId = null;
+        let typingTimeout = null;
+        let activeTypingListener = null;
 
-        function goToStartScreen(message) {
-            if (message) alert(message);
-            stopGameTimer();
-            leaveCurrentLobby();
-            gameMode = 'solo';
-            lobbyScreen.style.display = 'none';
-            arcadeRoom.style.display = 'none';
-            gameContainer.style.display = 'none';
-            startScreen.style.display = 'flex';
-            document.body.classList.remove('in-game');
+        const pfpColors = ["#f44336", "#9c27b0", "#3f51b5", "#009688", "#4caf50", "#ffeb3b", "#ff9800", "#795548", "#607d8b"];
+        const presetAvatars = [ 'pfps/cat.png', 'pfps/dog.png', 'pfps/creeper.png', 'pfps/chess.png', 'pfps/nuget.png', 'pfps/ptak.png', 'pfps/glet.png' ];
+
+        const ACHIEVEMENTS_LIST = {
+            'milan_first_game': { name: 'Začínající kuchař', desc: 'Odehrál první hru Milanovy klobásy.', icon: 'https://i.ibb.co/6yV2Z8j/milan-ach.png' },
+            'krump_first_game': { name: 'První krumpáč', desc: 'Odehrál první hru KrumpTezic.', icon: 'https://i.ibb.co/F83Wp2P/krump-ach.png' },
+            'ptak_first_game': { name: 'Vzlétnutí', desc: 'Odehrál první hru PTAK 2.', icon: 'https://i.ibb.co/d2x9sVd/ptak-ach.png' }
+        };
+
+        let selectedAvatarUrl = null;
+        let selectedColor = null;
+
+        function getInitials(name) {
+            if (!name) return '?';
+            const parts = name.trim().split(' ');
+            if (parts.length > 1 && parts[1]) {
+                return parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
         }
 
-        function setupInitialScreen() {
-            AudioEngine.init();
-            const volumeSlider = document.getElementById('volume-slider');
-            const savedVolume = localStorage.getItem('arcadeVolume') || 0.5;
-            volumeSlider.value = savedVolume;
-            AudioEngine.setVolume(savedVolume);
-            volumeSlider.addEventListener('input', (e) => AudioEngine.setVolume(e.target.value));
+        function getColorForName(name) {
+            if (!name) return pfpColors[0];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash % pfpColors.length);
+            return pfpColors[index];
+        }
+        
+        function renderPfp(container, pfpData) {
+            container.innerHTML = '';
+            container.style.backgroundColor = 'transparent';
+            if (pfpData.photoURL) {
+                const img = document.createElement('img');
+                img.src = pfpData.photoURL;
+                container.appendChild(img);
+            } else {
+                container.style.backgroundColor = pfpData.pfpColor || getColorForName(pfpData.displayName);
+                container.innerHTML = `<span class="initials">${getInitials(pfpData.displayName)}</span>`;
+            }
+        }
 
-            document.getElementById('solo-arcade-btn').addEventListener('click', () => {
-                gameMode = 'solo';
-                loadHighScoresFromFirestore().then(() => {
-                    startScreen.style.display = 'none';
-                    arcadeRoom.style.display = 'flex';
-                    document.body.classList.add('in-game');
-                    AudioEngine.playMusic('menu');
-                    createGameCabinets();
-                });
-            });
-             document.getElementById('speedrun-btn').addEventListener('click', () => {
-                gameMode = 'gauntlet';
-                gauntletProgress = {};
-                startScreen.style.display = 'none';
-                arcadeRoom.style.display = 'flex';
-                document.body.classList.add('in-game');
-                startGameTimer(true); 
-                AudioEngine.playMusic('menu');
-                createGameCabinets();
-            });
-            document.getElementById('multiplayer-btn').addEventListener('click', () => {
-                if (auth.currentUser.isAnonymous) {
-                     alert("You must be logged in to play multiplayer!");
-                     return;
+        function setLanguage(lang) {
+            document.documentElement.lang = lang;
+            localStorage.setItem('selectedLanguage', lang);
+            currentLang = lang;
+            document.querySelectorAll('[data-translate-key]').forEach(element => {
+                const key = element.getAttribute('data-translate-key');
+                if (translations[lang] && translations[lang][key]) {
+                    element.textContent = translations[lang][key];
                 }
-                gameMode = 'multiplayer';
-                loadHighScoresFromFirestore().then(() => {
-                    startScreen.style.display = 'none';
-                    lobbyScreen.style.display = 'flex';
-                    setupLobbyPage();
-                    switchToJoinMode();
-                });
             });
-            
-            // --- NEW LEADERBOARD EVENT LISTENERS ---
-            document.getElementById('leaderboard-btn').addEventListener('click', () => {
-                const modal = document.getElementById('gauntlet-leaderboard-modal');
-                modal.style.display = 'flex';
-                showGauntletLeaderboard(1); // Show "Solo" by default
-            });
-
-            document.querySelectorAll('.modal .close-modal-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.target.closest('.modal').style.display = 'none';
-                    if(e.target.closest('.modal').id === 'winner-modal'){
-                        goToStartScreen();
-                    }
-                });
-            });
-
-            document.querySelectorAll('.leaderboard-filter-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.leaderboard-filter-btn').forEach(b => b.classList.remove('active'));
-                    e.target.classList.add('active');
-                    showGauntletLeaderboard(parseInt(e.target.dataset.count, 10));
-                });
-            });
+            const langSwitcherBtn = document.getElementById('language-switcher-btn');
+            if (langSwitcherBtn) {
+                const currentLangSpan = langSwitcherBtn.querySelector('.lang-current');
+                const targetLangSpan = langSwitcherBtn.querySelector('.lang-target');
+                if (lang === 'en') {
+                    currentLangSpan.textContent = 'EN';
+                    targetLangSpan.textContent = 'CS';
+                } else {
+                    currentLangSpan.textContent = 'CS';
+                    targetLangSpan.textContent = 'EN';
+                }
+            }
+        }
+        
+        function setTheme(theme) {
+            localStorage.setItem('selectedTheme', theme);
+            currentTheme = theme;
+            const themeSwitcherBtn = document.getElementById('theme-switcher-btn');
+            if (theme === 'dark') {
+                document.body.classList.add('dark-mode');
+                if (themeSwitcherBtn) themeSwitcherBtn.textContent = '☀️';
+            } else {
+                document.body.classList.remove('dark-mode');
+                if (themeSwitcherBtn) themeSwitcherBtn.textContent = '🌙';
+            }
         }
 
-        // --- NEW LEADERBOARD FUNCTIONS ---
-        async function showGauntletLeaderboard(playerCountFilter) {
-            const tbody = document.getElementById('gauntlet-leaderboard-body');
-            tbody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
-            
-            let query;
-            const collectionRef = db.collection('arcade_gauntlet_leaderboard');
-            if (playerCountFilter >= 4) {
-                 query = collectionRef.where('playerCount', '>=', 4).orderBy('playerCount', 'asc').orderBy('time', 'asc');
-            } else {
-                 query = collectionRef.where('playerCount', '==', playerCountFilter).orderBy('time', 'asc');
-            }
-
+        async function deleteLeaderboardEntry(gameId, userToDelete) {
+            if (typeof db === 'undefined') { alert("Spojení s databází selhalo."); return; }
+            const gameData = {
+                milan: { key: "milan_leaderboard" },
+                krumptezic: { key: "krumptezic_leaderboard" },
+                ptak2: { key: "ptak2_leaderboard" },
+            };
+            const collectionName = gameData[gameId].key;
             try {
-                const snapshot = await query.limit(15).get();
-                if (snapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="3">No scores yet for this category!</td></tr>';
-                    return;
+                const userDocRef = db.collection(collectionName).doc(userToDelete);
+                await userDocRef.delete();
+                showLeaderboard(gameId); 
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+            }
+        }
+        
+       async function showLeaderboard(gameId) {
+            if (typeof db === 'undefined') { return; }
+            const leaderboardModal = document.getElementById('leaderboard-modal');
+            const titleEl = document.getElementById('leaderboard-title');
+            const headEl = document.getElementById('leaderboard-head');
+            const bodyEl = document.getElementById('leaderboard-body');
+            const currentUser = auth.currentUser;
+            const isAdmin = currentUser && currentUser.displayName === '90Tom';
+            const gameData = {
+                milan: { title: "Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
+                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
+                ptak2: { title: "PTAK 2", fields: ['Úroveň', 'Čas'], query: db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
+            };
+            const { title, fields, query } = gameData[gameId];
+            titleEl.textContent = `Žebříček: ${title}`;
+            bodyEl.innerHTML = '<tr><td colspan="5">Načítání...</td></tr>';
+            leaderboardModal.style.display = 'flex';
+            try {
+                const querySnapshot = await query.limit(10).get();
+                const scores = querySnapshot.docs.map(doc => doc.data());
+                headEl.innerHTML = '';
+                bodyEl.innerHTML = '';
+                let headers = '<th>#</th><th>Hráč</th>';
+                fields.forEach(field => headers += `<th>${field}</th>`);
+                if (isAdmin) headers += '<th>Akce</th>';
+                headEl.innerHTML = `<tr>${headers}</tr>`;
+                if (scores.length === 0) {
+                    const colspan = isAdmin ? fields.length + 3 : fields.length + 2;
+                    bodyEl.innerHTML = `<tr><td colspan="${colspan}">Zatím žádné výsledky!</td></tr>`;
+                } else {
+                    scores.forEach((score, index) => {
+                        let row = `<td>${index + 1}</td><td>${score.user}</td>`;
+                        if (gameId === 'milan') {
+                            row += `<td>${score.orders}</td><td>${score.time}s</td>`;
+                        } else if (gameId === 'krumptezic') {
+                            row += `<td>${Math.floor(score.blocks)}</td><td>${score.winTime ? score.winTime + 's' : '-'}</td>`;
+                        } else if (gameId === 'ptak2') {
+                             const timeInSeconds = (score.time / 1000).toFixed(2);
+                            row += `<td>${score.level}</td><td>${timeInSeconds}s</td>`;
+                        }
+                        if (isAdmin) {
+                            row += `<td><button class="delete-score-btn" data-game="${gameId}" data-user="${score.user}" title="Smazat">🗑️</button></td>`;
+                        }
+                        bodyEl.innerHTML += `<tr>${row}</tr>`;
+                    });
                 }
-                tbody.innerHTML = '';
-                snapshot.forEach((doc, index) => {
-                    const data = doc.data();
-                    const time = formatTime(Math.floor(data.time));
-                    const players = data.players.join(', ');
-
-                    const row = `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td>${players}</td>
-                            <td>${time}</td>
-                        </tr>
-                    `;
-                    tbody.innerHTML += row;
-                });
-            } catch (e) {
-                console.error("Error fetching leaderboard:", e);
-                tbody.innerHTML = '<tr><td colspan="3">Error loading scores.</td></tr>';
+            } catch (error) {
+                 console.error("Error fetching leaderboard:", error);
+                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku.</td></tr>`;
             }
         }
 
-        async function saveGauntletLeaderboardScore(timeInSeconds) {
-            if (auth.currentUser.isAnonymous) {
-                console.log("Anonymous user completed Gauntlet. Score not saved.");
+        function displayChatMessage(msg, container) {
+            // Main message container
+            const messageElement = document.createElement('div');
+            messageElement.className = 'chat-message';
+
+            // PFP container
+            const pfpContainer = document.createElement('div');
+            pfpContainer.className = 'pfp-container';
+            if (currentChatMode === 'public') {
+                pfpContainer.onclick = () => showUserProfile(msg.userId);
+            } else {
+                pfpContainer.style.cursor = 'default';
+            }
+            renderPfp(pfpContainer, { ...msg });
+
+            // Content container
+            const contentElement = document.createElement('div');
+            contentElement.className = 'message-content';
+
+            // Meta container (author, time, delete button)
+            const metaElement = document.createElement('div');
+            metaElement.className = 'message-meta';
+
+            // Author's name
+            const authorElement = document.createElement('span');
+            authorElement.className = 'message-author';
+            if (msg.pfpColor) {
+                authorElement.style.color = msg.pfpColor;
+            }
+            authorElement.textContent = msg.displayName || 'Anonym';
+            if (currentChatMode === 'public') {
+                authorElement.onclick = () => showUserProfile(msg.userId);
+            }
+
+            // Timestamp
+            const timestampElement = document.createElement('span');
+            timestampElement.className = 'message-timestamp';
+            timestampElement.textContent = msg.createdAt ? msg.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            
+            // Text of the message
+            const textElement = document.createElement('span');
+            textElement.className = 'message-text';
+            if (msg.deleted) {
+                textElement.classList.add('message-deleted');
+                textElement.textContent = '[tato zpráva byla smazána]';
+            } else {
+                // *** SECURITY FIX: Use textContent instead of innerHTML to prevent XSS ***
+                textElement.textContent = msg.text;
+            }
+            
+            // Assemble the meta section
+            metaElement.appendChild(authorElement);
+            metaElement.appendChild(timestampElement);
+
+            // Add delete button if applicable
+            const isMyMessage = auth.currentUser && msg.userId === auth.currentUser.uid;
+            const isAdmin = currentUserData && currentUserData.displayName === '90Tom';
+
+            if ((currentChatMode === 'public' && isAdmin) || (currentChatMode === 'dm' && isMyMessage)) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-msg-btn';
+                deleteBtn.innerHTML = '🗑️';
+                if (currentChatMode === 'public') {
+                    deleteBtn.onclick = () => deletePublicChatMessage(msg.id);
+                } else { // It's a DM
+                    deleteBtn.onclick = () => deleteDmMessage(msg.id);
+                }
+                // Add the button next to the timestamp
+                metaElement.insertBefore(deleteBtn, timestampElement.nextSibling); 
+            }
+
+            // Assemble the final message element
+            contentElement.appendChild(metaElement);
+            contentElement.appendChild(textElement);
+            messageElement.appendChild(pfpContainer);
+            messageElement.appendChild(contentElement);
+            container.appendChild(messageElement);
+        }
+
+        async function deletePublicChatMessage(msgId) {
+            if (!currentUserData || currentUserData.displayName !== '90Tom') return;
+            if (confirm('Opravdu smazat tuto zprávu?')) {
+                try {
+                    await db.collection('chat').doc(msgId).update({ text: '', deleted: true });
+                } catch (error) {
+                    console.error("Error deleting public message:", error);
+                }
+            }
+        }
+
+        async function deleteDmMessage(msgId) {
+            if (!auth.currentUser || !currentDmPartnerId) return;
+            const myId = auth.currentUser.uid;
+            const convoId = [myId, currentDmPartnerId].sort().join('_');
+            
+            if (confirm('Opravdu smazat tuto zprávu?')) {
+                try {
+                    const msgRef = db.collection('dms').doc(convoId).collection('messages').doc(msgId);
+                    await msgRef.update({ text: '', deleted: true });
+                } catch(error) {
+                    console.error("Error deleting DM:", error);
+                }
+            }
+        }
+        
+        async function showUserProfile(userId) {
+            const modal = document.getElementById('user-view-modal');
+            const pfpContainer = document.getElementById('user-view-pfp-container');
+            const infoContainer = document.getElementById('user-view-info');
+            const achievementsContainer = document.getElementById('user-view-achievements');
+            const sendDmBtn = document.getElementById('send-dm-btn');
+
+            infoContainer.innerHTML = 'Načítání...';
+            achievementsContainer.innerHTML = '';
+            sendDmBtn.style.display = 'none';
+            modal.style.display = 'flex';
+
+            const userDoc = await db.collection('users').doc(userId).get();
+            if (!userDoc.exists) {
+                infoContainer.innerHTML = 'Uživatel nenalezen.';
                 return;
             }
+            const userData = userDoc.data();
             
-            const isLobbyGauntlet = currentLobbyData?.mode === 'gauntlet';
-            const players = isLobbyGauntlet ? Object.keys(currentLobbyData.players) : [playerName];
-            const playerCount = players.length;
-
-            try {
-                await db.collection('arcade_gauntlet_leaderboard').add({
-                    time: timeInSeconds,
-                    players: players,
-                    playerCount: playerCount,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                console.log("Gauntlet score saved!", { time: timeInSeconds, playerCount, players });
-            } catch (e) {
-                console.error("Error saving gauntlet score:", e);
-            }
-        }
-
-
-        function setupLobbyPage() {
-            document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
-            document.getElementById('host-btn').addEventListener('click', switchToHostMode);
-            document.getElementById('join-btn').addEventListener('click', switchToJoinMode);
-        }
-
-        async function switchToHostMode() {
-            await leaveCurrentLobby();
-            document.getElementById('host-view').style.display = 'flex';
-            document.getElementById('join-view').style.display = 'none';
-            document.getElementById('host-btn').classList.add('active');
-            document.getElementById('join-btn').classList.remove('active');
-            isHost = true;
-            await createLobby();
-        }
-
-        async function switchToJoinMode() {
-            await leaveCurrentLobby();
-            isHost = false;
-            currentLobbyId = null;
-            document.getElementById('host-view').style.display = 'none';
-            document.getElementById('join-view').style.display = 'flex';
-            document.getElementById('host-btn').classList.remove('active');
-            document.getElementById('join-btn').classList.add('active');
-            initializeLobbyUI(false);
-            listenForLobbies();
-        }
-
-        function initializeLobbyUI(isUserHost) {
-            isHost = isUserHost;
-            document.getElementById('play-btn').disabled = !isUserHost;
-            document.getElementById('time-input').disabled = !isUserHost;
-            if(!isUserHost){
-                document.getElementById('player-list').innerHTML = `<li style="color:grey;">Join a lobby...</li>`;
-                document.getElementById('color-selection').innerHTML = '';
-            }
-        }
-
-        function listenForLobbies() {
-            const lobbyList = document.getElementById('lobby-list');
-            rtdb.ref('lobbies').on('value', (snapshot) => {
-                lobbyList.innerHTML = '';
-                let hasLobbies = false;
-                if (!snapshot.exists()) {
-                    lobbyList.innerHTML = '<li style="color: grey;">No lobbies found. Host one!</li>';
-                    return;
-                }
-                snapshot.forEach((childSnapshot) => {
-                    const lobby = childSnapshot.val();
-                    if (!lobby || !lobby.players) {
-                        rtdb.ref(`lobbies/${childSnapshot.key}`).remove();
-                        return;
-                    }
-                    if (isHost && childSnapshot.key === currentLobbyId) return;
-                    
-                    hasLobbies = true;
-                    const playerCount = Object.keys(lobby.players).length;
-                    const lobbyEl = document.createElement('li');
-                    lobbyEl.textContent = `${lobby.name} (${playerCount}/8)`;
-                    lobbyEl.dataset.lobbyId = childSnapshot.key;
-                    
-                    if (!isHost && childSnapshot.key === currentLobbyId) {
-                        lobbyEl.textContent += " (Joined)";
-                        lobbyEl.style.color = 'var(--primary-glow)';
-                    }
-
-                    if (playerCount >= 8 || lobby.status === 'playing') {
-                        lobbyEl.style.color = 'grey';
-                        lobbyEl.style.cursor = 'not-allowed';
-                    } else {
-                        lobbyEl.onclick = () => handleLobbyClick(childSnapshot.key);
-                    }
-                    lobbyList.appendChild(lobbyEl);
-                });
-                if (!hasLobbies) {
-                    lobbyList.innerHTML = '<li style="color: grey;">No other lobbies found.</li>';
-                }
-            });
-        }
-
-        async function handleLobbyClick(lobbyId) {
-            if (currentLobbyId === lobbyId) return;
-            await leaveCurrentLobby();
-            joinLobby(lobbyId);
-        }
-        
-        function renderColorSelector(playerColor) {
-            const container = document.getElementById('color-selection');
-            container.innerHTML = '';
-            TEAM_COLORS.forEach(color => {
-                const box = document.createElement('div');
-                box.className = 'color-box';
-                box.style.backgroundColor = color;
-                if(color === playerColor) {
-                    box.classList.add('selected');
-                }
-                box.onclick = () => updatePlayerColor(color);
-                container.appendChild(box);
-            });
-        }
-
-        function updatePlayerColor(color) {
-            if(playerRef) {
-                playerRef.update({ color: color });
-            }
-        }
-
-        function listenForPlayersInLobby(lobbyId) {
-            if (playerListListenerInfo) playerListListenerInfo.ref.off('value', playerListListenerInfo.listener);
+            renderPfp(pfpContainer, userData);
+            const nameStyle = userData.pfpColor ? `style="color: ${userData.pfpColor}; font-weight: bold;"` : 'style="font-weight: bold;"';
+            infoContainer.innerHTML = `<p><strong>Jméno:</strong> <span ${nameStyle}>${userData.displayName}</span></p><p><strong>XP:</strong> ${userData.xp}</p>`;
             
-            const playerList = document.getElementById('player-list');
-            const lobbyPlayersRef = rtdb.ref(`lobbies/${lobbyId}/players`);
-            const listener = lobbyPlayersRef.on('value', (snapshot) => {
-                playerList.innerHTML = '';
-                const players = snapshot.val() || {};
-                const playerCount = Object.keys(players).length;
-
-                if (isHost) {
-                    document.getElementById('play-btn').disabled = playerCount < 1;
-                }
-
-                const colors = new Set();
-                snapshot.forEach((playerSnapshot) => {
-                    const name = playerSnapshot.key;
-                    const playerData = playerSnapshot.val();
-                    colors.add(playerData.color);
-
-                    const li = document.createElement('li');
-                    li.textContent = name;
-                    li.style.color = playerData.color || '#FFFFFF';
-                    li.style.textShadow = `0 0 5px ${playerData.color || '#FFFFFF'}`;
-
-                    if(name === playerName) {
-                        renderColorSelector(playerData.color);
-                    }
-
-                    if(isHost && name !== playerName) {
-                        const kickBtn = document.createElement('button');
-                        kickBtn.className = 'kick-btn';
-                        kickBtn.textContent = 'X';
-                        kickBtn.onclick = () => kickPlayer(name);
-                        li.appendChild(kickBtn);
-                    }
-                    playerList.appendChild(li);
-                });
-
-                const isCoop = colors.size === 1 && playerCount > 1;
-                document.getElementById('time-setting-container').style.display = isCoop ? 'none' : 'block';
-            });
-            playerListListenerInfo = { ref: lobbyPlayersRef, listener: listener };
-        }
-
-        async function kickPlayer(playerToKick) {
-            if(isHost && currentLobbyId) {
-                await rtdb.ref(`lobbies/${currentLobbyId}/players/${playerToKick}`).remove();
-            }
-        }
-
-        async function joinLobby(lobbyId) {
-            const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
-            const snapshot = await lobbyRef.get();
-            if (!snapshot.exists() || snapshot.val().status === 'playing') { alert("Cannot join lobby."); return; }
-            await leaveCurrentLobby();
-
-            currentLobbyId = lobbyId;
-            isHost = false;
-            playerRef = rtdb.ref(`lobbies/${lobbyId}/players/${playerName}`);
-            
-            await playerRef.set({ color: TEAM_COLORS[Math.floor(Math.random() * TEAM_COLORS.length)] });
-            playerRef.onDisconnect().remove();
-            
-            document.getElementById('host-view').style.display = 'flex';
-            document.getElementById('join-view').style.display = 'none';
-            document.getElementById('host-btn').classList.remove('active');
-            document.getElementById('join-btn').classList.add('active');
-
-            initializeLobbyUI(false);
-            listenForPlayersInLobby(lobbyId);
-            listenForLobbyStatus(lobbyId);
-            listenForLobbyHighScores(lobbyId);
-            listenForGauntletProgress(lobbyId);
-
-            playerRef.on('value', (snapshot) => {
-                if(!snapshot.exists() && (lobbyScreen.style.display !== 'none' || arcadeRoom.style.display !== 'none')) {
-                    goToStartScreen("You have been kicked from the lobby.");
-                }
-            });
-        }
-
-        async function createLobby() {
-            const newLobbyRef = rtdb.ref('lobbies').push();
-            currentLobbyId = newLobbyRef.key;
-            isHost = true;
-            playerRef = rtdb.ref(`lobbies/${currentLobbyId}/players/${playerName}`);
-            
-            const initialPlayerData = {};
-            initialPlayerData[playerName] = { color: TEAM_COLORS[0] };
-
-            await newLobbyRef.set({
-                name: `${playerName}'S GAME`,
-                host: playerName,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                players: initialPlayerData,
-                status: 'waiting',
-                scores: {},
-                gauntletProgress: {}
-            });
-            newLobbyRef.onDisconnect().remove();
-            
-            initializeLobbyUI(true);
-            listenForPlayersInLobby(currentLobbyId);
-            listenForLobbyStatus(currentLobbyId);
-            listenForLobbyHighScores(currentLobbyId);
-            listenForGauntletProgress(currentLobbyId);
-        }
-
-        async function startGameFromLobby() {
-            if (isHost && currentLobbyId) {
-                const players = (await rtdb.ref(`lobbies/${currentLobbyId}/players`).get()).val() || {};
-                const colors = new Set(Object.values(players).map(p => p.color));
-                const isCoop = colors.size === 1 && Object.keys(players).length > 1;
-
-                const updates = {
-                    status: 'playing',
-                    startTime: firebase.database.ServerValue.TIMESTAMP,
+            if (auth.currentUser && auth.currentUser.uid !== userId) {
+                sendDmBtn.style.display = 'block';
+                sendDmBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    document.getElementById('chat-popup').classList.add('open');
+                    openDmChat(userId);
                 };
-
-                if (isCoop) {
-                    updates.mode = 'gauntlet';
-                } else {
-                    updates.mode = 'competitive';
-                    const durationMins = parseInt(document.getElementById('time-input').value, 10);
-                    updates.duration = durationMins * 60;
-                }
-                
-                await rtdb.ref(`lobbies/${currentLobbyId}`).update(updates);
-            }
-        }
-
-        function switchToArcadeRoom() {
-            if (arcadeRoom.style.display === 'flex') return; 
-            AudioEngine.playMusic('menu');
-            lobbyScreen.style.display = 'none';
-            gameContainer.style.display = 'none';
-            arcadeRoom.style.display = 'flex';
-            document.body.classList.add('in-game');
-
-            if (currentLobbyData && currentLobbyData.status === 'playing') {
-                if(currentLobbyData.mode === 'gauntlet') {
-                    gameMode = 'gauntlet';
-                    startGameTimer(true, currentLobbyData.startTime);
-                } else {
-                    gameMode = 'multiplayer';
-                    startGameTimer(false, currentLobbyData.startTime, currentLobbyData.duration);
-                }
-            }
-            createGameCabinets();
-        }
-
-        function listenForLobbyStatus(lobbyId) {
-            if (lobbyStateListenerInfo) lobbyStateListenerInfo.ref.off('value', lobbyStateListenerInfo.listener);
-            
-            const lobbyRef = rtdb.ref(`lobbies/${lobbyId}`);
-            const listener = lobbyRef.on('value', (snapshot) => {
-                if (!snapshot.exists()) {
-                    if (!isHost) {
-                        if (isGameActive) {
-                            stopGame(true); 
-                        }
-                        goToStartScreen("Lobby was closed by the host.");
-                    }
-                    return;
-                }
-                const lobbyData = snapshot.val();
-                currentLobbyData = lobbyData;
-
-                if (lobbyData.status === 'playing' && !isGameActive && arcadeRoom.style.display !== 'flex') {
-                    switchToArcadeRoom();
-                }
-            });
-            lobbyStateListenerInfo = { ref: lobbyRef, listener: listener };
-        }
-        
-        function listenForLobbyHighScores(lobbyId) {
-            if (lobbyScoresListenerInfo) lobbyScoresListenerInfo.ref.off('value', lobbyScoresListenerInfo.listener);
-            
-            const scoresRef = rtdb.ref(`lobbies/${lobbyId}/scores`);
-            const listener = scoresRef.on('value', (snapshot) => {
-                lobbyHighScores = snapshot.val() || {};
-                 if(isGameActive) {
-                    updateHighScoresDisplay();
-                 }
-                 if (arcadeRoom.style.display === 'flex') {
-                    createGameCabinets();
-                 }
-            });
-            lobbyScoresListenerInfo = { ref: scoresRef, listener: listener };
-        }
-        
-        function listenForGauntletProgress(lobbyId) {
-             if (gauntletListenerInfo) gauntletListenerInfo.ref.off('value', gauntletListenerInfo.listener);
-
-            const progressRef = rtdb.ref(`lobbies/${lobbyId}/gauntletProgress`);
-            const listener = progressRef.on('value', (snapshot) => {
-                gauntletProgress = snapshot.val() || {};
-                if (arcadeRoom.style.display === 'flex') {
-                    createGameCabinets();
-                }
-            });
-            gauntletListenerInfo = { ref: progressRef, listener: listener };
-        }
-
-        async function leaveCurrentLobby() {
-             const listeners = [lobbyStateListenerInfo, playerListListenerInfo, lobbyScoresListenerInfo, gauntletListenerInfo];
-            listeners.forEach(info => {
-                if (info) {
-                    info.ref.off('value', info.listener);
-                }
-            });
-            lobbyStateListenerInfo = playerListListenerInfo = lobbyScoresListenerInfo = gauntletListenerInfo = null;
-
-             if (currentLobbyId && playerRef) {
-                await playerRef.onDisconnect().cancel();
-                await playerRef.remove();
-                playerRef = null;
-             }
-             if (currentLobbyId && isHost) {
-                const hostLobbyRef = rtdb.ref(`lobbies/${currentLobbyId}`);
-                await hostLobbyRef.onDisconnect().cancel();
-                await hostLobbyRef.remove();
-             }
-             currentLobbyId = null;
-             currentLobbyData = null;
-             isHost = false;
-             lobbyHighScores = {};
-             gauntletProgress = {};
-        }
-
-        window.addEventListener('beforeunload', async () => {
-            if (isHost && currentLobbyId) {
-                await rtdb.ref(`lobbies/${currentLobbyId}`).remove();
-            } else if (playerRef) {
-                await playerRef.remove();
-            }
-        });
-
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const secs = (seconds % 60).toString().padStart(2, '0');
-            return `${mins}:${secs}`;
-        }
-        
-        function startGameTimer(isUp, serverStartTime = null, duration = 0) {
-            stopGameTimer();
-            const timerDisplay = document.getElementById('game-timer');
-            timerDisplay.style.display = 'block';
-            
-            // Use server's start time if provided, otherwise use local time.
-            gauntletStartTime = serverStartTime || Date.now();
-
-            gameTimerInterval = setInterval(() => {
-                const now = Date.now();
-                const elapsed = (now - gauntletStartTime) / 1000;
-
-                if (isUp) { // Counting Up (Gauntlet Mode)
-                    timerDisplay.textContent = formatTime(Math.floor(elapsed));
-                } else { // Counting Down (Competitive Mode)
-                    const remaining = Math.max(0, duration - elapsed);
-                    timerDisplay.textContent = formatTime(Math.ceil(remaining));
-                    if (remaining <= 0) {
-                        if (gameTimerInterval) {
-                            timerDisplay.textContent = "GAME OVER";
-                            endArcadeRun();
-                        }
-                    }
-                }
-            }, 1000);
-        }
-
-        function stopGameTimer() {
-            if(gameTimerInterval) clearInterval(gameTimerInterval);
-            gameTimerInterval = null;
-            gauntletStartTime = 0;
-            const timerDisplay = document.getElementById('game-timer');
-            if (timerDisplay) {
-                timerDisplay.style.display = 'none';
-            }
-        }
-
-        async function endArcadeRun() {
-            if (gameContainer.style.display === 'flex') {
-                stopGame(false); 
-            }
-            stopGameTimer();
-            document.querySelectorAll('.game-cabinet').forEach(c => c.onclick = null);
-
-            const allScores = lobbyHighScores || {};
-            const playerWins = {};
-            const teamWins = {};
-            const players = currentLobbyData.players || {};
-
-            for (const p in players) {
-                playerWins[p] = 0;
-                const color = players[p].color;
-                if (!teamWins[color]) teamWins[color] = 0;
             }
             
-            for (const gameId in allScores) {
-                const gameScores = allScores[gameId];
-                const sortOrder = games[gameId].sort;
-                let bestScore = sortOrder === 'desc' ? -Infinity : Infinity;
-                let winnersForGame = [];
-
-                for (const player in gameScores) {
-                    const score = gameScores[player].score;
-                    if ((sortOrder === 'desc' && score > bestScore) || (sortOrder === 'asc' && score < bestScore)) {
-                        bestScore = score;
-                        winnersForGame = [player];
-                    } else if (score === bestScore) {
-                        winnersForGame.push(player);
-                    }
-                }
-                winnersForGame.forEach(winner => {
-                    if (playerWins[winner] !== undefined) {
-                        playerWins[winner]++;
-                        const winnerColor = players[winner]?.color;
-                        if (winnerColor && teamWins[winnerColor] !== undefined) {
-                            teamWins[winnerColor]++;
-                        }
+            const achievementsSnapshot = await db.collection('users').doc(userId).collection('achievements').get();
+            if (achievementsSnapshot.empty) {
+                achievementsContainer.innerHTML = '<p>Zatím žádné odznaky.</p>';
+            } else {
+                achievementsSnapshot.forEach(doc => {
+                    const achievementData = ACHIEVEMENTS_LIST[doc.id];
+                    if (achievementData) {
+                        const div = document.createElement('div');
+                        div.className = 'achievement';
+                        div.innerHTML = `<img src="${achievementData.icon}" alt="${achievementData.name}"><div class="achievement-info"><h4>${achievementData.name}</h4><p>${achievementData.desc}</p></div>`;
+                        achievementsContainer.appendChild(div);
                     }
                 });
             }
-            
-            let maxWins = 0;
-            for(const color in teamWins) {
-                if(teamWins[color] > maxWins) {
-                    maxWins = teamWins[color];
-                }
-            }
+        }
 
-            let winningColors = [];
-            if(maxWins > 0) {
-                 for(const color in teamWins) {
-                    if(teamWins[color] === maxWins) {
-                        winningColors.push(color);
+        async function showMyProfile() {
+            if (!currentUserData) return;
+            const profileModal = document.getElementById('profile-modal');
+            const pfpContainer = document.getElementById('profile-pfp-container');
+            const profileInfo = document.getElementById('profile-info');
+            const avatarGrid = document.getElementById('avatar-grid-choices');
+            const colorGrid = document.getElementById('color-grid-choices');
+            
+            selectedAvatarUrl = currentUserData.photoURL;
+            selectedColor = currentUserData.pfpColor || getColorForName(currentUserData.displayName);
+
+            renderPfp(pfpContainer, { photoURL: selectedAvatarUrl, pfpColor: selectedColor, displayName: currentUserData.displayName });
+            
+            const nameStyle = `style="color: ${selectedColor}; font-weight: bold;"`;
+            profileInfo.innerHTML = `<p><strong>Jméno:</strong> <span id="name-preview" ${nameStyle}>${currentUserData.displayName}</span></p><p><strong>Email:</strong> ${currentUserData.email}</p><p><strong>XP:</strong> ${currentUserData.xp}</p>`;
+
+            avatarGrid.innerHTML = '';
+            
+            const initialsChoice = document.createElement('div');
+            initialsChoice.className = 'avatar-choice';
+            initialsChoice.innerHTML = `<span class="initials">${getInitials(currentUserData.displayName)}</span>`;
+            if (!selectedAvatarUrl) initialsChoice.classList.add('selected');
+            initialsChoice.onclick = () => {
+                selectedAvatarUrl = null;
+                document.querySelectorAll('.avatar-choice').forEach(el => el.classList.remove('selected'));
+                initialsChoice.classList.add('selected');
+                renderPfp(pfpContainer, { pfpColor: selectedColor, displayName: currentUserData.displayName });
+            };
+            avatarGrid.appendChild(initialsChoice);
+
+            presetAvatars.forEach(url => {
+                const img = document.createElement('img');
+                img.src = url;
+                img.className = 'avatar-choice';
+                if (url === selectedAvatarUrl) img.classList.add('selected');
+                img.onclick = () => {
+                    selectedAvatarUrl = url;
+                    document.querySelectorAll('.avatar-choice').forEach(el => el.classList.remove('selected'));
+                    img.classList.add('selected');
+                    renderPfp(pfpContainer, { photoURL: url, displayName: currentUserData.displayName });
+                };
+                avatarGrid.appendChild(img);
+            });
+
+            colorGrid.innerHTML = '';
+            pfpColors.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'color-choice';
+                div.style.backgroundColor = color;
+                if (color === selectedColor) div.classList.add('selected');
+                div.onclick = () => {
+                    selectedColor = color;
+                    document.querySelectorAll('.color-choice').forEach(el => el.classList.remove('selected'));
+                    div.classList.add('selected');
+                    document.getElementById('name-preview').style.color = color;
+                    if (!selectedAvatarUrl) {
+                        renderPfp(pfpContainer, { pfpColor: color, displayName: currentUserData.displayName });
                     }
-                }
-            }
-
-            let overallWinners = [];
-            if(winningColors.length > 0) {
-                 for(const pName in players) {
-                    if(winningColors.includes(players[pName].color)) {
-                        overallWinners.push({ name: pName, color: players[pName].color });
-                    }
-                 }
-            }
+                };
+                colorGrid.appendChild(div);
+            });
             
-            const winnerNameEl = document.getElementById('winner-name');
-            const winnerTextEl = document.getElementById('winner-text');
-            const winnerTitleEl = document.getElementById('winner-title');
-
-            if (overallWinners.length > 1) {
-                winnerTitleEl.textContent = "WINNERS!";
-                winnerNameEl.innerHTML = overallWinners.map(w => `<span style="color:${w.color}; text-shadow: 0 0 8px ${w.color};">${w.name}</span>`).join('<br>');
-                winnerTextEl.textContent = "are the Arcade Champions!";
-            } else if (overallWinners.length === 1) {
-                winnerTitleEl.textContent = "WINNER!";
-                winnerNameEl.innerHTML = `<span style="color:${overallWinners[0].color}; text-shadow: 0 0 8px ${overallWinners[0].color};">${overallWinners[0].name}</span>`;
-                winnerTextEl.textContent = "is the Arcade Champion!";
-            } else {
-                winnerTitleEl.textContent = "TIE!";
-                winnerNameEl.textContent = "No winners this time...";
-                winnerTextEl.textContent = "Better luck next time!";
-            }
-            document.getElementById('winner-modal').style.display = 'flex';
+            profileModal.style.display = 'flex';
         }
 
-
-        const games = {
-            tetris: { name: 'Tetris', init: initTetris, music: 'tetris', sort: 'desc' },
-            spaceInvaders: { name: 'Space Invaders', init: initSpaceInvaders, music: 'spaceInvaders', sort: 'desc' },
-            pacman: { name: 'Pac-Man', init: initPacman, music: 'pacman', sort: 'desc' },
-            racing: { name: 'Retro Racer', init: initRacing, music: 'racing', sort: 'desc' },
-            snake: { name: 'Snake', init: initSnake, music: null, sort: 'desc' },
-            pong: { name: 'Pong', init: initPong, music: null, sort: 'desc' },
-            breakout: { name: 'Breakout', init: initBreakout, music: 'breakout', sort: 'desc' },
-            maze: { name: 'Maze Runner', init: initMaze, music: null, sort: 'asc' }
-        };
-
-        async function loadHighScoresFromFirestore() {
-            for (const gameId in games) {
-                const game = games[gameId];
-                const query = db.collection('arcade_high_scores').doc(gameId).collection('scores')
-                    .orderBy('score', game.sort === 'asc' ? 'asc' : 'desc').limit(10);
-                
-                try {
-                    const snapshot = await query.get();
-                    if (!snapshot.empty) {
-                        highScores[gameId] = snapshot.docs.map(doc => doc.data());
-                    } else {
-                        highScores[gameId] = [];
-                    }
-                } catch (e) {
-                    console.error(`Could not load high score for ${gameId}:`, e);
-                    highScores[gameId] = [];
-                }
-            }
-        }
-
-
-        function createGameCabinets() {
-            gameSelection.innerHTML = '';
-            const marqueeNames = { 'Maze Runner': 'MAZE<br>RUNNER', 'Retro Racer': 'RETRO<br>RACER', 'Space Invaders': 'SPACE<br>INVADERS' };
-
-            for (const gameId in games) {
-                const cabinet = document.createElement('div');
-                cabinet.className = 'game-cabinet';
-                cabinet.dataset.theme = gameId;
-
-                let topScoreDisplay;
-                const isLobbyGauntlet = gameMode === 'multiplayer' && currentLobbyData?.mode === 'gauntlet';
-                const marqueeName = marqueeNames[games[gameId].name] || games[gameId].name;
-
-                if (gameMode === 'gauntlet' || isLobbyGauntlet) {
-                    topScoreDisplay = `GOAL: ${GAUNTLET_GOALS[gameId].text}`;
-                    cabinet.innerHTML = `<div class="completion-light"></div><div class="marquee">${marqueeName}</div><div class="screen-area"><div>${topScoreDisplay}</div></div><div class="control-panel-base"><div class="control-panel"><div class="joystick"></div><div class="buttons"><div></div><div class="coin-slot"></div></div></div></div>`;
-                    const light = cabinet.querySelector('.completion-light');
-                    light.style.display = 'block';
-                    if (gauntletProgress[gameId]) {
-                        light.classList.add('active');
-                    }
-                } else {
-                    topScoreDisplay = 'NO SCORE';
-                    if(gameMode === 'multiplayer') {
-                        const gameScores = lobbyHighScores[gameId];
-                        if (gameScores) {
-                            const sortOrder = games[gameId].sort;
-                            let bestScore = sortOrder === 'desc' ? -Infinity : Infinity;
-                            let topPlayer = null;
-                            
-                            for (const playerName in gameScores) {
-                                const playerData = gameScores[playerName];
-                                if ((sortOrder === 'desc' && playerData.score > bestScore) || (sortOrder === 'asc' && playerData.score < bestScore)) {
-                                    bestScore = playerData.score;
-                                    topPlayer = { name: playerName, color: playerData.color, score: playerData.score };
-                                }
-                            }
-                            if(topPlayer){
-                                 let score = topPlayer.score;
-                                 if (games[gameId].sort === 'asc') score += 's';
-                                 topScoreDisplay = `<span style="color:${topPlayer.color}; text-shadow: 0 0 5px ${topPlayer.color};">${topPlayer.name}</span> - ${score}`;
-                            }
-                        }
-                    } else { // Solo mode
-                        if (highScores[gameId] && highScores[gameId].length > 0) {
-                            const top = highScores[gameId][0];
-                            let score = top.score;
-                            if (games[gameId].sort === 'asc') score += 's';
-                            topScoreDisplay = `${score} - ${top.name}`;
-                        }
-                    }
-                     cabinet.innerHTML = `<div class="marquee">${marqueeName}</div><div class="screen-area"><div>TOP SCORE</div><div class="high-score-display">${topScoreDisplay}</div></div><div class="control-panel-base"><div class="control-panel"><div class="joystick"></div><div class="buttons"><div></div><div class="coin-slot"></div></div></div></div>`;
-                }
-               
-                cabinet.querySelector('.joystick').innerHTML = '<div class="joystick-base"></div><div class="joystick-stick"></div><div class="joystick-top"></div>';
-                cabinet.onclick = () => startGame(gameId);
-                gameSelection.appendChild(cabinet);
-            }
-        }
-        
-        function checkGauntletWin(gameId, score, hasWon) {
-            const isLobbyGauntlet = currentLobbyData?.mode === 'gauntlet';
-            if (gameMode !== 'gauntlet' && !isLobbyGauntlet) return;
-
-            const goal = GAUNTLET_GOALS[gameId];
-            let goalMet = false;
-            if (goal.type === 'score' && score >= goal.value) goalMet = true;
-            if (goal.type === 'win' && hasWon) goalMet = true;
-            
-            const progress = isLobbyGauntlet ? (gauntletProgress || {}) : gauntletProgress;
-
-            if (goalMet && !progress[gameId]) {
-                AudioEngine.playSound('score');
-                
-                if (isLobbyGauntlet) {
-                    rtdb.ref(`lobbies/${currentLobbyId}/gauntletProgress/${gameId}`).set(true);
-                } else {
-                    gauntletProgress[gameId] = true;
-                    const light = document.querySelector(`.game-cabinet[data-theme="${gameId}"] .completion-light`);
-                    if(light) light.classList.add('active');
-                }
-
-                const updatedProgress = {...progress, [gameId]: true};
-                const allComplete = Object.keys(games).every(id => updatedProgress[id]);
-                if (allComplete) {
-                    stopGameTimer();
-                    const finalTimeSeconds = (Date.now() - gauntletStartTime) / 1000;
-                    const finalTimeFormatted = formatTime(Math.floor(finalTimeSeconds));
-                    
-                    saveGauntletLeaderboardScore(finalTimeSeconds);
-
-                    document.getElementById('winner-title').textContent = "GAUNTLET COMPLETE!";
-                    let winnerName = (isLobbyGauntlet) ? Object.values(currentLobbyData.players).map(p => p.color ? `<span style="color:${p.color}; text-shadow: 0 0 5px ${p.color}">${Object.keys(currentLobbyData.players).find(key => currentLobbyData.players[key] === p)}</span>` : Object.keys(currentLobbyData.players).find(key => currentLobbyData.players[key] === p)).join(' & ') : playerName;
-                    document.getElementById('winner-name').innerHTML = `${winnerName}<br>Final Time: ${finalTimeFormatted}`;
-                    document.getElementById('winner-text').textContent = "You are true Arcade Masters!";
-                    document.getElementById('winner-modal').style.display = 'flex';
-                }
-            }
-        }
-
-        function startGame(gameId) {
-            isGameActive = true;
-            AudioEngine.playSound('select');
-            AudioEngine.playMusic(games[gameId].music);
-            arcadeRoom.style.display = 'none';
-            gameContainer.style.display = 'flex';
-            if (gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') {
-                highScoresContainer.style.display = 'block';
-            }
-            currentGameId = gameId;
-            highScoresTitle.innerText = `${games[currentGameId].name} Scores`;
-            updateHighScoresDisplay();
-            games[gameId].init();
-        }
-
-        function stopGame(isForced = false) {
-            isGameActive = false;
-            AudioEngine.playMusic('menu');
-            if (gameLoopId) { cancelAnimationFrame(gameLoopId); clearInterval(gameLoopId); gameLoopId = null; }
-            if (currentKeyListener) { document.removeEventListener('keydown', currentKeyListener); document.removeEventListener('keyup', currentKeyListener); currentKeyListener = null; }
-            if (currentMouseListener) { canvas.removeEventListener('mousemove', currentMouseListener); currentMouseListener = null; }
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            if (isForced) {
-                gameContainer.style.display = 'none';
-                arcadeRoom.style.display = 'none';
-                lobbyScreen.style.display = 'flex';
-            } else {
-                gameContainer.style.display = 'none';
-                arcadeRoom.style.display = 'flex';
-                createGameCabinets();
-            }
-            currentGameId = null;
-            highScoresContainer.style.display = 'none';
-            
-            if (gameMode === 'solo' && !isForced) {
-                document.body.classList.remove('in-game');
-            }
-        }
-
-        function updateHighScoresDisplay() {
-            if (!highScoresContainer || !currentGameId) return;
-            highScoresList.innerHTML = '';
-            let allScores = [];
-
-            if (gameMode === 'multiplayer' || (currentLobbyData && currentLobbyData.mode)) {
-                const gameScores = lobbyHighScores[currentGameId];
-                if (gameScores) {
-                    allScores = Object.entries(gameScores).map(([name, data]) => ({ name, ...data }));
-                }
-            } else { 
-                allScores = highScores[currentGameId] || [];
-            }
-            
-            const bestScores = {};
-            const sortOrder = games[currentGameId].sort;
-            for (const s of allScores) {
-                if (!bestScores[s.name] || (sortOrder === 'desc' ? s.score > bestScores[s.name].score : s.score < bestScores[s.name].score)) {
-                    bestScores[s.name] = s;
-                }
-            }
-            let scores = Object.values(bestScores);
-            scores.sort((a, b) => sortOrder === 'desc' ? b.score - a.score : a.score - b.score);
-            
-            if (scores.length > 0) {
-                scores.slice(0, 10).forEach(score => {
-                    const li = document.createElement('li');
-                    let scoreDisplay = score.score;
-                    if(games[currentGameId].sort === 'asc') scoreDisplay += 's';
-
-                    const nameSpan = `<span class="name" style="color:${score.color || 'var(--primary-glow)'}; text-shadow: 0 0 5px ${score.color || 'var(--primary-glow)'}">${score.name}</span>`;
-                    const scoreSpan = `<span class="score">${scoreDisplay}</span>`;
-                    
-                    li.innerHTML = `${nameSpan} ${scoreSpan}`;
-                    highScoresList.appendChild(li);
-                });
-            } else {
-                highScoresList.innerHTML = '<li>No scores yet!</li>';
-            }
-        }
-
-        async function saveHighScore(score, gameId, hasWon = false) {
+        async function saveProfileChanges() {
             const user = auth.currentUser;
             if (!user) return;
-
-            checkGauntletWin(gameId, score, hasWon);
-
-            if (gameMode === 'multiplayer') { 
-                const myColor = currentLobbyData.players[playerName]?.color || '#FFFFFF';
-                const scoreRef = rtdb.ref(`lobbies/${currentLobbyId}/scores/${gameId}/${playerName}`);
-                
-                const snapshot = await scoreRef.once('value');
-                const existingData = snapshot.val();
-                const existingScore = existingData ? existingData.score : null;
-
-                let isNewLobbyHighScore = existingScore === null || (games[gameId].sort === 'desc' ? score > existingScore : score < existingScore);
-                
-                if (isNewLobbyHighScore) {
-                    await scoreRef.set({ score: score, color: myColor });
-                }
+            const updates = {
+                pfpColor: selectedColor
+            };
+            if (selectedAvatarUrl) {
+                updates.photoURL = selectedAvatarUrl;
+            } else {
+                updates.photoURL = firebase.firestore.FieldValue.delete();
             }
+            try {
+                await db.collection('users').doc(user.uid).update(updates);
+                const authPhotoURL = selectedAvatarUrl ? 'custom' : '';
+                if (user.photoURL !== authPhotoURL) {
+                    await user.updateProfile({ photoURL: authPhotoURL });
+                }
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                currentUserData = userDoc.data();
+                updateProfileButtonPfp();
+                document.getElementById('profile-modal').style.display = 'none';
+                alert("Profil uložen!");
+            } catch (error) {
+                console.error("Chyba při ukládání profilu: ", error);
+                alert("Nepodařilo se uložit profil.");
+            }
+        }
+        
+        function updateProfileButtonPfp() {
+            const pfpButton = document.getElementById('profile-btn-pfp');
+            if (currentUserData) {
+                renderPfp(pfpButton, currentUserData);
+            }
+        }
+
+        function switchChatView(view) {
+            document.querySelectorAll('.chat-view').forEach(v => v.classList.remove('active'));
+            document.getElementById(view).classList.add('active');
+        }
+
+        function listenToChat(collection, containerId, mode) {
+            if (activeChatListener) activeChatListener();
+            currentChatMode = mode;
+            const container = document.getElementById(containerId);
+            activeChatListener = collection.orderBy('createdAt', 'asc').limitToLast(50).onSnapshot(snapshot => {
+                const shouldScroll = container.scrollTop + container.clientHeight >= container.scrollHeight - 20;
+                container.innerHTML = '';
+                snapshot.forEach(doc => {
+                    displayChatMessage({ id: doc.id, ...doc.data() }, container);
+                });
+                if(shouldScroll) container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        function listenForTyping(convoId) {
+            if (activeTypingListener) activeTypingListener();
+            const typingRef = db.collection('dms').doc(convoId);
+            const indicatorContainer = document.getElementById('typing-indicator-container');
             
-            if (user.isAnonymous) {
+            activeTypingListener = typingRef.onSnapshot(async (doc) => {
+                const data = doc.data();
+                if (data && data.typing && data.typing.uid === currentDmPartnerId && 
+                    firebase.firestore.Timestamp.now().seconds - data.typing.timestamp.seconds < 5) {
+                    
+                    const userDoc = await db.collection('users').doc(data.typing.uid).get();
+                    if (userDoc.exists) {
+                        const partnerData = userDoc.data();
+                        indicatorContainer.innerHTML = `
+                            <div class="typing-indicator">
+                                <div class="pfp-container"></div>
+                                <div class="typing-dots"><span></span><span></span><span></span></div>
+                            </div>
+                        `;
+                        renderPfp(indicatorContainer.querySelector('.pfp-container'), partnerData);
+                    }
+                } else {
+                    indicatorContainer.innerHTML = '';
+                }
+            });
+        }
+        
+        async function openDmChat(otherUserId) {
+            const myId = auth.currentUser.uid;
+            if (myId === otherUserId) return;
+            const otherUserDoc = await db.collection('users').doc(otherUserId).get();
+            if (!otherUserDoc.exists) return;
+            
+            currentDmPartnerId = otherUserId;
+            const partnerData = otherUserDoc.data();
+            document.getElementById('chat-with-name').textContent = partnerData.displayName;
+            
+            const convoId = [myId, otherUserId].sort().join('_');
+            await db.collection('dms').doc(convoId).set({
+                users: [myId, otherUserId],
+                lastActivity: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            const messagesCollection = db.collection('dms').doc(convoId).collection('messages');
+            
+            listenToChat(messagesCollection, 'chat-messages-container', 'dm');
+            listenForTyping(convoId);
+            switchChatView('chat-view-container');
+        }
+
+        function listenToDmList() {
+            const myId = auth.currentUser.uid;
+            if (activeDmListListener) activeDmListListener();
+            
+            const container = document.getElementById('dm-list-container');
+            
+            container.innerHTML = '<div class="public-chat-btn">Veřejný Chat 🌍</div>';
+            document.querySelector('.public-chat-btn').addEventListener('click', () => {
+                document.getElementById('chat-with-name').textContent = 'Veřejný Chat';
+                listenToChat(db.collection('chat'), 'chat-messages-container', 'public');
+                switchChatView('chat-view-container');
+            });
+            
+            activeDmListListener = db.collection('dms').where('users', 'array-contains', myId)
+              .orderBy('lastActivity', 'desc')
+              .onSnapshot(async (snapshot) => {
+                
+                const existingDmElems = new Set(Array.from(container.querySelectorAll('.dm-list-item')).map(el => el.dataset.userId));
+                
+                for (const doc of snapshot.docs) {
+                    const convo = doc.data();
+                    const partnerId = convo.users.find(id => id !== myId);
+                    if (!partnerId) continue;
+                    
+                    existingDmElems.delete(partnerId);
+
+                    let item = container.querySelector(`.dm-list-item[data-user-id="${partnerId}"]`);
+                    if (item) {
+                        item.querySelector('.dm-info-lastmsg').textContent = convo.lastMessage || '';
+                        continue;
+                    }
+
+                    const userDoc = await db.collection('users').doc(partnerId).get();
+                    if (!userDoc.exists) continue;
+                    const partnerData = userDoc.data();
+                    
+                    item = document.createElement('div');
+                    item.className = 'dm-list-item';
+                    item.dataset.userId = partnerId;
+                    item.onclick = () => openDmChat(partnerId);
+                    
+                    const pfp = document.createElement('div');
+                    pfp.className = 'pfp-container';
+                    renderPfp(pfp, partnerData);
+                    
+                    const info = document.createElement('div');
+                    info.className = 'dm-info';
+                    const nameStyle = partnerData.pfpColor ? `style="color: ${partnerData.pfpColor}"` : '';
+                    info.innerHTML = `<span class="dm-info-name" ${nameStyle}>${partnerData.displayName}</span><span class="dm-info-lastmsg">${convo.lastMessage || ''}</span>`;
+                    
+                    item.appendChild(pfp);
+                    item.appendChild(info);
+                    container.appendChild(item);
+                }
+
+                existingDmElems.forEach(userIdToRemove => {
+                    const elemToRemove = container.querySelector(`.dm-list-item[data-user-id="${userIdToRemove}"]`);
+                    if (elemToRemove) elemToRemove.remove();
+                });
+            });
+        }
+
+        async function searchUsers(searchTerm) {
+            const container = document.getElementById('dm-list-container');
+            container.innerHTML = '<div class="public-chat-btn">Veřejný Chat 🌍</div>';
+            document.querySelector('.public-chat-btn').addEventListener('click', () => {
+                document.getElementById('chat-with-name').textContent = 'Veřejný Chat';
+                listenToChat(db.collection('chat'), 'chat-messages-container', 'public');
+                switchChatView('chat-view-container');
+            });
+            
+            if (searchTerm.trim() === '') {
+                if (activeDmListListener) activeDmListListener();
+                listenToDmList();
                 return;
             }
+
+            if (activeDmListListener) activeDmListListener();
+
+            const usersRef = db.collection('users');
+            const querySnapshot = await usersRef.where('displayName', '>=', searchTerm).where('displayName', '<=', searchTerm + '\uf8ff').limit(10).get();
+
+            querySnapshot.forEach(doc => {
+                if (doc.id === auth.currentUser.uid) return;
+                const userData = doc.data();
+                const item = document.createElement('div');
+                item.className = 'user-search-result';
+                item.onclick = () => showUserProfile(doc.id);
+                const pfp = document.createElement('div');
+                pfp.className = 'pfp-container';
+                renderPfp(pfp, userData);
+                const info = document.createElement('div');
+                info.className = 'dm-info';
+                const nameStyle = userData.pfpColor ? `style="color: ${userData.pfpColor}"` : '';
+                info.innerHTML = `<span class="dm-info-name" ${nameStyle}>${userData.displayName}</span>`;
+                item.appendChild(pfp);
+                item.appendChild(info);
+                container.appendChild(item);
+            });
+        }
+        
+        function updateTypingStatus() {
+            if (currentChatMode !== 'dm' || !currentDmPartnerId || !auth.currentUser) return;
             
-            const gameInfo = games[gameId];
-            const globalTopScore = highScores[gameId] && highScores[gameId].length > 0 ? highScores[gameId][0].score : null;
-            const isNewGlobalRecord = globalTopScore === null || (gameInfo.sort === 'desc' ? score > globalTopScore : score < globalTopScore);
+            const myId = auth.currentUser.uid;
+            const convoId = [myId, currentDmPartnerId].sort().join('_');
+            const typingRef = db.collection('dms').doc(convoId);
+            
+            typingRef.set({
+                typing: {
+                    uid: myId,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                }
+            }, { merge: true });
+        }
 
-            if (isNewGlobalRecord) {
-                const globalScoreRef = db.collection('arcade_high_scores').doc(gameId).collection('scores').doc();
-                await globalScoreRef.set({ name: playerName.substring(0, 10), score: score, userId: user.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        async function loadAdminPublicLog() {
+            const container = document.getElementById('admin-public-log');
+            container.innerHTML = 'Načítání...';
+            const snapshot = await db.collection('chat').orderBy('createdAt', 'desc').limit(100).get();
+            if (snapshot.empty) {
+                container.innerHTML = 'Žádné zprávy ve veřejném chatu.';
+                return;
+            }
+            container.innerHTML = '';
+            snapshot.forEach(doc => {
+                const msg = doc.data();
+                const time = msg.createdAt ? msg.createdAt.toDate().toLocaleString() : 'N/A';
+                container.innerHTML += `<div class="admin-log-entry"><strong>${msg.displayName || 'Anonym'}:</strong> ${msg.text} <small>(${time})</small></div>`;
+            });
+        }
+
+        async function loadAdminDmList() {
+            const container = document.getElementById('admin-dm-log-list');
+            container.innerHTML = 'Načítání...';
+            const snapshot = await db.collection('dms').orderBy('lastActivity', 'desc').get();
+            if (snapshot.empty) {
+                container.innerHTML = 'Žádné DM konverzace.';
+                return;
+            }
+            container.innerHTML = '';
+            for (const doc of snapshot.docs) {
+                const convo = doc.data();
+                const userPromises = convo.users.map(uid => db.collection('users').doc(uid).get());
+                const userDocs = await Promise.all(userPromises);
+                const userNames = userDocs.map(userDoc => userDoc.exists ? userDoc.data().displayName : 'Neznámý uživatel');
                 
-                await loadHighScoresFromFirestore();
-                
-                if (isGameActive) {
-                    updateHighScoresDisplay();
-                }
-                if (arcadeRoom.style.display === 'flex') {
-                    createGameCabinets();
-                }
+                const time = convo.lastActivity ? convo.lastActivity.toDate().toLocaleString() : 'N/A';
+                container.innerHTML += `<div class="admin-log-entry"><strong>Konverzace:</strong> ${userNames.join(' & ')} <small> (Poslední aktivita: ${time})</small></div>`;
             }
         }
 
-        backToArcadeButton.onclick = () => stopGame();
-        loadHighScoresFromFirestore();
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginBtn = document.getElementById('login-btn');
+            const profileBtnPfp = document.getElementById('profile-btn-pfp');
+            const chatToggleBtn = document.getElementById('chat-toggle-btn');
+            const adminPanelBtn = document.getElementById('admin-panel-btn');
+            const chatPopup = document.getElementById('chat-popup');
+            const chatCloseBtn = document.getElementById('chat-close-btn');
+            const chatInput = document.getElementById('chat-input');
+            
+            setTheme(currentTheme);
+            setLanguage(currentLang);
 
-        // --- ALL GAME LOGIC FUNCTIONS (No changes below this line) ---
-        function initTetris() { canvas.width = 300; canvas.height = 600; let gameOver = false; const COLS = 10, ROWS = 20, BLOCK_SIZE = 30; const COLORS = ['#00FFFF', '#0000FF', '#FFA500', '#FFFF00', '#00FF00', '#800080', '#FF0000']; const SHAPES = [ [], [[1,1,1,1]], [[2,0,0],[2,2,2]], [[0,0,3],[3,3,3]], [[4,4],[4,4]], [[0,5,5],[5,5,0]], [[0,6,0],[6,6,6]], [[7,7,0],[0,7,7]] ]; let arena = Array.from({ length: ROWS }, () => Array(COLS).fill(0)); let player = { pos: { x: 0, y: 0 }, matrix: null, score: 0, level: 1, lines: 0 }; let dropCounter = 0, dropInterval = 1000, lastTime = 0; function playerReset() { const typeId = Math.floor(Math.random() * (SHAPES.length-1)) + 1; player.matrix = SHAPES[typeId]; player.pos.y = 0; player.pos.x = (COLS / 2 | 0) - (player.matrix[0].length / 2 | 0); if (collide(arena, player)) { endGame(); } } function endGame() { if (gameOver) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(player.score, 'tetris'); if (gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { setTimeout(stopGame, 1000); } else { stopGame(); } } function drawMatrix(matrix, offset, colorOverride = null) { matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) { ctx.fillStyle = colorOverride ? colorOverride : COLORS[value-1]; ctx.fillRect(x + offset.x, y + offset.y, 1, 1); } })); } function drawGhost() { const ghost = { ...player, pos: { ...player.pos }}; while (!collide(arena, ghost)) { ghost.pos.y++; } ghost.pos.y--; drawMatrix(ghost.matrix, ghost.pos, 'rgba(255, 255, 255, 0.2)'); } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.scale(BLOCK_SIZE, BLOCK_SIZE); drawMatrix(arena, { x: 0, y: 0 }); if(!gameOver) drawGhost(); drawMatrix(player.matrix, player.pos); ctx.setTransform(1, 0, 0, 1, 0, 0); } function merge() { player.matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; })); } function collide(arena, player) { const [m, o] = [player.matrix, player.pos]; for (let y = 0; y < m.length; ++y) for (let x = 0; x < m[y].length; ++x) if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true; return false; } function playerDrop() { player.pos.y++; if (collide(arena, player)) { player.pos.y--; merge(); AudioEngine.playSound('hit'); arenaSweep(); playerReset(); } dropCounter = 0; } function playerMove(dir) { player.pos.x += dir; if (collide(arena, player)) player.pos.x -= dir; } function rotate(matrix) { const newMatrix = []; for (let i = 0; i < matrix[0].length; i++) { newMatrix.push([]); }; for (let i = 0; i < matrix.length; i++) { for (let j = 0; j < matrix[0].length; j++) { newMatrix[j].unshift(matrix[i][j]); } } return newMatrix; } function playerRotate() { const originalPos = player.pos.x; const originalMatrix = player.matrix; player.matrix = rotate(player.matrix); let offset = 1; while (collide(arena, player)) { player.pos.x += offset; offset = -(offset + (offset > 0 ? 1 : -1)); if (offset > player.matrix[0].length) { player.pos.x = originalPos; player.matrix = originalMatrix; return; } } } function arenaSweep() { let rowCount = 0; outer: for (let y = arena.length - 1; y > 0; --y) { for (let x = 0; x < arena[y].length; ++x) if (arena[y][x] === 0) continue outer; const row = arena.splice(y, 1)[0].fill(0); arena.unshift(row); ++y; rowCount++; } if (rowCount > 0) { AudioEngine.playSound('score'); player.score += (rowCount * 10) * rowCount * player.level; player.lines += rowCount; player.level = Math.floor(player.lines / 10) + 1; dropInterval = Math.max(100, 1000 * Math.pow(0.85, player.level - 1)); } } function update(time = 0) { if(gameOver) return; const deltaTime = time - lastTime; lastTime = time; dropCounter += deltaTime; if (dropCounter > dropInterval) playerDrop(); draw(); scoreElement.textContent = `Score: ${player.score}`; levelLivesElement.textContent = `Level: ${player.level}`; gameLoopId = requestAnimationFrame(update); } currentKeyListener = event => { if (gameOver) return; if (event.key === 'ArrowLeft') playerMove(-1); else if (event.key === 'ArrowRight') playerMove(1); else if (event.key === 'ArrowDown') playerDrop(); else if (event.key === 'ArrowUp') playerRotate(); }; document.addEventListener('keydown', currentKeyListener); playerReset(); update(); }
-        function initSpaceInvaders() { canvas.width = 600; canvas.height = 600; let score = 0, lives = 3, gameOver = false, gameOverText = '', currentLevel = 0, lastTime = 0, moveAccumulator = 0; const invaderLayouts = [ [[1,1,1,1,1,1,1,1],[2,2,2,2,2,2,2,2],[3,3,3,3,3,3,3,3]], [[0,1,1,0,0,2,2,0],[1,0,0,1,2,0,0,2],[1,1,1,1,2,2,2,2],[0,3,0,3,3,0,3,0]], [[1,1,0,0,0,0,2,2],[1,1,1,0,0,2,2,2],[3,3,3,3,3,3,3,3],[0,1,1,3,3,1,1,0]] ]; const invaderPixels = { 1: [ [0,0,1,1,1,1,0,0], [0,1,1,1,1,1,1,0], [1,1,0,1,1,0,1,1], [1,1,1,1,1,1,1,1], [0,1,0,1,1,0,1,0], [1,0,0,0,0,0,0,1] ], 2: [ [0,1,1,0,0,1,1,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ], 3: [ [0,0,1,1,1,1,0,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ] }; class Player { constructor() { this.x = canvas.width/2; this.y = canvas.height-50; this.width = 32; this.height = 16; this.speed = 250; } draw() { ctx.fillStyle = 'lime'; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillRect(this.x-2, this.y-4, 4, 4);}} class Bullet { constructor(x, y, speed, color) { this.x = x; this.y = y; this.width = 4; this.height = 15; this.speed = speed; this.color = color; } update(dt) { this.y += this.speed * dt; } draw() { ctx.shadowColor = this.color; ctx.shadowBlur = 15; ctx.fillStyle = this.color; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillStyle = 'white'; ctx.fillRect(this.x - 1, this.y + 2, 2, this.height-4); ctx.shadowBlur = 0; }} class Invader { constructor(x, y, type) { this.x = x; this.y = y; this.width = 32; this.height = 24; this.type = type; } draw() { const pixels = invaderPixels[this.type]; ctx.fillStyle='white'; for(let r=0; r<pixels.length; r++) for(let c=0; c<pixels[r].length; c++) if(pixels[r][c]) { ctx.fillRect(this.x+c*4, this.y+r*4, 4, 4); } }} class Bunker { constructor(x) { this.x = x; this.y = canvas.height - 120; this.width = 80; this.height = 40; this.health = 20; } draw() { if(this.health > 0) { ctx.fillStyle = `rgb(0, ${this.health * 12}, 0)`; ctx.fillRect(this.x, this.y, this.width, this.height); } }} let player = new Player(); let keys = {}; let playerBullets = [], invaderBullets = [], invaders = [], bunkers = []; let invaderDirection = 1, invaderDrop = 20, invaderMoveThreshold = 1000; function loadLevel(levelIndex) { invaders = []; const layout = invaderLayouts[levelIndex]; for(let r = 0; r < layout.length; r++) for(let c = 0; c < layout[r].length; c++) if(layout[r][c]) invaders.push(new Invader(80 + c * 50, 50 + r * 40, layout[r][c])); invaderMoveThreshold = 1000 - levelIndex * 150; player.x = canvas.width/2; } function update(dt) { if (gameOver) return; if (keys['ArrowLeft'] && player.x > player.width/2) player.x -= player.speed * dt; if (keys['ArrowRight'] && player.x < canvas.width-player.width/2) player.x += player.speed * dt; playerBullets.forEach((b, i) => { b.update(dt); if(b.y < 0) playerBullets.splice(i, 1); }); invaderBullets.forEach((b, i) => { b.update(dt); if(b.y > canvas.height) invaderBullets.splice(i, 1); }); moveAccumulator += dt * 1000; if(moveAccumulator > invaderMoveThreshold) { moveAccumulator = 0; let wallHit = false; invaders.forEach(invader => { invader.x += 10 * invaderDirection; if (invader.x + invader.width > canvas.width || invader.x < 0) wallHit = true; }); if (wallHit) { invaderDirection *= -1; invaders.forEach(invader => invader.y += invaderDrop); }} if (Math.random() < 0.02 && invaders.length > 0) { const shooter = invaders[Math.floor(Math.random()*invaders.length)]; invaderBullets.push(new Bullet(shooter.x+shooter.width/2, shooter.y+shooter.height, 300, 'red')); } invaders.forEach(invader => { if(invader.y + invader.height >= (bunkers[0]?.y || canvas.height - 50)) endGame(false); }); playerBullets.forEach((bullet, bIndex) => { invaders.forEach((invader, iIndex) => { if (bullet.x > invader.x && bullet.x < invader.x + invader.width && bullet.y > invader.y && bullet.y < invader.y + invader.height) { playerBullets.splice(bIndex, 1); invaders.splice(iIndex, 1); score += 100 * (currentLevel+1); AudioEngine.playSound('hit'); } }); bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { playerBullets.splice(bIndex,1); bunker.health--; }}); }); invaderBullets.forEach((bullet, bIndex) => { if (bullet.x > player.x - player.width/2 && bullet.x < player.x + player.width/2 && bullet.y > player.y - player.height/2 && bullet.y < player.y + player.height/2) { invaderBullets.splice(bIndex, 1); lives--; AudioEngine.playSound('hit'); if (lives <= 0) endGame(false); } bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { invaderBullets.splice(bIndex,1); bunker.health--; }}); }); if (invaders.length === 0) { currentLevel++; if(currentLevel >= invaderLayouts.length) { endGame(true); } else { loadLevel(currentLevel); } } } function draw() { ctx.clearRect(0, 0, canvas.width, canvas.height); if (!gameOver) player.draw(); playerBullets.forEach(b => b.draw()); invaderBullets.forEach(b => b.draw()); invaders.forEach(i => i.draw()); bunkers.forEach(b => b.draw()); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Lives: ${lives}`; if(gameOver) { ctx.fillStyle = 'white'; ctx.font = '40px "Press Start 2P"'; ctx.textAlign = 'center'; ctx.fillText(gameOverText, canvas.width/2, canvas.height/2); } } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); if (!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } function endGame(didWin) { if(gameOver) return; gameOver = true; gameOverText = didWin ? 'You Win!' : 'Game Over!'; AudioEngine.playSound('gameOver'); saveHighScore(score, 'spaceInvaders', didWin); if (gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { setTimeout(stopGame, 1000); } else { stopGame(); } } currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; if (e.key === ' ' && e.type === 'keydown' && playerBullets.length < 3) { AudioEngine.playSound('shoot'); playerBullets.push(new Bullet(player.x, player.y, -400, 'yellow')); } }; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); for(let i = 0; i < 4; i++) bunkers.push(new Bunker(70 + i * 120)); loadLevel(0); gameLoopId = requestAnimationFrame(gameLoop); }
-        function initPacman() {
-            canvas.width = 560; canvas.height = 620; let score = 0, lives = 3; let frame = 0, lastTime = 0, gameOver = false; const TILE_SIZE = 20, PAC_SPEED = 100; const map=[[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,3,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,3,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,2,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,2,1],[1,2,1,1,1,1,2,1,1,2,1,1,1,4,4,1,1,1,2,1,1,2,1,1,1,1,2,1],[1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],[1,1,1,1,1,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,1,1,1,1,1],[0,0,0,0,0,1,2,1,1,1,1,1,0,1,1,0,1,1,1,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,1,1,1,5,5,1,1,1,0,1,1,2,1,0,0,0,0,0],[1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1],[0,0,0,0,0,0,2,0,0,0,1,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0],[1,1,1,1,1,1,2,1,1,0,1,0,0,0,0,0,0,1,0,1,1,2,1,1,1,1,1,1],[0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,0,0,0,0],[0,0,0,0,0,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,0,0,0,0,0],[1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],[1,3,2,2,1,1,2,2,2,2,2,2,2,0,0,2,2,2,2,2,2,2,1,1,2,2,3,1],[1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],[1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1],[1,2,2,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,1,1,2,2,2,2,2,2,1],[1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],[1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]]; let totalPellets = map.flat().filter(tile => tile === 2 || tile === 3).length;
-            class Entity { constructor(x, y, radius, color, speed) { this.x = x; this.y = y; this.radius = radius; this.color = color; this.speed = speed; this.dir = {x:0, y:0}; this.nextDir = {x:0, y:0}; } getMapPos() { return { x: Math.floor(this.x / TILE_SIZE), y: Math.floor(this.y / TILE_SIZE) }; } isAtCenter() { const xRem = this.x % TILE_SIZE; const yRem = this.y % TILE_SIZE; const center = TILE_SIZE/2; return xRem > center-1 && xRem < center+1 && yRem > center-1 && yRem < center+1; }}
-            class Pacman extends Entity { constructor(x, y) { super(x, y, TILE_SIZE/2 - 2, 'yellow', PAC_SPEED); this.angle = 0; } draw() { ctx.save(); ctx.translate(this.x, this.y); if(this.dir.x === 1) this.angle=0; else if(this.dir.x === -1) this.angle=Math.PI; else if(this.dir.y === 1) this.angle=Math.PI/2; else if(this.dir.y === -1) this.angle=-Math.PI/2; ctx.rotate(this.angle); const mouthAngle = 0.2 * Math.abs(Math.sin(frame * 0.2)); ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(0, 0, this.radius, mouthAngle, -mouthAngle); ctx.lineTo(0, 0); ctx.fill(); ctx.restore(); }}
-            class Ghost extends Entity { constructor(x, y, color) { super(x, y, TILE_SIZE/2 - 2, color, PAC_SPEED * 0.85); this.isFrightened = false; this.isReleased = false; this.homeX = x; this.homeY = y; this.respawnTimer = 0;} draw() { ctx.fillStyle = this.isFrightened ? '#2196F3' : this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, Math.PI, 0); ctx.lineTo(this.x + this.radius, this.y + this.radius); ctx.lineTo(this.x - this.radius, this.y + this.radius); ctx.closePath(); ctx.fill(); ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(this.x - 4, this.y - 2, 2, 0, 2 * Math.PI); ctx.arc(this.x + 4, this.y - 2, 2, 0, 2 * Math.PI); ctx.fill();}}
-            let pacman = new Pacman(14*TILE_SIZE+TILE_SIZE/2, 23*TILE_SIZE+TILE_SIZE/2); let ghosts = [new Ghost(14*TILE_SIZE+TILE_SIZE/2, 11*TILE_SIZE+TILE_SIZE/2, 'red'), new Ghost(12*TILE_SIZE+TILE_SIZE/2, 14*TILE_SIZE+TILE_SIZE/2, 'pink'), new Ghost(14*TILE_SIZE+TILE_SIZE/2, 14*TILE_SIZE+TILE_SIZE/2, 'cyan'), new Ghost(16*TILE_SIZE+TILE_SIZE/2, 14*TILE_SIZE+TILE_SIZE/2, 'orange')]; ghosts[0].isReleased = true; let frightenedTimer = 0; let releaseTimer = 0;
-            function drawMap() { for (let y=0; y<map.length; y++) for (let x=0; x<map[y].length; x++) { if (map[y][x] === 1) { ctx.fillStyle = '#0000DD'; ctx.fillRect(x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE); } else if (map[y][x] === 2) { ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(x*TILE_SIZE+TILE_SIZE/2, y*TILE_SIZE+TILE_SIZE/2, 2, 0, Math.PI*2); ctx.fill(); } else if (map[y][x] === 3) { ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(x*TILE_SIZE+TILE_SIZE/2, y*TILE_SIZE+TILE_SIZE/2, 5, 0, Math.PI*2); ctx.fill(); }}}
-            function getTile(x, y) { if (x < 0 || x >= map[0].length || y < 0 || y >= map.length) return 1; return map[y][x]; }
-            function canMove(entity, dir) { const nextMapX = Math.floor(entity.x/TILE_SIZE) + dir.x; const nextMapY = Math.floor(entity.y/TILE_SIZE) + dir.y; const tile = getTile(nextMapX, nextMapY); return tile !== 1;}
-            function moveEntity(entity, dt) { if (entity.isAtCenter()) { if ((entity.nextDir.x !== 0 || entity.nextDir.y !== 0) && canMove(entity, entity.nextDir)) entity.dir = {...entity.nextDir}; if (!canMove(entity, entity.dir)) { entity.x = entity.getMapPos().x * TILE_SIZE + TILE_SIZE/2; entity.y = entity.getMapPos().y * TILE_SIZE + TILE_SIZE/2; entity.dir = {x:0, y:0}; } } entity.x += entity.dir.x * entity.speed * dt; entity.y += entity.dir.y * entity.speed * dt; if(entity.x < -entity.radius) entity.x = canvas.width + entity.radius; if(entity.x > canvas.width + entity.radius) entity.x = -entity.radius; }
-            function updateGhost(ghost) { if (!ghost.isReleased || ghost.respawnTimer > 0) return; if (ghost.isAtCenter()) { const ghostPos = ghost.getMapPos(); let target; const isInBox = ghostPos.y >= 12 && ghostPos.x >= 12 && ghostPos.x <= 16; if (isInBox) { target = { x: 14 * TILE_SIZE, y: 11 * TILE_SIZE }; } else { target = pacman; } let possibleMoves = []; if (canMove(ghost, {x: 1, y: 0})) possibleMoves.push({x: 1, y: 0}); if (canMove(ghost, {x: -1, y: 0})) possibleMoves.push({x: -1, y: 0}); if (canMove(ghost, {x: 0, y: 1})) possibleMoves.push({x: 0, y: 1}); if (canMove(ghost, {x: 0, y: -1})) possibleMoves.push({x: 0, y: -1}); let choices = possibleMoves; if (choices.length > 1) { choices = choices.filter(move => move.x !== -ghost.dir.x || move.y !== -ghost.dir.y); } if (!isInBox) { const isAtIntersectionAboveBox = ghostPos.y === 11 && (ghostPos.x >= 13 && ghostPos.x <= 15); if(isAtIntersectionAboveBox){ choices = choices.filter(move => move.y !== 1); } } if (choices.length > 0) { choices.sort((a, b) => { const distA = Math.hypot(target.x - ((ghostPos.x + a.x) * TILE_SIZE), target.y - ((ghostPos.y + a.y) * TILE_SIZE)); const distB = Math.hypot(target.x - ((ghostPos.x + b.x) * TILE_SIZE), target.y - ((ghostPos.y + b.y) * TILE_SIZE)); return distA - distB; }); if (ghost.isFrightened && !isInBox) { ghost.nextDir = choices[choices.length - 1]; } else { ghost.nextDir = choices[0]; } } else { ghost.nextDir = {x: -ghost.dir.x, y: -ghost.dir.y}; } } }
-            function checkCollisions() { const {x:mapX, y:mapY} = pacman.getMapPos(); if(getTile(mapX, mapY) === 2) { map[mapY][mapX] = 0; score += 10; totalPellets--; AudioEngine.playSound('score'); } else if(getTile(mapX, mapY) === 3) { map[mapY][mapX] = 0; score += 50; totalPellets--; ghosts.forEach(g => { if(g.isReleased) g.isFrightened = true; }); frightenedTimer = 7; AudioEngine.playSound('score');} ghosts.forEach(ghost => { if (ghost.respawnTimer > 0) return; const dist = Math.hypot(pacman.x-ghost.x, pacman.y-ghost.y); if(dist < pacman.radius+ghost.radius) { if (ghost.isFrightened) { score += 200; ghost.x = ghost.homeX; ghost.y = ghost.homeY; ghost.isFrightened=false; ghost.respawnTimer = 3; AudioEngine.playSound('score'); } else { resetAfterDeath(); }}})}
-            function resetAfterDeath() { lives--; AudioEngine.playSound('hit'); if(lives <= 0) { gameOver=true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'pacman', false); if(gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { setTimeout(stopGame, 100); } else { stopGame(); } } else { pacman.x = 14*TILE_SIZE+TILE_SIZE/2; pacman.y = 23*TILE_SIZE+TILE_SIZE/2; pacman.dir = {x:0, y:0}; pacman.nextDir = {x:0, y:0}; ghosts.forEach((g,i) => {g.x = g.homeX; g.y = g.homeY; g.isFrightened=false; g.isReleased = (i===0); g.respawnTimer = 0;}); releaseTimer=0;}}
-            function gameLoop(currentTime) { if(gameOver) return; frame++; const dt = (currentTime - (lastTime||currentTime)) / 1000; lastTime = currentTime; ctx.clearRect(0,0,canvas.width,canvas.height); drawMap(); moveEntity(pacman, dt); ghosts.forEach((g) => { if (g.respawnTimer > 0) g.respawnTimer -= dt; else { updateGhost(g); } moveEntity(g, dt); }); pacman.draw(); ghosts.forEach(g => g.draw()); checkCollisions(); if (frightenedTimer > 0) { frightenedTimer -= dt; if (frightenedTimer <= 0) ghosts.forEach(g => g.isFrightened = false); } releaseTimer += dt; if(releaseTimer > 4 && !ghosts[1].isReleased){ghosts[1].isReleased = true;} if(releaseTimer > 8 && !ghosts[2].isReleased){ghosts[2].isReleased = true;} if(releaseTimer > 12 && !ghosts[3].isReleased){ghosts[3].isReleased = true;} if(totalPellets === 0) { saveHighScore(score, 'pacman', true); if(gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { alert("You Win!"); stopGame(); } else { stopGame(); } return; } scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Lives: ${lives}`; gameLoopId = requestAnimationFrame(gameLoop); }
-            currentKeyListener = e => { if (e.type === 'keydown') { if (e.key==='ArrowUp') pacman.nextDir = {x:0, y:-1}; else if (e.key==='ArrowDown') pacman.nextDir = {x:0, y:1}; else if (e.key==='ArrowLeft') pacman.nextDir = {x:-1, y:0}; else if (e.key==='ArrowRight') pacman.nextDir = {x:1, y:0}; }};
-            document.addEventListener('keydown', currentKeyListener);
-            gameLoopId = requestAnimationFrame(gameLoop);
-        }
-        function initBreakout() { canvas.width = 800; canvas.height = 600; let score = 0, lives = 3, currentLevel = 0, lastTime = 0, gameOver=false; const paddle = { x: canvas.width/2-50, y: canvas.height-30, width: 100, height: 10, speed: 500, baseWidth: 100, laserActive: false }; let balls = [], bullets = []; const R = 0; const brickLevels = [ [[1,2,3,4,5,4,3,2,1],[1,2,3,4,5,4,3,2,1],[1,2,3,4,5,4,3,2,1]], [[R,R,1,1,R,1,1,R,R],[R,1,1,1,1,1,1,1,R],[1,1,1,1,1,1,1,1,1],[R,R,1,1,1,1,1,R,R],[R,R,R,1,1,1,R,R,R]], [[5,5,5,5,5,5,5,5,5],[R,R,R,R,R,R,R,R,R],[3,3,3,3,3,3,3,3,3],[R,R,R,R,R,R,R,R,R],[1,1,1,1,1,1,1,1,1]], [[1,1,R,R,R,R,R,1,1],[1,1,1,R,R,R,1,1,1],[1,1,1,1,R,1,1,1,1],[1,1,1,R,R,R,1,1,1],[1,1,R,R,R,R,R,1,1]], ]; const brickInfo = { rowCount: 0, columnCount: 9, width: 75, height: 20, padding: 10, offsetTop: 30, offsetLeft: 30 }; const brickColors = ["#f1c40f", "#e67e22", "#c0392b", "#9b59b6", "#3498db"]; let bricks = [], totalBricks = 0, powerups = []; function Ball(x, y, dx, dy) { this.x = x; this.y = y; this.radius = 8; this.dx = dx; this.dy = dy; this.speed = 400; } function loadLevel(levelIndex) { bricks = []; totalBricks = 0; powerups = []; balls = []; lives = 3; const layout = brickLevels[levelIndex % brickLevels.length]; brickInfo.rowCount = layout.length; brickInfo.columnCount = layout[0].length; for (let c = 0; c < brickInfo.columnCount; c++) { bricks[c] = []; for (let r = 0; r < brickInfo.rowCount; r++) { const type = layout[r][c]; if(type) { bricks[c][r] = { x: 0, y: 0, status: 1, color: brickColors[type-1], points: type * 10 }; totalBricks++; }}} setTimeout(resetBallAndPaddle, 100); } function resetBallAndPaddle() { balls = [new Ball(canvas.width/2, canvas.height/2, Math.random() > 0.5 ? 1 : -1, -1)]; paddle.x = canvas.width/2 - paddle.width/2; } function update(dt) { if(gameOver) return; if(keys['ArrowLeft'] && paddle.x > 0) paddle.x -= paddle.speed * dt; if(keys['ArrowRight'] && paddle.x < canvas.width - paddle.width) paddle.x += paddle.speed * dt; for(let i = powerups.length-1; i >= 0; i--) { const p = powerups[i]; p.y += 150 * dt; if(p.y > paddle.y && p.x > paddle.x && p.x < paddle.x + paddle.width) { activatePowerup(p.type); powerups.splice(i, 1); } else if(p.y > canvas.height) powerups.splice(i, 1); } for(let i=balls.length-1; i>=0; i--) { let ball = balls[i]; ball.x += ball.dx * ball.speed * dt; ball.y += ball.dy * ball.speed * dt; if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) ball.dx = -ball.dx; if (ball.y - ball.radius < 0) ball.dy = -ball.dy; if (ball.y + ball.radius > canvas.height + 20) balls.splice(i,1); if (ball.y + ball.radius > paddle.y && ball.y - ball.radius < paddle.y + paddle.height && ball.x + ball.radius > paddle.x && ball.x - ball.radius < paddle.x + paddle.width) { if (ball.dy > 0) { ball.dy = -1; ball.y = paddle.y - ball.radius; const hitPos = (ball.x - (paddle.x + paddle.width/2)) / (paddle.width/2); ball.dx = hitPos * 2; AudioEngine.playSound('hit'); } } } for (let c = 0; c < brickInfo.columnCount; c++) for (let r = 0; r < brickInfo.rowCount; r++) { const b = bricks[c]?.[r]; if (b?.status === 1) { balls.forEach(ball => { if (ball.x > b.x && ball.x < b.x + brickInfo.width && ball.y > b.y && ball.y < b.y + brickInfo.height) { ball.dy = -ball.dy; b.status = 0; score += b.points; totalBricks--; AudioEngine.playSound('hit'); if(Math.random() < 0.2) powerups.push({x:b.x+brickInfo.width/2, y:b.y, type: ['big_paddle','multi_ball','laser'][Math.floor(Math.random()*3)]}); }}); bullets.forEach((bullet, bIndex) => { if (bullet.x > b.x && bullet.x < b.x + brickInfo.width && bullet.y > b.y && bullet.y < b.y + brickInfo.height) { bullets.splice(bIndex, 1); b.status = 0; score += b.points; totalBricks--; AudioEngine.playSound('hit'); }});}} bullets.forEach((bullet, i) => { bullet.y -= 400 * dt; if(bullet.y < 0) bullets.splice(i, 1); }); if (totalBricks === 0 && balls.length > 0) { currentLevel++; if(currentLevel >= brickLevels.length) { endGame(true); return; } loadLevel(currentLevel); } if(balls.length === 0 && totalBricks > 0) { lives--; AudioEngine.playSound('hit'); if (!lives) { endGame(false); return; } else { resetBallAndPaddle(); }} } function drawPowerupIcon(x, y, type) { ctx.fillStyle='lime'; if(type==='big_paddle') { ctx.fillRect(x-10, y, 20, 5); } else if(type==='multi_ball') { ctx.beginPath(); ctx.arc(x-5, y+2, 3, 0, Math.PI*2); ctx.arc(x+5, y+2, 3, 0, Math.PI*2); ctx.fill(); } else if(type==='laser') { ctx.fillRect(x-2, y, 4, 10); }} function draw() { ctx.clearRect(0, 0, canvas.width, canvas.height); for (let c=0; c<brickInfo.columnCount; c++) for (let r=0; r<brickInfo.rowCount; r++) { const b = bricks[c]?.[r]; if(b?.status) { b.x = c * (brickInfo.width + brickInfo.padding) + brickInfo.offsetLeft; b.y = r * (brickInfo.height + brickInfo.padding) + brickInfo.offsetTop; ctx.fillStyle = b.color; ctx.fillRect(b.x, b.y, brickInfo.width, brickInfo.height); } } ctx.fillStyle = paddle.laserActive ? '#ff55de' : '#3498db'; ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height); powerups.forEach(p => drawPowerupIcon(p.x, p.y, p.type)); balls.forEach(ball => { ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2); ctx.fillStyle='white'; ctx.fill(); }); bullets.forEach(bullet => { ctx.fillStyle = 'yellow'; ctx.fillRect(bullet.x-2, bullet.y, 4, 10); }); } function activatePowerup(type) { AudioEngine.playSound('score'); if(type==='big_paddle') { paddle.width = paddle.baseWidth * 1.5; setTimeout(() => paddle.width=paddle.baseWidth, 10000); } else if(type==='multi_ball') { const currentBalls = [...balls]; currentBalls.forEach(b => { balls.push(new Ball(b.x, b.y, -b.dx, -b.dy), new Ball(b.x, b.y, b.dx, -b.dy)); }); } else if(type==='laser') { paddle.laserActive = true; setTimeout(() => paddle.laserActive=false, 10000); } } function endGame(didWin) { if(gameOver) return; gameOver=true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'breakout', didWin); if(gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { alert(didWin ? 'YOU WIN!' : 'GAME OVER'); stopGame(); } else { stopGame(); } } function gameLoop(currentTime) { if(gameOver) return; const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Lives: ${lives}`; gameLoopId = requestAnimationFrame(gameLoop); } let keys = {}; currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; if(e.key === ' ' && e.type === 'keydown' && paddle.laserActive) { AudioEngine.playSound('shoot'); bullets.push({x: paddle.x + 10, y: paddle.y}); bullets.push({x: paddle.x + paddle.width - 10, y: paddle.y}); }}; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); loadLevel(0); gameLoopId = requestAnimationFrame(gameLoop); }
-        function initRacing() { canvas.width = 400; canvas.height = 600; const initialSpeed = 80; let topSpeed = 0; let score = 0; let speed = initialSpeed, gameOver = false, lastTime = 0, enemySpawnTimer = 2; const player = { x: canvas.width/2 - 20, y: canvas.height - 100, width: 40, height: 60, speed: 300 }; const keys = {}; let roadMarkings = [], enemies = [], verges = []; const vehicleTypes = [ {type:'car', w:40, h:60}, {type:'van', w:45, h:70}, {type:'bike', w:20, h:50}, {type:'bus', w:50, h:100}, {type:'limo', w:40, h:120} ]; function spawnEnemyWave() { const laneWidth = (canvas.width-100)/3; const lane = Math.floor(Math.random()*3); const vehicle = vehicleTypes[Math.floor(Math.random()*vehicleTypes.length)]; const x = 50 + lane * laneWidth + (laneWidth/2) - (vehicle.w/2) + (Math.random()-0.5)*(laneWidth/4); const color = ['#FF5555', '#FFFF88', '#88FF88', '#3498db'][Math.floor(Math.random() * 4)]; enemies.push({ x, y: -vehicle.h, ...vehicle, color, speedModifier: Math.random() * 0.2 + 0.85 }); } function update(dt) { if (gameOver) return; if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed * dt; if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed * dt; speed += 8 * dt; roadMarkings.forEach(m => { m.y += speed * 1.1 * dt; }); roadMarkings = roadMarkings.filter(m => m.y < canvas.height); verges.forEach(v => { v.y += speed * 1.1 * dt; }); verges = verges.filter(v => v.y < canvas.height); enemies.forEach(e => { e.y += speed * e.speedModifier * dt; }); enemies = enemies.filter(e => e.y < canvas.height); if(roadMarkings.length === 0 || roadMarkings[roadMarkings.length-1].y > 120) roadMarkings.push({ y: -60, height: 40 }); if(verges.length === 0 || verges[verges.length-1].y > 0) verges.push({ y: -50, height: 52, color: Math.random() < 0.5 ? '#00A000' : '#11BB11' }); enemySpawnTimer -= dt; if(enemySpawnTimer <= 0) { spawnEnemyWave(); enemySpawnTimer = Math.max(0.5, 1.5 - (speed / 500)); } enemies.forEach(enemy => { if (player.x < enemy.x + enemy.w && player.x + player.width > enemy.x && player.y < enemy.y + enemy.h && player.y + player.height > enemy.y) { endGame(); } }); topSpeed = Math.max(topSpeed, (30 + (speed-initialSpeed)/5)); score = Math.floor(topSpeed * 10); } function endGame(){ if(gameOver) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'racing'); if (gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { setTimeout(stopGame, 1000); } else { stopGame(); } } function drawF1Car(x,y,w,h,color) { ctx.fillStyle = color; ctx.fillRect(x+w*0.2, y, w*0.6, h); ctx.fillRect(x, y+h*0.2, w, h*0.2); ctx.fillRect(x, y+h*0.6, w, h*0.2); ctx.fillStyle = '#111'; ctx.fillRect(x-w*0.1, y+h*0.1, w*0.2, h*0.2); ctx.fillRect(x+w*0.9, y+h*0.1, w*0.2, h*0.2); ctx.fillRect(x-w*0.1, y+h*0.7, w*0.2, h*0.2); ctx.fillRect(x+w*0.9, y+h*0.7, w*0.2, h*0.2); ctx.fillStyle = '#00e5ff'; ctx.fillRect(x+w*0.4, y+h*0.4, w*0.2, h*0.2); } function drawVehicle(x, y, w, h, color, type) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); ctx.fillStyle = '#2c3e50'; if (type === 'car' || type === 'van' || type === 'limo') { ctx.fillRect(x + w*0.1, y + h*0.1, w*0.8, h*0.3); ctx.fillRect(x + w*0.1, y + h*0.6, w*0.8, h*0.3); } else if (type === 'bus') { for(let i=0.1; i < 0.9; i+=0.3) ctx.fillRect(x + w*0.1, y + h*i, w*0.8, h*0.1); } else if (type === 'bike') { ctx.fillStyle = '#333'; ctx.fillRect(x, y+h*0.2, w, h*0.6); ctx.fillStyle=color; ctx.fillRect(x+w*0.3, y, w*0.4, h*0.8); } } function draw() { ctx.fillStyle = '#666'; ctx.fillRect(0, 0, canvas.width, canvas.height); verges.forEach(v => { ctx.fillStyle = v.color; ctx.fillRect(0, v.y, 50, v.height+2); ctx.fillRect(canvas.width-50, v.y, 50, v.height+2); }); ctx.fillStyle = 'yellow'; ctx.fillRect(50,0,5,canvas.height); ctx.fillRect(canvas.width-55,0,5,canvas.height); ctx.fillStyle = 'white'; const laneWidth = (canvas.width-100)/3; roadMarkings.forEach(m => { ctx.fillRect(50 + laneWidth - 2.5, m.y, 5, m.height); ctx.fillRect(50 + 2*laneWidth - 2.5, m.y, 5, m.height); }); enemies.forEach(e => drawVehicle(e.x, e.y, e.w, e.h, e.color, e.type)); drawF1Car(player.x, player.y, player.width, player.height, '#FF0000'); } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Speed: ${Math.floor(topSpeed)}`; if(!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; }; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); gameLoopId = requestAnimationFrame(gameLoop); }
-        function initSnake() { canvas.width = 400; canvas.height = 400; const gridSize = 20; let snake = [{ x: 10, y: 10 }]; let food = {}; let direction = {x:1, y:0}; let score = 0; let gameOver = false; let inputQueue = []; let lastTime=0, accumulator=0, interval=0.12; function generateFood() { food = { x: Math.floor(Math.random() * 20), y: Math.floor(Math.random() * 20) }; snake.forEach(s => {if(s.x === food.x && s.y === food.y) generateFood();}); } function update() { if(inputQueue.length > 0) { const nextDir = inputQueue.shift(); if((nextDir.x !== -direction.x || nextDir.y !== -direction.y) && (direction.x !==0 || direction.y !==0)) direction = nextDir; } const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y }; if (head.x < 0 || head.x >= 20 || head.y < 0 || head.y >= 20 || checkCollision(head)) { gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'snake'); if (gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { setTimeout(stopGame, 1000); } else { stopGame(); } return; } snake.unshift(head); if (head.x === food.x && head.y === food.y) { score++; generateFood(); AudioEngine.playSound('snakeEat'); } else { snake.pop(); } } function checkCollision(head) { for (let i = 1; i < snake.length; i++) if (head.x === snake[i].x && head.y === snake[i].y) return true; return false; } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); snake.forEach((segment, i) => { ctx.fillStyle = i === 0 ? 'lime' : '#00A000'; ctx.fillRect(segment.x * gridSize, segment.y * gridSize, gridSize - 1, gridSize - 1); }); ctx.shadowColor = 'red'; ctx.shadowBlur = 10; ctx.fillStyle = 'red'; ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize - 1, gridSize - 1); ctx.shadowBlur = 0; } function gameLoop(time) { if (gameOver) return; accumulator += (time - lastTime) / 1000; lastTime = time; while(accumulator > interval){ update(); accumulator -= interval; } draw(); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = ''; gameLoopId = requestAnimationFrame(gameLoop); } currentKeyListener = e => { if (e.key === 'ArrowUp') inputQueue.push({x:0, y:-1}); else if (e.key === 'ArrowDown') inputQueue.push({x:0, y:1}); else if (e.key === 'ArrowLeft') inputQueue.push({x:-1, y:0}); else if (e.key === 'ArrowRight') inputQueue.push({x:1, y:0}); }; document.addEventListener('keydown', currentKeyListener); generateFood(); lastTime = performance.now(); gameLoopId = requestAnimationFrame(gameLoop); }
-        function initPong() { canvas.width = 800; canvas.height = 500; const paddleWidth = 15, paddleHeight = 100; let lastTime = 0, gameOver = false; let player = { x: 10, y: canvas.height/2-paddleHeight/2, width: paddleWidth, height: paddleHeight, score: 0 }; let computer = { x: canvas.width-paddleWidth-10, y: canvas.height/2-paddleHeight/2, width: paddleWidth, height: paddleHeight, score: 0 }; let ball = { x: canvas.width/2, y: canvas.height/2, radius: 10, speed: 500, dx: 1, dy: 1 }; const winScore = 5; function drawRect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); } function drawCircle(x, y, r, color) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.closePath(); ctx.fill(); } function drawNet() { for (let i = 0; i < canvas.height; i += 40) drawRect(canvas.width / 2 - 1, i, 2, 20, "rgba(255,255,255,0.5)"); } function update(dt) { ball.x += ball.dx * ball.speed * dt; ball.y += ball.dy * ball.speed * dt; computer.y += (ball.y - (computer.y + computer.height / 2)) * 4.0 * dt; if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) { ball.dy = -ball.dy; AudioEngine.playSound('pongHit'); } let activePaddle = (ball.dx < 0) ? player : computer; if (ball.x - ball.radius < activePaddle.x + activePaddle.width && ball.x + ball.radius > activePaddle.x && ball.y - ball.radius < activePaddle.y + activePaddle.height && ball.y + ball.radius > activePaddle.y) { let collidePoint = (ball.y - (activePaddle.y + activePaddle.height / 2)) / (activePaddle.height / 2); let angleRad = collidePoint * (Math.PI / 4); ball.dx = -ball.dx; ball.dy = Math.sin(angleRad); AudioEngine.playSound('pongHit'); } if (ball.x - ball.radius < 0) { computer.score++; resetBall(); AudioEngine.playSound('pongScore'); } else if (ball.x + ball.radius > canvas.width) { player.score++; resetBall(); AudioEngine.playSound('pongScore'); } if (player.score >= winScore || computer.score >= winScore) { endGame(); } } function endGame(){ if(gameOver) return; gameOver = true; const didWin = player.score >= winScore; saveHighScore(player.score, 'pong', didWin); if (gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { setTimeout(stopGame, 1000); } else { stopGame(); } } function resetBall() { ball.x = canvas.width/2; ball.y = canvas.height/2; ball.dx = -ball.dx; ball.dy = (Math.random()*2 - 1); } function render() { drawRect(0, 0, canvas.width, canvas.height, '#000'); drawNet(); drawRect(player.x, player.y, player.width, player.height, '#fff'); drawRect(computer.x, computer.y, computer.width, computer.height, '#fff'); drawCircle(ball.x, ball.y, ball.radius, '#fff'); scoreElement.textContent = `Player: ${player.score}`; levelLivesElement.textContent = `Computer: ${computer.score}`; } currentMouseListener = event => { let rect = canvas.getBoundingClientRect(); player.y = event.clientY - rect.top - player.height / 2; }; canvas.addEventListener('mousemove', currentMouseListener); gameLoopId = requestAnimationFrame(function gameLoop(currentTime){ if(gameOver) return; const dt = (currentTime - (lastTime || currentTime))/1000; lastTime = currentTime; update(dt); render(); gameLoopId = requestAnimationFrame(gameLoop); }); }
-        function initMaze() { let currentLevel = 1, initialStartTime; let player, goal, maze, key, door, princess; let mazeEnded = false, lastMoveTime = 0, moveDelay = 120; function loadLevel(level) { mazeEnded = false; let mazeSize; if(level === 1) { mazeSize = 15; initialStartTime = Date.now(); } else if(level === 2) mazeSize = 25; else mazeSize = 35; canvas.width = 600; canvas.height = 600; const cellSize = canvas.width / mazeSize; player = { x: 0, y: 0, hasKey: false, hasPrincess: false }; function generateMaze() { maze = Array.from({length:mazeSize}, () => Array.from({length:mazeSize}, () => ({ n: true, s: true, e: true, w: true, visited: false }))); let stack = [], current = { x: 0, y: 0 }; maze[current.y][current.x].visited = true; stack.push(current); while (stack.length > 0) { current = stack[stack.length - 1]; let neighbors = []; if (current.y > 0 && !maze[current.y - 1][current.x].visited) neighbors.push({ x: 0, y: -1, wall: 'n', opp: 's' }); if (current.y < mazeSize - 1 && !maze[current.y + 1][current.x].visited) neighbors.push({ x: 0, y: 1, wall: 's', opp: 'n' }); if (current.x > 0 && !maze[current.y][current.x - 1].visited) neighbors.push({ x: -1, y: 0, wall: 'w', opp: 'e' }); if (current.x < mazeSize - 1 && !maze[current.y][current.x + 1].visited) neighbors.push({ x: 1, y: 0, wall: 'e', opp: 'w' }); if (neighbors.length > 0) { let nextDir = neighbors[Math.floor(Math.random() * neighbors.length)]; let next = { x: current.x + nextDir.x, y: current.y + nextDir.y }; maze[current.y][current.x][nextDir.wall] = false; maze[next.y][next.x][nextDir.opp] = false; maze[next.y][next.x].visited = true; stack.push(next); } else { stack.pop(); } }}
-            function getReachableCells(startX, startY, walls) { let q = [{x:startX, y:startY}]; let visited = new Set([`${startX},${startY}`]); let reachable = []; while(q.length > 0) { let curr = q.shift(); reachable.push(curr); const cell = walls[curr.y][curr.x]; if(!cell.n && !visited.has(`${curr.x},${curr.y-1}`)) { visited.add(`${curr.x},${curr.y-1}`); q.push({x:curr.x, y:curr.y-1}); } if(!cell.s && !visited.has(`${curr.x},${curr.y+1}`)) { visited.add(`${curr.x},${curr.y+1}`); q.push({x:curr.x, y:curr.y+1}); } if(!cell.w && !visited.has(`${curr.x-1},${curr.y}`)) { visited.add(`${curr.x-1},${curr.y}`); q.push({x:curr.x-1, y:curr.y}); } if(!cell.e && !visited.has(`${curr.x+1},${curr.y}`)) { visited.add(`${curr.x+1},${curr.y}`); q.push({x:curr.x+1, y:curr.y}); } } return reachable; }
-            generateMaze();
-            if (level === 1) { goal = { x: mazeSize - 1, y: mazeSize - 1 };}
-            else {
-                const doorX = Math.floor(mazeSize / 2) + (Math.floor(Math.random()*4)-2);
-                const doorY = Math.floor(Math.random() * (mazeSize - 2)) + 1;
-                door = {x: doorX, y: doorY};
-                maze[door.y][door.x].e = true;
-                maze[door.y][door.x+1].w = true;
-                
-                const beforeDoorReachable = getReachableCells(0,0,maze);
-                const afterDoorReachable = getReachableCells(mazeSize-1, mazeSize-1,maze);
-                
-                key = beforeDoorReachable[Math.floor(Math.random() * beforeDoorReachable.length)];
+            const cards = document.querySelectorAll('.game-card');
+            cards.forEach((card, index) => {
+                card.style.transition = `opacity 0.5s ease ${index * 0.1}s, transform 0.5s ease ${index * 0.1}s, filter 0.3s ease`;
+                setTimeout(() => { card.style.opacity = '1'; card.style.transform = 'translateY(0)'; }, 50);
+            });
+            
+            document.getElementById('theme-switcher-btn')?.addEventListener('click', () => {
+                const newTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+                setTheme(newTheme);
+            });
 
-                if (level === 2) {
-                     goal = afterDoorReachable[Math.floor(Math.random() * afterDoorReachable.length)];
-                } else { // Level 3
-                     princess = afterDoorReachable[Math.floor(Math.random() * afterDoorReachable.length)];
-                     goal = {x: mazeSize-1, y: 0}; 
+            document.getElementById('language-switcher-btn')?.addEventListener('click', () => {
+                const newLang = (document.documentElement.lang === 'cs') ? 'en' : 'cs';
+                setLanguage(newLang);
+            });
+            
+            const allModals = document.querySelectorAll('.modal');
+            const loginView = document.getElementById('login-view');
+            const registerView = document.getElementById('register-view');
+
+            auth.onAuthStateChanged(async user => {
+                if (user && !user.isAnonymous) {
+                    const userDocRef = db.collection('users').doc(user.uid);
+                    let userDoc = await userDocRef.get();
+                    if (!userDoc.exists) {
+                        const newUserProfile = {
+                            displayName: user.displayName, email: user.email, xp: 0,
+                            pfpColor: getColorForName(user.displayName),
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        await userDocRef.set(newUserProfile);
+                        userDoc = await userDocRef.get();
+                    }
+                    currentUserData = userDoc.data();
+                    
+                    updateProfileButtonPfp();
+                    sessionStorage.setItem('loggedInUser', user.displayName || user.email);
+                    loginBtn.style.display = 'none';
+                    profileBtnPfp.style.display = 'flex';
+                    chatToggleBtn.style.display = 'inline-flex';
+                    if (user.displayName === '90Tom') {
+                        adminPanelBtn.style.display = 'inline-flex';
+                    }
+                    listenToDmList();
+                } else {
+                    currentUserData = null;
+                    if (activeDmListListener) activeDmListListener();
+                    activeDmListListener = null;
+                    sessionStorage.removeItem('loggedInUser');
+                    loginBtn.style.display = 'inline-flex';
+                    profileBtnPfp.style.display = 'none';
+                    chatToggleBtn.style.display = 'none';
+                    adminPanelBtn.style.display = 'none';
+                    chatPopup.classList.remove('open');
+                    loginBtn.onclick = (e) => {
+                        e.preventDefault();
+                        loginView.style.display = 'block';
+                        registerView.style.display = 'none';
+                        document.getElementById('login-modal').style.display = 'flex';
+                    };
+
+                    if (!user) {
+                        auth.signInAnonymously().catch(error => console.error("Anonymous sign-in failed:", error));
+                    }
                 }
-            }
-            function draw() { if(mazeEnded) return; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = 'cyan'; ctx.lineWidth = 2; for (let y=0; y<mazeSize; y++) for (let x=0; x<mazeSize; x++) { const c = maze[y][x]; if(c.n) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,y*cellSize);ctx.stroke();} if(c.s) {ctx.beginPath();ctx.moveTo(x*cellSize,(y+1)*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.w) {ctx.beginPath();ctx.moveTo(x*cellSize,y*cellSize);ctx.lineTo(x*cellSize,(y+1)*cellSize);ctx.stroke();} if(c.e) {ctx.beginPath();ctx.moveTo((x+1)*cellSize,y*cellSize);ctx.lineTo((x+1)*cellSize,(y+1)*cellSize);ctx.stroke();}} if(key && !player.hasKey) { ctx.fillStyle = 'yellow'; ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.5, cellSize*0.5, cellSize*0.1); ctx.fillRect(key.x*cellSize+cellSize*0.25, key.y*cellSize+cellSize*0.25, cellSize*0.1, cellSize*0.4); } if(door) { ctx.fillStyle = '#8B4513'; ctx.fillRect(door.x * cellSize + cellSize - 2, door.y * cellSize, 4, cellSize); ctx.fillStyle = 'yellow'; ctx.fillRect(door.x * cellSize + cellSize - 4, door.y * cellSize + cellSize*0.45, 8, 5); } if(goal) { ctx.fillStyle = 'lime'; ctx.fillRect(goal.x * cellSize + 2, goal.y * cellSize + 2, cellSize - 4, cellSize - 4); } if(princess && !player.hasPrincess) { ctx.fillStyle = '#ff00c1'; ctx.fillRect(princess.x*cellSize+cellSize*0.4, princess.y*cellSize+cellSize*0.2, cellSize*0.2, cellSize*0.2); ctx.beginPath(); ctx.moveTo(princess.x*cellSize+cellSize*0.5, princess.y*cellSize+cellSize*0.4); ctx.lineTo(princess.x*cellSize+cellSize*0.3, princess.y*cellSize+cellSize*0.8); ctx.lineTo(princess.x*cellSize+cellSize*0.7, princess.y*cellSize+cellSize*0.8); ctx.closePath(); ctx.fill(); } ctx.fillStyle = player.hasKey ? '#ffeb3b' : '#ffff00'; ctx.fillRect(player.x * cellSize + 2, player.y * cellSize + 2, cellSize - 4, cellSize - 4); if(player.hasPrincess){ctx.fillStyle='#ff00c1'; ctx.fillRect(player.x * cellSize + 3, player.y*cellSize + 3, 4, 4);} let elapsedTime = ((Date.now() - initialStartTime) / 1000).toFixed(2); levelLivesElement.textContent = `Time: ${elapsedTime}s`; } 
-            function keydownHandler(e) { if (mazeEnded) return; const now = performance.now(); if(now - lastMoveTime < moveDelay) return; const currentCell = maze[player.y][player.x]; let moved = false, bumped=false; if (e.key === 'ArrowUp') { if(!currentCell.n) {player.y--; moved=true;} else bumped=true; } else if (e.key === 'ArrowDown') { if(!currentCell.s) {player.y++; moved=true;} else bumped=true; } else if (e.key === 'ArrowLeft') { if(!currentCell.w) {player.x--; moved=true;} else bumped=true; } else if (e.key === 'ArrowRight') { if(!currentCell.e) {player.x++; moved=true;} else bumped=true; } if(moved) { AudioEngine.playSound('mazeStep'); lastMoveTime = now; } if(bumped) { AudioEngine.playSound('mazeBump'); lastMoveTime = now; } if (key && !player.hasKey && player.x === key.x && player.y === key.y) { player.hasKey = true; AudioEngine.playSound('score'); if(door) { maze[door.y][door.x].e = false; maze[door.y][door.x+1].w = false; AudioEngine.playSound('score'); } } if (princess && !player.hasPrincess && player.x === princess.x && player.y === princess.y) { player.hasPrincess = true; AudioEngine.playSound('score'); } if (goal && player.x === goal.x && player.y === goal.y && (!princess || player.hasPrincess) ) { if(currentLevel < 3){ currentLevel++; AudioEngine.playSound('score'); clearInterval(gameLoopId); document.removeEventListener('keydown', currentKeyListener); currentKeyListener = null; loadLevel(currentLevel); } else { mazeEnded = true; clearInterval(gameLoopId); document.removeEventListener('keydown', currentKeyListener); currentKeyListener = null; const finalTime = parseFloat(((Date.now() - initialStartTime) / 1000).toFixed(2)); AudioEngine.playSound('score'); saveHighScore(finalTime, 'maze', true); if(gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { alert(`You finished in ${finalTime} seconds!`); setTimeout(stopGame, 100); } else { stopGame(); } } } }; currentKeyListener = keydownHandler; document.addEventListener('keydown', currentKeyListener); scoreElement.textContent = `Level ${currentLevel}`; gameLoopId = setInterval(draw, 30); } loadLevel(currentLevel); }
+
+                if (auth.currentUser) {
+                    const uid = auth.currentUser.uid;
+                    const userStatusDatabaseRef = rtdb.ref('/status/' + uid);
+                    const isOfflineForDatabase = { state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP };
+                    const isOnlineForDatabase = { state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP };
+                    rtdb.ref('.info/connected').on('value', function(snapshot) {
+                        if (snapshot.val() == false) return;
+                        userStatusDatabaseRef.onDisconnect().set(isOfflineForDatabase).then(function() {
+                            userStatusDatabaseRef.set(isOnlineForDatabase);
+                        });
+                    });
+                }
+            });
+
+            rtdb.ref('/status').on('value', (snapshot) => {
+                let onlineCount = 0;
+                snapshot.forEach((childSnapshot) => {
+                    if (childSnapshot.val().state === 'online') {
+                        onlineCount++;
+                    }
+                });
+                document.getElementById('online-users-count').textContent = onlineCount;
+            });
+
+            document.getElementById('arcade-link').addEventListener('click', function(event) {
+                const user = auth.currentUser;
+                if (!user || user.isAnonymous) {
+                    event.preventDefault();
+                    alert('You have to be logged in to play the arcade!');
+                    document.getElementById('login-modal').style.display = 'flex';
+                }
+            });
+
+            profileBtnPfp.addEventListener('click', showMyProfile);
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                if (auth.currentUser) {
+                     rtdb.ref('/status/' + auth.currentUser.uid).set({ state: 'offline' });
+                }
+                auth.signOut();
+                document.getElementById('profile-modal').style.display = 'none';
+            });
+            document.getElementById('save-profile-btn').addEventListener('click', saveProfileChanges);
+            chatToggleBtn.addEventListener('click', () => chatPopup.classList.add('open'));
+            chatCloseBtn.addEventListener('click', () => chatPopup.classList.remove('open'));
+            adminPanelBtn.addEventListener('click', () => {
+                document.getElementById('admin-modal').style.display = 'flex';
+                loadAdminPublicLog();
+                loadAdminDmList();
+            });
+            document.getElementById('show-register-link').addEventListener('click', (e) => { e.preventDefault(); loginView.style.display = 'none'; registerView.style.display = 'block'; });
+            document.getElementById('show-login-link').addEventListener('click', (e) => { e.preventDefault(); registerView.style.display = 'none'; loginView.style.display = 'block'; });
+            document.querySelectorAll('.leaderboard-btn').forEach(button => { button.addEventListener('click', (e) => { e.stopPropagation(); const gameId = e.currentTarget.dataset.game; showLeaderboard(gameId); }); });
+            document.getElementById('leaderboard-modal').addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-score-btn')) {
+                    const userToDelete = e.target.dataset.user;
+                    const gameId = e.target.dataset.game;
+                    if(confirm(`Opravdu chcete smazat výsledek hráče ${userToDelete}?`)){ deleteLeaderboardEntry(gameId, userToDelete); }
+                }
+            });
+            allModals.forEach(modal => { modal.querySelector('.close-btn')?.addEventListener('click', () => { modal.style.display = 'none'; }); });
+            window.onclick = (event) => { if (event.target.classList.contains('modal')) { event.target.style.display = "none"; } };
+            
+            document.getElementById('login-form').addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const userInput = document.getElementById('login-username').value;
+                const password = document.getElementById('login-password').value;
+                const errorMessage = document.getElementById('login-error-message');
+                errorMessage.textContent = '';
+                
+                try {
+                    const currentAnonUser = auth.currentUser;
+                    let email = userInput;
+                    if (!userInput.includes('@')) {
+                        const usersRef = db.collection('users');
+                        const querySnapshot = await usersRef.where('displayName', '==', userInput).limit(1).get();
+                        if (querySnapshot.empty) {
+                            errorMessage.textContent = 'Uživatel s tímto jménem neexistuje.';
+                            return;
+                        }
+                        email = querySnapshot.docs[0].data().email;
+                    }
+                    await auth.signInWithEmailAndPassword(email, password);
+                    if (currentAnonUser) {
+                        await currentAnonUser.delete();
+                    }
+                    window.location.reload();
+                } catch (error) {
+                    errorMessage.textContent = 'Nesprávné heslo nebo chyba přihlášení.';
+                    console.error("Login error: ", error);
+                }
+            });
+            
+            document.getElementById('register-form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                const displayName = document.getElementById('register-displayname').value;
+                const email = document.getElementById('register-email').value;
+                const password = document.getElementById('register-password').value;
+                const confirmPassword = document.getElementById('confirm-password').value;
+                const errorMessage = document.getElementById('register-error-message');
+
+                if (password !== confirmPassword) { errorMessage.textContent = 'Hesla se neshodují.'; return; }
+                if (displayName.length < 3) { errorMessage.textContent = 'Zobrazované jméno musí mít alespoň 3 znaky.'; return; }
+
+                const currentAnonUser = auth.currentUser;
+
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        const user = userCredential.user;
+                        return user.updateProfile({ displayName: displayName, photoURL: '' }).then(() => {
+                             db.collection('users').doc(user.uid).set({
+                                displayName: displayName, email: email, xp: 0,
+                                pfpColor: getColorForName(displayName),
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            }).then(async () => { 
+                                if (currentAnonUser) {
+                                    await currentAnonUser.delete();
+                                }
+                                window.location.reload(); 
+                            });
+                        });
+                    })
+                    .catch((error) => { errorMessage.textContent = error.message; });
+            });
+
+            document.getElementById('chat-back-btn').addEventListener('click', () => {
+                if (activeChatListener) activeChatListener();
+                if (activeTypingListener) activeTypingListener();
+                activeChatListener = null;
+                activeTypingListener = null;
+                document.getElementById('typing-indicator-container').innerHTML = '';
+                currentChatMode = 'dm-list';
+                currentDmPartnerId = null;
+                switchChatView('dm-list-view');
+            });
+            
+            document.getElementById('dm-search-bar').addEventListener('input', (e) => {
+                searchUsers(e.target.value);
+            });
+
+            chatInput.addEventListener('input', () => {
+                clearTimeout(typingTimeout);
+                updateTypingStatus();
+                typingTimeout = setTimeout(() => {}, 2000);
+            });
+            
+            document.getElementById('chat-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const text = chatInput.value.trim();
+                const user = auth.currentUser;
+                if (!text || !user || !currentUserData) return;
+                
+                const message = {
+                    text: text,
+                    userId: user.uid,
+                    displayName: currentUserData.displayName,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    deleted: false,
+                    pfpColor: currentUserData.pfpColor || getColorForName(currentUserData.displayName)
+                };
+                if (currentUserData.photoURL) message.photoURL = currentUserData.photoURL;
+
+                if (currentChatMode === 'public') {
+                    db.collection('chat').add(message);
+                } else if (currentChatMode === 'dm' && currentDmPartnerId) {
+                    const myId = user.uid;
+                    const convoId = [myId, currentDmPartnerId].sort().join('_');
+                    db.collection('dms').doc(convoId).collection('messages').add(message);
+                    db.collection('dms').doc(convoId).set({
+                        users: [myId, currentDmPartnerId],
+                        lastMessage: text,
+                        lastActivity: firebase.firestore.FieldValue.serverTimestamp(),
+                        typing: firebase.firestore.FieldValue.delete()
+                    }, { merge: true });
+                }
+                chatInput.value = '';
+            });
+        });
     </script>
 </body>
 </html>

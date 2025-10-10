@@ -93,6 +93,18 @@
         #color-selection { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
         .color-box { width: 25px; height: 25px; cursor: pointer; border: 2px solid #555; transition: border-color 0.2s; }
         .color-box.selected { border-color: #fff; box-shadow: 0 0 10px #fff; }
+
+        /* --- NEW LEADERBOARD STYLES --- */
+        #gauntlet-leaderboard-modal .modal-content { width: 90%; max-width: 800px; }
+        #leaderboard-filters { margin-bottom: 20px; display: flex; justify-content: center; flex-wrap: wrap; gap: 15px; }
+        .leaderboard-filter-btn { font-family: 'Press Start 2P', cursive; font-size: 0.8em; padding: 10px 15px; border: 2px solid var(--primary-glow); color: var(--primary-glow); background: transparent; cursor: pointer; text-shadow: 0 0 4px var(--primary-glow); }
+        .leaderboard-filter-btn:hover { background: var(--primary-glow); color: var(--main-bg); }
+        .leaderboard-filter-btn.active { background: var(--primary-glow); color: var(--main-bg); box-shadow: 0 0 15px var(--primary-glow); }
+        #gauntlet-leaderboard-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.8em; }
+        #gauntlet-leaderboard-table th, #gauntlet-leaderboard-table td { padding: 10px 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.2); }
+        #gauntlet-leaderboard-table th { color: var(--secondary-glow); }
+        #gauntlet-leaderboard-table td:first-child { color: var(--primary-glow); }
+        #gauntlet-leaderboard-table td:last-child { text-align: right; color: #ffff00; }
     </style>
 </head>
 <body>
@@ -103,6 +115,7 @@
             <button id="solo-arcade-btn" class="lobby-btn">SOLO ARCADE</button>
             <button id="speedrun-btn" class="lobby-btn">GAUNTLET</button>
             <button id="multiplayer-btn" class="lobby-btn">MULTIPLAYER</button>
+            <button id="leaderboard-btn" class="lobby-btn" style="font-size: 1.2em; width: 300px;">LEADERBOARD</button>
         </div>
     </div>
     
@@ -156,12 +169,39 @@
 
     <div id="winner-modal" class="modal">
         <div class="modal-content">
-            <button id="close-winner-modal" class="close-modal-btn">X</button>
+            <button class="close-modal-btn">X</button>
             <h2 id="winner-title">WINNER!</h2>
             <p id="winner-name"></p>
             <p id="winner-text">is the Arcade Champion!</p>
         </div>
     </div>
+    
+    <!-- NEW: GAUNTLET LEADERBOARD MODAL -->
+    <div id="gauntlet-leaderboard-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal-btn">X</button>
+            <h2>GAUNTLET LEADERBOARD</h2>
+            <div id="leaderboard-filters">
+                <button class="leaderboard-filter-btn active" data-count="1">Solo</button>
+                <button class="leaderboard-filter-btn" data-count="2">Duos</button>
+                <button class="leaderboard-filter-btn" data-count="3">Trios</button>
+                <button class="leaderboard-filter-btn" data-count="4">4-8 Players</button>
+            </div>
+            <table id="gauntlet-leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Player(s)</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="gauntlet-leaderboard-body">
+                    <tr><td colspan="3">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -203,6 +243,7 @@
         let gameTimerInterval = null, playerRef = null, currentLobbyData = null;
         let gameMode = 'solo', isGameActive = false;
         let gauntletProgress = {};
+        let gauntletStartTime = 0;
         
         const TEAM_COLORS = ['#FF5555', '#55FF55', '#5555FF', '#FFFF55', '#FF55FF', '#55FFFF', '#FFFFFF', '#FFA500'];
         const GAUNTLET_GOALS = {
@@ -303,11 +344,95 @@
                     switchToJoinMode();
                 });
             });
-             document.getElementById('close-winner-modal').addEventListener('click', () => {
-                document.getElementById('winner-modal').style.display = 'none';
-                goToStartScreen(); 
+            
+            // --- NEW LEADERBOARD EVENT LISTENERS ---
+            document.getElementById('leaderboard-btn').addEventListener('click', () => {
+                const modal = document.getElementById('gauntlet-leaderboard-modal');
+                modal.style.display = 'flex';
+                showGauntletLeaderboard(1); // Show "Solo" by default
+            });
+
+            document.querySelectorAll('.modal .close-modal-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.target.closest('.modal').style.display = 'none';
+                    if(e.target.closest('.modal').id === 'winner-modal'){
+                        goToStartScreen();
+                    }
+                });
+            });
+
+            document.querySelectorAll('.leaderboard-filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.leaderboard-filter-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    showGauntletLeaderboard(parseInt(e.target.dataset.count, 10));
+                });
             });
         }
+
+        // --- NEW LEADERBOARD FUNCTIONS ---
+        async function showGauntletLeaderboard(playerCountFilter) {
+            const tbody = document.getElementById('gauntlet-leaderboard-body');
+            tbody.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
+            
+            let query;
+            const collectionRef = db.collection('arcade_gauntlet_leaderboard');
+            if (playerCountFilter >= 4) {
+                 query = collectionRef.where('playerCount', '>=', 4).orderBy('playerCount', 'asc').orderBy('time', 'asc');
+            } else {
+                 query = collectionRef.where('playerCount', '==', playerCountFilter).orderBy('time', 'asc');
+            }
+
+            try {
+                const snapshot = await query.limit(15).get();
+                if (snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="3">No scores yet for this category!</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = '';
+                snapshot.forEach((doc, index) => {
+                    const data = doc.data();
+                    const time = formatTime(Math.floor(data.time));
+                    const players = data.players.join(', ');
+
+                    const row = `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${players}</td>
+                            <td>${time}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            } catch (e) {
+                console.error("Error fetching leaderboard:", e);
+                tbody.innerHTML = '<tr><td colspan="3">Error loading scores.</td></tr>';
+            }
+        }
+
+        async function saveGauntletLeaderboardScore(timeInSeconds) {
+            if (auth.currentUser.isAnonymous) {
+                console.log("Anonymous user completed Gauntlet. Score not saved.");
+                return;
+            }
+            
+            const isLobbyGauntlet = currentLobbyData?.mode === 'gauntlet';
+            const players = isLobbyGauntlet ? Object.keys(currentLobbyData.players) : [playerName];
+            const playerCount = players.length;
+
+            try {
+                await db.collection('arcade_gauntlet_leaderboard').add({
+                    time: timeInSeconds,
+                    players: players,
+                    playerCount: playerCount,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log("Gauntlet score saved!", { time: timeInSeconds, playerCount, players });
+            } catch (e) {
+                console.error("Error saving gauntlet score:", e);
+            }
+        }
+
 
         function setupLobbyPage() {
             document.getElementById('play-btn').addEventListener('click', startGameFromLobby);
@@ -661,14 +786,17 @@
             return `${mins}:${secs}`;
         }
         
-        function startGameTimer(isUp, startTime = Date.now(), duration = 0) {
+        function startGameTimer(isUp, serverStartTime = null, duration = 0) {
             stopGameTimer();
             const timerDisplay = document.getElementById('game-timer');
             timerDisplay.style.display = 'block';
+            
+            // Use server's start time if provided, otherwise use local time.
+            gauntletStartTime = serverStartTime || Date.now();
 
             gameTimerInterval = setInterval(() => {
                 const now = Date.now();
-                const elapsed = (now - startTime) / 1000;
+                const elapsed = (now - gauntletStartTime) / 1000;
 
                 if (isUp) { // Counting Up (Gauntlet Mode)
                     timerDisplay.textContent = formatTime(Math.floor(elapsed));
@@ -688,6 +816,7 @@
         function stopGameTimer() {
             if(gameTimerInterval) clearInterval(gameTimerInterval);
             gameTimerInterval = null;
+            gauntletStartTime = 0;
             const timerDisplay = document.getElementById('game-timer');
             if (timerDisplay) {
                 timerDisplay.style.display = 'none';
@@ -902,10 +1031,14 @@
                 const allComplete = Object.keys(games).every(id => updatedProgress[id]);
                 if (allComplete) {
                     stopGameTimer();
-                    const finalTime = document.getElementById('game-timer').textContent;
+                    const finalTimeSeconds = (Date.now() - gauntletStartTime) / 1000;
+                    const finalTimeFormatted = formatTime(Math.floor(finalTimeSeconds));
+                    
+                    saveGauntletLeaderboardScore(finalTimeSeconds);
+
                     document.getElementById('winner-title').textContent = "GAUNTLET COMPLETE!";
                     let winnerName = (isLobbyGauntlet) ? Object.values(currentLobbyData.players).map(p => p.color ? `<span style="color:${p.color}; text-shadow: 0 0 5px ${p.color}">${Object.keys(currentLobbyData.players).find(key => currentLobbyData.players[key] === p)}</span>` : Object.keys(currentLobbyData.players).find(key => currentLobbyData.players[key] === p)).join(' & ') : playerName;
-                    document.getElementById('winner-name').innerHTML = `${winnerName}<br>Final Time: ${finalTime}`;
+                    document.getElementById('winner-name').innerHTML = `${winnerName}<br>Final Time: ${finalTimeFormatted}`;
                     document.getElementById('winner-text').textContent = "You are true Arcade Masters!";
                     document.getElementById('winner-modal').style.display = 'flex';
                 }
@@ -966,7 +1099,6 @@
                 allScores = highScores[currentGameId] || [];
             }
             
-            // *** NEW: Filter for unique best scores per player ***
             const bestScores = {};
             const sortOrder = games[currentGameId].sort;
             for (const s of allScores) {
@@ -1041,7 +1173,7 @@
         backToArcadeButton.onclick = () => stopGame();
         loadHighScoresFromFirestore();
 
-        // --- ALL GAME LOGIC FUNCTIONS ---
+        // --- ALL GAME LOGIC FUNCTIONS (No changes below this line) ---
         function initTetris() { canvas.width = 300; canvas.height = 600; let gameOver = false; const COLS = 10, ROWS = 20, BLOCK_SIZE = 30; const COLORS = ['#00FFFF', '#0000FF', '#FFA500', '#FFFF00', '#00FF00', '#800080', '#FF0000']; const SHAPES = [ [], [[1,1,1,1]], [[2,0,0],[2,2,2]], [[0,0,3],[3,3,3]], [[4,4],[4,4]], [[0,5,5],[5,5,0]], [[0,6,0],[6,6,6]], [[7,7,0],[0,7,7]] ]; let arena = Array.from({ length: ROWS }, () => Array(COLS).fill(0)); let player = { pos: { x: 0, y: 0 }, matrix: null, score: 0, level: 1, lines: 0 }; let dropCounter = 0, dropInterval = 1000, lastTime = 0; function playerReset() { const typeId = Math.floor(Math.random() * (SHAPES.length-1)) + 1; player.matrix = SHAPES[typeId]; player.pos.y = 0; player.pos.x = (COLS / 2 | 0) - (player.matrix[0].length / 2 | 0); if (collide(arena, player)) { endGame(); } } function endGame() { if (gameOver) return; gameOver = true; AudioEngine.playSound('gameOver'); saveHighScore(player.score, 'tetris'); if (gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { setTimeout(stopGame, 1000); } else { stopGame(); } } function drawMatrix(matrix, offset, colorOverride = null) { matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) { ctx.fillStyle = colorOverride ? colorOverride : COLORS[value-1]; ctx.fillRect(x + offset.x, y + offset.y, 1, 1); } })); } function drawGhost() { const ghost = { ...player, pos: { ...player.pos }}; while (!collide(arena, ghost)) { ghost.pos.y++; } ghost.pos.y--; drawMatrix(ghost.matrix, ghost.pos, 'rgba(255, 255, 255, 0.2)'); } function draw() { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.scale(BLOCK_SIZE, BLOCK_SIZE); drawMatrix(arena, { x: 0, y: 0 }); if(!gameOver) drawGhost(); drawMatrix(player.matrix, player.pos); ctx.setTransform(1, 0, 0, 1, 0, 0); } function merge() { player.matrix.forEach((row, y) => row.forEach((value, x) => { if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value; })); } function collide(arena, player) { const [m, o] = [player.matrix, player.pos]; for (let y = 0; y < m.length; ++y) for (let x = 0; x < m[y].length; ++x) if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true; return false; } function playerDrop() { player.pos.y++; if (collide(arena, player)) { player.pos.y--; merge(); AudioEngine.playSound('hit'); arenaSweep(); playerReset(); } dropCounter = 0; } function playerMove(dir) { player.pos.x += dir; if (collide(arena, player)) player.pos.x -= dir; } function rotate(matrix) { const newMatrix = []; for (let i = 0; i < matrix[0].length; i++) { newMatrix.push([]); }; for (let i = 0; i < matrix.length; i++) { for (let j = 0; j < matrix[0].length; j++) { newMatrix[j].unshift(matrix[i][j]); } } return newMatrix; } function playerRotate() { const originalPos = player.pos.x; const originalMatrix = player.matrix; player.matrix = rotate(player.matrix); let offset = 1; while (collide(arena, player)) { player.pos.x += offset; offset = -(offset + (offset > 0 ? 1 : -1)); if (offset > player.matrix[0].length) { player.pos.x = originalPos; player.matrix = originalMatrix; return; } } } function arenaSweep() { let rowCount = 0; outer: for (let y = arena.length - 1; y > 0; --y) { for (let x = 0; x < arena[y].length; ++x) if (arena[y][x] === 0) continue outer; const row = arena.splice(y, 1)[0].fill(0); arena.unshift(row); ++y; rowCount++; } if (rowCount > 0) { AudioEngine.playSound('score'); player.score += (rowCount * 10) * rowCount * player.level; player.lines += rowCount; player.level = Math.floor(player.lines / 10) + 1; dropInterval = Math.max(100, 1000 * Math.pow(0.85, player.level - 1)); } } function update(time = 0) { if(gameOver) return; const deltaTime = time - lastTime; lastTime = time; dropCounter += deltaTime; if (dropCounter > dropInterval) playerDrop(); draw(); scoreElement.textContent = `Score: ${player.score}`; levelLivesElement.textContent = `Level: ${player.level}`; gameLoopId = requestAnimationFrame(update); } currentKeyListener = event => { if (gameOver) return; if (event.key === 'ArrowLeft') playerMove(-1); else if (event.key === 'ArrowRight') playerMove(1); else if (event.key === 'ArrowDown') playerDrop(); else if (event.key === 'ArrowUp') playerRotate(); }; document.addEventListener('keydown', currentKeyListener); playerReset(); update(); }
         function initSpaceInvaders() { canvas.width = 600; canvas.height = 600; let score = 0, lives = 3, gameOver = false, gameOverText = '', currentLevel = 0, lastTime = 0, moveAccumulator = 0; const invaderLayouts = [ [[1,1,1,1,1,1,1,1],[2,2,2,2,2,2,2,2],[3,3,3,3,3,3,3,3]], [[0,1,1,0,0,2,2,0],[1,0,0,1,2,0,0,2],[1,1,1,1,2,2,2,2],[0,3,0,3,3,0,3,0]], [[1,1,0,0,0,0,2,2],[1,1,1,0,0,2,2,2],[3,3,3,3,3,3,3,3],[0,1,1,3,3,1,1,0]] ]; const invaderPixels = { 1: [ [0,0,1,1,1,1,0,0], [0,1,1,1,1,1,1,0], [1,1,0,1,1,0,1,1], [1,1,1,1,1,1,1,1], [0,1,0,1,1,0,1,0], [1,0,0,0,0,0,0,1] ], 2: [ [0,1,1,0,0,1,1,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ], 3: [ [0,0,1,1,1,1,0,0], [1,1,1,1,1,1,1,1], [1,0,1,1,1,1,0,1], [1,0,0,1,1,0,0,1], [0,0,1,0,0,1,0,0] ] }; class Player { constructor() { this.x = canvas.width/2; this.y = canvas.height-50; this.width = 32; this.height = 16; this.speed = 250; } draw() { ctx.fillStyle = 'lime'; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillRect(this.x-2, this.y-4, 4, 4);}} class Bullet { constructor(x, y, speed, color) { this.x = x; this.y = y; this.width = 4; this.height = 15; this.speed = speed; this.color = color; } update(dt) { this.y += this.speed * dt; } draw() { ctx.shadowColor = this.color; ctx.shadowBlur = 15; ctx.fillStyle = this.color; ctx.fillRect(this.x - this.width/2, this.y, this.width, this.height); ctx.fillStyle = 'white'; ctx.fillRect(this.x - 1, this.y + 2, 2, this.height-4); ctx.shadowBlur = 0; }} class Invader { constructor(x, y, type) { this.x = x; this.y = y; this.width = 32; this.height = 24; this.type = type; } draw() { const pixels = invaderPixels[this.type]; ctx.fillStyle='white'; for(let r=0; r<pixels.length; r++) for(let c=0; c<pixels[r].length; c++) if(pixels[r][c]) { ctx.fillRect(this.x+c*4, this.y+r*4, 4, 4); } }} class Bunker { constructor(x) { this.x = x; this.y = canvas.height - 120; this.width = 80; this.height = 40; this.health = 20; } draw() { if(this.health > 0) { ctx.fillStyle = `rgb(0, ${this.health * 12}, 0)`; ctx.fillRect(this.x, this.y, this.width, this.height); } }} let player = new Player(); let keys = {}; let playerBullets = [], invaderBullets = [], invaders = [], bunkers = []; let invaderDirection = 1, invaderDrop = 20, invaderMoveThreshold = 1000; function loadLevel(levelIndex) { invaders = []; const layout = invaderLayouts[levelIndex]; for(let r = 0; r < layout.length; r++) for(let c = 0; c < layout[r].length; c++) if(layout[r][c]) invaders.push(new Invader(80 + c * 50, 50 + r * 40, layout[r][c])); invaderMoveThreshold = 1000 - levelIndex * 150; player.x = canvas.width/2; } function update(dt) { if (gameOver) return; if (keys['ArrowLeft'] && player.x > player.width/2) player.x -= player.speed * dt; if (keys['ArrowRight'] && player.x < canvas.width-player.width/2) player.x += player.speed * dt; playerBullets.forEach((b, i) => { b.update(dt); if(b.y < 0) playerBullets.splice(i, 1); }); invaderBullets.forEach((b, i) => { b.update(dt); if(b.y > canvas.height) invaderBullets.splice(i, 1); }); moveAccumulator += dt * 1000; if(moveAccumulator > invaderMoveThreshold) { moveAccumulator = 0; let wallHit = false; invaders.forEach(invader => { invader.x += 10 * invaderDirection; if (invader.x + invader.width > canvas.width || invader.x < 0) wallHit = true; }); if (wallHit) { invaderDirection *= -1; invaders.forEach(invader => invader.y += invaderDrop); }} if (Math.random() < 0.02 && invaders.length > 0) { const shooter = invaders[Math.floor(Math.random()*invaders.length)]; invaderBullets.push(new Bullet(shooter.x+shooter.width/2, shooter.y+shooter.height, 300, 'red')); } invaders.forEach(invader => { if(invader.y + invader.height >= (bunkers[0]?.y || canvas.height - 50)) endGame(false); }); playerBullets.forEach((bullet, bIndex) => { invaders.forEach((invader, iIndex) => { if (bullet.x > invader.x && bullet.x < invader.x + invader.width && bullet.y > invader.y && bullet.y < invader.y + invader.height) { playerBullets.splice(bIndex, 1); invaders.splice(iIndex, 1); score += 100 * (currentLevel+1); AudioEngine.playSound('hit'); } }); bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { playerBullets.splice(bIndex,1); bunker.health--; }}); }); invaderBullets.forEach((bullet, bIndex) => { if (bullet.x > player.x - player.width/2 && bullet.x < player.x + player.width/2 && bullet.y > player.y - player.height/2 && bullet.y < player.y + player.height/2) { invaderBullets.splice(bIndex, 1); lives--; AudioEngine.playSound('hit'); if (lives <= 0) endGame(false); } bunkers.forEach((bunker) => { if(bunker.health > 0 && bullet.x > bunker.x && bullet.x < bunker.x+bunker.width && bullet.y > bunker.y && bullet.y < bunker.y+bunker.height) { invaderBullets.splice(bIndex,1); bunker.health--; }}); }); if (invaders.length === 0) { currentLevel++; if(currentLevel >= invaderLayouts.length) { endGame(true); } else { loadLevel(currentLevel); } } } function draw() { ctx.clearRect(0, 0, canvas.width, canvas.height); if (!gameOver) player.draw(); playerBullets.forEach(b => b.draw()); invaderBullets.forEach(b => b.draw()); invaders.forEach(i => i.draw()); bunkers.forEach(b => b.draw()); scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Lives: ${lives}`; if(gameOver) { ctx.fillStyle = 'white'; ctx.font = '40px "Press Start 2P"'; ctx.textAlign = 'center'; ctx.fillText(gameOverText, canvas.width/2, canvas.height/2); } } function gameLoop(currentTime) { const dt = (currentTime - (lastTime || currentTime)) / 1000; lastTime = currentTime; update(dt); draw(); if (!gameOver) gameLoopId = requestAnimationFrame(gameLoop); } function endGame(didWin) { if(gameOver) return; gameOver = true; gameOverText = didWin ? 'You Win!' : 'Game Over!'; AudioEngine.playSound('gameOver'); saveHighScore(score, 'spaceInvaders', didWin); if (gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { setTimeout(stopGame, 1000); } else { stopGame(); } } currentKeyListener = e => { keys[e.key] = e.type === 'keydown'; if (e.key === ' ' && e.type === 'keydown' && playerBullets.length < 3) { AudioEngine.playSound('shoot'); playerBullets.push(new Bullet(player.x, player.y, -400, 'yellow')); } }; document.addEventListener('keydown', currentKeyListener); document.addEventListener('keyup', currentKeyListener); for(let i = 0; i < 4; i++) bunkers.push(new Bunker(70 + i * 120)); loadLevel(0); gameLoopId = requestAnimationFrame(gameLoop); }
         function initPacman() {
@@ -1056,7 +1188,7 @@
             function moveEntity(entity, dt) { if (entity.isAtCenter()) { if ((entity.nextDir.x !== 0 || entity.nextDir.y !== 0) && canMove(entity, entity.nextDir)) entity.dir = {...entity.nextDir}; if (!canMove(entity, entity.dir)) { entity.x = entity.getMapPos().x * TILE_SIZE + TILE_SIZE/2; entity.y = entity.getMapPos().y * TILE_SIZE + TILE_SIZE/2; entity.dir = {x:0, y:0}; } } entity.x += entity.dir.x * entity.speed * dt; entity.y += entity.dir.y * entity.speed * dt; if(entity.x < -entity.radius) entity.x = canvas.width + entity.radius; if(entity.x > canvas.width + entity.radius) entity.x = -entity.radius; }
             function updateGhost(ghost) { if (!ghost.isReleased || ghost.respawnTimer > 0) return; if (ghost.isAtCenter()) { const ghostPos = ghost.getMapPos(); let target; const isInBox = ghostPos.y >= 12 && ghostPos.x >= 12 && ghostPos.x <= 16; if (isInBox) { target = { x: 14 * TILE_SIZE, y: 11 * TILE_SIZE }; } else { target = pacman; } let possibleMoves = []; if (canMove(ghost, {x: 1, y: 0})) possibleMoves.push({x: 1, y: 0}); if (canMove(ghost, {x: -1, y: 0})) possibleMoves.push({x: -1, y: 0}); if (canMove(ghost, {x: 0, y: 1})) possibleMoves.push({x: 0, y: 1}); if (canMove(ghost, {x: 0, y: -1})) possibleMoves.push({x: 0, y: -1}); let choices = possibleMoves; if (choices.length > 1) { choices = choices.filter(move => move.x !== -ghost.dir.x || move.y !== -ghost.dir.y); } if (!isInBox) { const isAtIntersectionAboveBox = ghostPos.y === 11 && (ghostPos.x >= 13 && ghostPos.x <= 15); if(isAtIntersectionAboveBox){ choices = choices.filter(move => move.y !== 1); } } if (choices.length > 0) { choices.sort((a, b) => { const distA = Math.hypot(target.x - ((ghostPos.x + a.x) * TILE_SIZE), target.y - ((ghostPos.y + a.y) * TILE_SIZE)); const distB = Math.hypot(target.x - ((ghostPos.x + b.x) * TILE_SIZE), target.y - ((ghostPos.y + b.y) * TILE_SIZE)); return distA - distB; }); if (ghost.isFrightened && !isInBox) { ghost.nextDir = choices[choices.length - 1]; } else { ghost.nextDir = choices[0]; } } else { ghost.nextDir = {x: -ghost.dir.x, y: -ghost.dir.y}; } } }
             function checkCollisions() { const {x:mapX, y:mapY} = pacman.getMapPos(); if(getTile(mapX, mapY) === 2) { map[mapY][mapX] = 0; score += 10; totalPellets--; AudioEngine.playSound('score'); } else if(getTile(mapX, mapY) === 3) { map[mapY][mapX] = 0; score += 50; totalPellets--; ghosts.forEach(g => { if(g.isReleased) g.isFrightened = true; }); frightenedTimer = 7; AudioEngine.playSound('score');} ghosts.forEach(ghost => { if (ghost.respawnTimer > 0) return; const dist = Math.hypot(pacman.x-ghost.x, pacman.y-ghost.y); if(dist < pacman.radius+ghost.radius) { if (ghost.isFrightened) { score += 200; ghost.x = ghost.homeX; ghost.y = ghost.homeY; ghost.isFrightened=false; ghost.respawnTimer = 3; AudioEngine.playSound('score'); } else { resetAfterDeath(); }}})}
-            function resetAfterDeath() { lives--; AudioEngine.playSound('hit'); if(lives <= 0) { gameOver=true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'pacman', false); if(gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { alert("Game Over!"); setTimeout(stopGame, 100); } else { stopGame(); } } else { pacman.x = 14*TILE_SIZE+TILE_SIZE/2; pacman.y = 23*TILE_SIZE+TILE_SIZE/2; pacman.dir = {x:0, y:0}; pacman.nextDir = {x:0, y:0}; ghosts.forEach((g,i) => {g.x = g.homeX; g.y = g.homeY; g.isFrightened=false; g.isReleased = (i===0); g.respawnTimer = 0;}); releaseTimer=0;}}
+            function resetAfterDeath() { lives--; AudioEngine.playSound('hit'); if(lives <= 0) { gameOver=true; AudioEngine.playSound('gameOver'); saveHighScore(score, 'pacman', false); if(gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { setTimeout(stopGame, 100); } else { stopGame(); } } else { pacman.x = 14*TILE_SIZE+TILE_SIZE/2; pacman.y = 23*TILE_SIZE+TILE_SIZE/2; pacman.dir = {x:0, y:0}; pacman.nextDir = {x:0, y:0}; ghosts.forEach((g,i) => {g.x = g.homeX; g.y = g.homeY; g.isFrightened=false; g.isReleased = (i===0); g.respawnTimer = 0;}); releaseTimer=0;}}
             function gameLoop(currentTime) { if(gameOver) return; frame++; const dt = (currentTime - (lastTime||currentTime)) / 1000; lastTime = currentTime; ctx.clearRect(0,0,canvas.width,canvas.height); drawMap(); moveEntity(pacman, dt); ghosts.forEach((g) => { if (g.respawnTimer > 0) g.respawnTimer -= dt; else { updateGhost(g); } moveEntity(g, dt); }); pacman.draw(); ghosts.forEach(g => g.draw()); checkCollisions(); if (frightenedTimer > 0) { frightenedTimer -= dt; if (frightenedTimer <= 0) ghosts.forEach(g => g.isFrightened = false); } releaseTimer += dt; if(releaseTimer > 4 && !ghosts[1].isReleased){ghosts[1].isReleased = true;} if(releaseTimer > 8 && !ghosts[2].isReleased){ghosts[2].isReleased = true;} if(releaseTimer > 12 && !ghosts[3].isReleased){ghosts[3].isReleased = true;} if(totalPellets === 0) { saveHighScore(score, 'pacman', true); if(gameMode !== 'gauntlet' && currentLobbyData?.mode !== 'gauntlet') { alert("You Win!"); stopGame(); } else { stopGame(); } return; } scoreElement.textContent = `Score: ${score}`; levelLivesElement.textContent = `Lives: ${lives}`; gameLoopId = requestAnimationFrame(gameLoop); }
             currentKeyListener = e => { if (e.type === 'keydown') { if (e.key==='ArrowUp') pacman.nextDir = {x:0, y:-1}; else if (e.key==='ArrowDown') pacman.nextDir = {x:0, y:1}; else if (e.key==='ArrowLeft') pacman.nextDir = {x:-1, y:0}; else if (e.key==='ArrowRight') pacman.nextDir = {x:1, y:0}; }};
             document.addEventListener('keydown', currentKeyListener);
