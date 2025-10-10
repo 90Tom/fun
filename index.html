@@ -112,7 +112,7 @@
         #language-switcher-btn .lang-target { opacity: 0.7; }
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); align-items: center; justify-content: center; }
         .modal-content { position: relative; background-color: var(--modal-bg); color: var(--text-color); padding: 40px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); width: 90%; max-width: 500px; text-align: center; transition: all 0.3s ease; }
-        #leaderboard-modal .modal-content { max-width: 800px; } /* Wider modal for leaderboards */
+        #leaderboard-modal .modal-content { max-width: 800px; } 
         .modal-content h1 { color: red; margin-bottom: 25px; font-weight: 600; }
         .input-group { margin-bottom: 20px; text-align: left; }
         .input-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #d90429; }
@@ -368,7 +368,7 @@
         <div class="modal-content">
             <span class="close-btn">&times;</span>
             <h1 id="leaderboard-title">Leaderboard</h1>
-            <div id="leaderboard-filters-container"></div> <!-- Container for filter buttons -->
+            <div id="leaderboard-filters-container"></div> 
             <table id="leaderboard-table">
                 <thead id="leaderboard-head"></thead>
                 <tbody id="leaderboard-body"></tbody>
@@ -590,6 +590,12 @@
                 console.error("Error deleting document: ", error);
             }
         }
+        
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
 
         function clearLeaderboardContent() {
             document.getElementById('leaderboard-filters-container').innerHTML = '';
@@ -597,18 +603,44 @@
             document.getElementById('leaderboard-body').innerHTML = '<tr><td colspan="5">Načítání...</td></tr>';
         }
 
-        // --- NEW UNIFIED GAUNTLET LEADERBOARD FUNCTION ---
-        async function showGauntletLeaderboard(playerCountFilter = 1) {
-            const modal = document.getElementById('leaderboard-modal');
+       async function showLeaderboard(gameId, filterOption = 1) {
+            if (typeof db === 'undefined') { return; }
+
+            const leaderboardModal = document.getElementById('leaderboard-modal');
             const titleEl = document.getElementById('leaderboard-title');
             const headEl = document.getElementById('leaderboard-head');
             const bodyEl = document.getElementById('leaderboard-body');
             const filtersContainer = document.getElementById('leaderboard-filters-container');
-
-            titleEl.textContent = 'Gauntlet Leaderboard';
             
-            // Create and append filters only if they don't exist
-            if (!filtersContainer.hasChildNodes()) {
+            clearLeaderboardContent();
+
+            const currentUser = auth.currentUser;
+            const isAdmin = currentUser && currentUser.displayName === '90Tom';
+
+            const gameData = {
+                arcade: {
+                    title: "Žebříček: Arcade Gauntlet",
+                    fields: ['Hráči', 'Čas'],
+                    query: (filter) => {
+                        let q = db.collection("arcade_gauntlet_leaderboard");
+                        if (filter >= 4) {
+                            return q.where('playerCount', '>=', 4).orderBy('playerCount', 'asc').orderBy('time', 'asc');
+                        } else {
+                            return q.where('playerCount', '==', filter).orderBy('time', 'asc');
+                        }
+                    }
+                },
+                milan: { title: "Žebříček: Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: () => db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
+                krumptezic: { title: "Žebříček: KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: () => db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
+                ptak2: { title: "Žebříček: PTAK 2", fields: ['Úroveň', 'Čas'], query: () => db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
+            };
+
+            const game = gameData[gameId];
+            if (!game) return;
+
+            titleEl.textContent = game.title;
+
+            if (gameId === 'arcade') {
                 const filtersHTML = `
                     <div id="leaderboard-filters">
                         <button class="leaderboard-filter-btn" data-count="1">Solo</button>
@@ -618,111 +650,50 @@
                     </div>`;
                 filtersContainer.innerHTML = filtersHTML;
                 filtersContainer.querySelectorAll('.leaderboard-filter-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        showGauntletLeaderboard(parseInt(e.target.dataset.count, 10));
-                    });
+                    btn.classList.toggle('active', parseInt(btn.dataset.count) === filterOption);
+                    btn.addEventListener('click', (e) => showLeaderboard('arcade', parseInt(e.target.dataset.count, 10)));
                 });
             }
-
-            // Update active filter button
-            filtersContainer.querySelectorAll('.leaderboard-filter-btn').forEach(btn => {
-                btn.classList.toggle('active', parseInt(btn.dataset.count, 10) === playerCountFilter);
-            });
-
-            headEl.innerHTML = '<tr><th>#</th><th>Player(s)</th><th>Time</th></tr>';
-            bodyEl.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
-            modal.style.display = 'flex';
             
-            let query;
-            const collectionRef = db.collection('arcade_gauntlet_leaderboard');
-            if (playerCountFilter >= 4) {
-                 query = collectionRef.where('playerCount', '>=', 4).orderBy('playerCount', 'asc').orderBy('time', 'asc');
-            } else {
-                 query = collectionRef.where('playerCount', '==', playerCountFilter).orderBy('time', 'asc');
-            }
-
-            try {
-                const snapshot = await query.limit(15).get();
-                if (snapshot.empty) {
-                    bodyEl.innerHTML = '<tr><td colspan="3">No scores yet for this category!</td></tr>';
-                    return;
-                }
-                bodyEl.innerHTML = '';
-                snapshot.forEach((doc, index) => {
-                    const data = doc.data();
-                    const mins = Math.floor(data.time / 60).toString().padStart(2, '0');
-                    const secs = (Math.floor(data.time) % 60).toString().padStart(2, '0');
-                    const time = `${mins}:${secs}`;
-                    const players = data.players.join(', ');
-
-                    const row = `<tr><td>${index + 1}</td><td>${players}</td><td>${time}</td></tr>`;
-                    bodyEl.innerHTML += row;
-                });
-            } catch (e) {
-                console.error("Error fetching Gauntlet leaderboard:", e);
-                bodyEl.innerHTML = '<tr><td colspan="3">Error loading scores.</td></tr>';
-            }
-        }
-        
-       async function showLeaderboard(gameId) {
-            if (typeof db === 'undefined') { return; }
-            
-            // --- REDIRECT TO GAUNTLET LEADERBOARD ---
-            if (gameId === 'arcade') {
-                showGauntletLeaderboard(1); // Default to Solo
-                return;
-            }
-
-            const leaderboardModal = document.getElementById('leaderboard-modal');
-            const titleEl = document.getElementById('leaderboard-title');
-            const headEl = document.getElementById('leaderboard-head');
-            const bodyEl = document.getElementById('leaderboard-body');
-            
-            clearLeaderboardContent(); // Clear old content, including filters
-
-            const currentUser = auth.currentUser;
-            const isAdmin = currentUser && currentUser.displayName === '90Tom';
-            const gameData = {
-                milan: { title: "Milanovy Klobásy", fields: ['Objednávky', 'Čas Přežití'], query: db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
-                krumptezic: { title: "KrumpTezic", fields: ['Nejvyšší Počet Bloků', 'Čas Výhry'], query: db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
-                ptak2: { title: "PTAK 2", fields: ['Úroveň', 'Čas'], query: db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
-            };
-            const { title, fields, query } = gameData[gameId];
-            titleEl.textContent = `Žebříček: ${title}`;
             leaderboardModal.style.display = 'flex';
+
             try {
+                const query = game.query(filterOption);
                 const querySnapshot = await query.limit(10).get();
                 const scores = querySnapshot.docs.map(doc => doc.data());
                 
-                let headers = '<th>#</th><th>Hráč</th>';
-                fields.forEach(field => headers += `<th>${field}</th>`);
-                if (isAdmin) headers += '<th>Akce</th>';
+                let headers = '<th>#</th>';
+                game.fields.forEach(field => headers += `<th>${field}</th>`);
+                if (isAdmin && gameId !== 'arcade') headers += '<th>Akce</th>';
                 headEl.innerHTML = `<tr>${headers}</tr>`;
 
                 if (scores.length === 0) {
-                    const colspan = isAdmin ? fields.length + 3 : fields.length + 2;
+                    const colspan = game.fields.length + 1 + (isAdmin && gameId !== 'arcade' ? 1 : 0);
                     bodyEl.innerHTML = `<tr><td colspan="${colspan}">Zatím žádné výsledky!</td></tr>`;
                 } else {
-                    bodyEl.innerHTML = ''; // Clear loading text
+                    bodyEl.innerHTML = '';
                     scores.forEach((score, index) => {
-                        let row = `<td>${index + 1}</td><td>${score.user}</td>`;
+                        let row = `<td>${index + 1}</td>`;
                         if (gameId === 'milan') {
-                            row += `<td>${score.orders}</td><td>${score.time}s</td>`;
+                            row += `<td>${score.user}</td><td>${score.orders}</td><td>${score.time}s</td>`;
                         } else if (gameId === 'krumptezic') {
-                            row += `<td>${Math.floor(score.blocks)}</td><td>${score.winTime ? score.winTime + 's' : '-'}</td>`;
+                            row += `<td>${score.user}</td><td>${Math.floor(score.blocks)}</td><td>${score.winTime ? score.winTime + 's' : '-'}</td>`;
                         } else if (gameId === 'ptak2') {
                              const timeInSeconds = (score.time / 1000).toFixed(2);
-                            row += `<td>${score.level}</td><td>${timeInSeconds}s</td>`;
+                            row += `<td>${score.user}</td><td>${score.level}</td><td>${timeInSeconds}s</td>`;
+                        } else if (gameId === 'arcade') {
+                            row += `<td>${score.players.join(', ')}</td><td>${formatTime(Math.floor(score.time))}</td>`;
                         }
-                        if (isAdmin) {
+                        
+                        if (isAdmin && gameId !== 'arcade') {
                             row += `<td><button class="delete-score-btn" data-game="${gameId}" data-user="${score.user}" title="Smazat">🗑️</button></td>`;
                         }
                         bodyEl.innerHTML += `<tr>${row}</tr>`;
                     });
                 }
             } catch (error) {
-                 console.error("Error fetching leaderboard:", error);
-                 bodyEl.innerHTML = `<tr><td colspan="4">Chyba při načítání žebříčku.</td></tr>`;
+                 console.error("Error fetching leaderboard for " + gameId + ":", error);
+                 bodyEl.innerHTML = `<tr><td colspan="5">Chyba při načítání žebříčku.</td></tr>`;
             }
         }
 
