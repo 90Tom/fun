@@ -428,7 +428,7 @@
             cs: {
                 welcomeMessage: "Vítám Vás! Vyberte si nějakou hru níže a užijte si!",
                 arcadeTitle: "Retro Arkáda",
-                arcadeDesc: "Sbírka klasických arkádových her. Připojte se do lobby a hrajte!",
+                arcadeDesc: "Sbírka klasických arkádových her. Možnost Multiplayer a Gauntlet!",
                 blonkyTitle: "Blónky TM",
                 blonkyDesc: "Předělání známé hry Bloons TD.",
                 krumptezicTitle: "KrumpTezic",
@@ -456,7 +456,7 @@
             en: {
                 welcomeMessage: "Welcome! Choose a game below and enjoy!",
                 arcadeTitle: "Retro Arcade",
-                arcadeDesc: "A collection of classic arcade games. Join a lobby and play!",
+                arcadeDesc: "Collection of classic arcade games. Multiplayer and Gauntlet available!",
                 blonkyTitle: "Blónky TM",
                 blonkyDesc: "A remake of the well-known game Bloons TD.",
                 krumptezicTitle: "KrumpTezic",
@@ -619,14 +619,14 @@
 
             const gameData = {
                 arcade: {
-                    title: "Žebříček: Arcade Gauntlet",
+                    title: "Arkádová výzva",
                     fields: ['Hráči', 'Čas'],
                     // This is just a placeholder, the actual query logic is handled inside the function now
                     query: () => db.collection("arcade_gauntlet_leaderboard")
                 },
-                milan: { title: "Žebříček: Milanovy Klobásy", fields: ['Hráč', 'Objednávky', 'Čas Přežití'], query: () => db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
-                krumptezic: { title: "Žebříček: KrumpTezic", fields: ['Hráč', 'Nejvyšší Počet Bloků', 'Čas Výhry'], query: () => db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
-                ptak2: { title: "Žebříček: PTAK 2", fields: ['Hráč', 'Úroveň', 'Čas'], query: () => db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
+                milan: { title: "Milanovy Klobásy", fields: ['Hráč', 'Objednávky', 'Čas Přežití'], query: () => db.collection("milan_leaderboard").orderBy('orders', 'desc').orderBy('time', 'desc') },
+                krumptezic: { title: "KrumpTezic", fields: ['Hráč', 'Nejvyšší Počet Bloků', 'Čas Výhry'], query: () => db.collection("krumptezic_leaderboard").orderBy('blocks', 'desc') },
+                ptak2: { title: "PTAK 2", fields: ['Hráč', 'Úroveň', 'Čas'], query: () => db.collection("ptak2_leaderboard").orderBy('level', 'desc').orderBy('time', 'asc') },
             };
 
             const game = gameData[gameId];
